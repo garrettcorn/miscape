@@ -1,0 +1,24 @@
+{
+  "id": "sweetberries",
+  "name": "Sweet Berries",
+  "version": "1.0.0",
+  "api": 1,
+  "description": "Example declarative mod: adds Berry Jam (a stronger snack), a jam recipe, a tiny quest from Bertram, and slightly faster regrowth.",
+  "content": {
+    "items": [
+      {"id": "sweetberries:jam", "name": "Berry Jam", "desc": "Restores 10 health. Sticky.", "kind": "food", "heal": 10, "tradeable": true, "stack": 16, "value": 4, "color": "#c2185b"}
+    ],
+    "recipes": [
+      {"id": "sweetberries:jam", "output": "sweetberries:jam", "count": 1, "inputs": {"berry": 3, "plank": 1}, "level": 1, "xp": 8}
+    ],
+    "quests": [
+      {"id": "sweetberries:jam_session", "name": "Jam Session", "giver": "bertram",
+       "intro": "My cousin swears by berry jam. Could you make me two jars?",
+       "outro": "Perfect! These will sell like… well, jam.",
+       "steps": [{"kind": "deliver", "target": "sweetberries:jam", "count": 2, "text": "Bring Bertram 2 Berry Jam"}],
+       "reward": {"coins": 12, "xp": {"crafting": 25}}}
+    ],
+    "shop": []
+  },
+  "rules": {"regrowMultiplier": 0.8}
+}

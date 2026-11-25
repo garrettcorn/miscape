@@ -1,0 +1,6 @@
+/data/
+/bin/
+*.exe
+host-key*.json
+admin-token
+.env

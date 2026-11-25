@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1d2a3a">
+<title>Lanternfall</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="gl" aria-label="Game view"></canvas>
+
+<!-- In-world overlays (name tags, damage numbers) -->
+<div id="tags" aria-hidden="true"></div>
+
+<!-- HUD -->
+<div id="hud" hidden>
+  <div id="topbar">
+    <div id="hpbox" aria-label="Health"><div id="hpbar"><div id="hpfill"></div></div><span id="hptext">20/20</span></div>
+    <div id="zone" role="status"></div>
+    <div id="realmbadge" title="Progress in this world stays in this world."></div>
+    <div id="netstatus" role="status" hidden></div>
+  </div>
+  <div id="tracker" aria-live="polite"></div>
+  <div id="crosshair" aria-hidden="true"></div>
+  <div id="target" role="status" aria-live="polite"></div>
+  <div id="prompt" aria-live="polite"></div>
+  <div id="hearthbar" hidden><div id="hearthfill"></div><span>Hearth Lantern…</span></div>
+  <div id="hotbar" role="toolbar" aria-label="Hotbar"></div>
+  <div id="chat"><div id="chatlog" aria-live="polite"></div><input id="chatinput" maxlength="200" placeholder="Say something… (Enter)" hidden></div>
+  <div id="toasts" aria-live="polite"></div>
+  <div id="vignette" aria-hidden="true"></div>
+</div>
+
+<!-- Touch controls -->
+<div id="touch" hidden>
+  <div id="stick"><div id="stickknob"></div></div>
+  <div id="tbuttons">
+    <button class="tb" data-act="primary" aria-label="Action">⚔</button>
+    <button class="tb" data-act="jump" aria-label="Jump">⤒</button>
+    <button class="tb" data-act="use" aria-label="Use item">✋</button>
+    <button class="tb" data-act="interact" aria-label="Talk / Trade">💬</button>
+    <button class="tb small" data-act="menu" aria-label="Menu">☰</button>
+    <button class="tb small" data-act="hearth" aria-label="Hearth Lantern">🏮</button>
+    <button class="tb small" data-act="sprint" aria-label="Sprint">»</button>
+  </div>
+</div>
+
+<!-- Panels -->
+<div id="screen-join" class="screen" hidden>
+  <div class="card join">
+    <h1><span class="logo">🏮</span> Lanternfall</h1>
+    <p class="tagline">A cozy voxel world of lanterns, little quests and friendly faces.</p>
+    <div id="worldinfo" class="worldinfo"></div>
+    <div id="diag" class="diag" hidden></div>
+    <div id="joinform"></div>
+    <p class="hint">Controller, keyboard &amp; mouse, or touch. Press <kbd>Start</kbd>/<kbd>Esc</kbd> in game for settings.</p>
+  </div>
+</div>
+
+<div id="panel" class="panel" hidden role="dialog" aria-modal="true" aria-labelledby="paneltitle">
+  <div class="panelhead">
+    <h2 id="paneltitle"></h2>
+    <div id="tabs" role="tablist"></div>
+    <button class="close" data-close aria-label="Close">✕</button>
+  </div>
+  <div id="panelbody"></div>
+  <div class="panelfoot"><span class="pad">Ⓑ / Esc to close · D-pad / Tab to move · Ⓐ / Enter to choose</span></div>
+</div>
+
+<div id="perf" hidden aria-hidden="true"></div>
+<div id="fatal" hidden role="alert"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lanternfall · World Admin</title>
+<style>
+:root { --bg:#141c29; --panel:#1f2a3d; --ink:#fdf6e3; --muted:#b8c2d6; --accent:#ffcf6b; --good:#8fd694; --danger:#ff6b8b; --focus:#ffe27a; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 "Trebuchet MS", "Segoe UI", system-ui, sans-serif; }
+main { max-width: 60em; margin: 0 auto; padding: 16px; }
+h1 { margin: .2em 0; } h2 { margin: 0 0 .5em; font-size: 1.15em; color: var(--accent); }
+section { background: var(--panel); border-radius: 14px; padding: 1em 1.2em; margin: 1em 0; }
+label { display: grid; grid-template-columns: 14em 1fr; gap: .8em; align-items: center; padding: .35em 0; }
+@media (max-width: 640px) { label { grid-template-columns: 1fr; gap: .2em; } }
+input, select, textarea, button { font: inherit; color: inherit; }
+input, select, textarea { background: #101724; border: 2px solid #3b4c6e; border-radius: 9px; padding: .45em .6em; min-height: 2.5em; width: 100%; }
+input[type=checkbox] { width: 1.4em; height: 1.4em; min-height: 0; }
+button { background: #3b4c6e; border: 0; border-radius: 10px; padding: .5em 1em; cursor: pointer; min-height: 2.5em; }
+button.primary { background: #e2a23b; color: #2b1d05; font-weight: bold; }
+button.danger { background: #9b3b52; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+table { width: 100%; border-collapse: collapse; } td, th { text-align: left; padding: .4em; border-bottom: 1px solid #2e3a52; vertical-align: top; }
+.note { color: var(--muted); font-size: .9em; }
+.ok { color: var(--good); } .bad { color: var(--danger); }
+.share { background: #101724; padding: .6em; border-radius: 8px; word-break: break-all; font-family: ui-monospace, Consolas, monospace; font-size: .85em; }
+.row { display: flex; gap: .5em; flex-wrap: wrap; align-items: center; }
+.callout { border-left: 4px solid var(--accent); padding: .5em .9em; background: #172234; border-radius: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🏮 World Admin</h1>
+  <p class="note">This page only works on the computer hosting the world. Friends never see it.</p>
+
+  <section id="login">
+    <h2>Unlock</h2>
+    <p>Paste the <b>admin token</b> printed in the host terminal (also saved as <code>admin-token</code> in your world folder).</p>
+    <div class="row"><input id="token" type="password" autocomplete="off" aria-label="Admin token" style="max-width:30em"><button class="primary" id="unlock">Unlock</button></div>
+    <p id="loginerr" class="bad" role="alert"></p>
+  </section>
+
+  <div id="app" hidden>
+    <section>
+      <h2>Status</h2>
+      <div id="status"></div>
+    </section>
+
+    <section>
+      <h2>Invite friends</h2>
+      <div class="callout"><b>How joining works:</b> your friend installs Lanternfall, runs <code>lanternfall join</code>, and pastes the invite line below.
+        It connects to your computer through an encrypted Tailcat tunnel (peer-to-peer when possible, otherwise through a relay) and opens the game in their browser.
+        <br><b>Treat invite lines like a house key:</b> share them privately (direct message), never in public posts or streams.</div>
+      <div class="row" style="margin-top:.8em">
+        <input id="ilabel" placeholder="Who is it for? (optional)" style="max-width:16em" aria-label="Invite label">
+        <select id="iuses" style="max-width:10em" aria-label="Uses"><option value="1">1 use</option><option value="5">5 uses</option><option value="0">Unlimited</option></select>
+        <select id="ihours" style="max-width:10em" aria-label="Expires"><option value="24">Expires in 1 day</option><option value="168">1 week</option><option value="0">Never</option></select>
+        <button class="primary" id="mkinvite">Create invite</button>
+      </div>
+      <div id="newinvite"></div>
+      <table id="invites" aria-label="Invites"></table>
+    </section>
+
+    <section>
+      <h2>World settings</h2>
+      <form id="cfg">
+        <label>World name <input name="name" maxlength="40" required></label>
+        <label>Description <input name="description" maxlength="200"></label>
+        <label>Max players <input name="maxPlayers" type="number" min="1" max="64"></label>
+        <label>Who can join <select name="access"><option value="invite">Invite code required</option><option value="open">Anyone with the tunnel address</option></select></label>
+        <label>PvP (outside Wickhollow) <input name="pvp" type="checkbox"></label>
+        <label>Difficulty <select name="difficulty"><option>easy</option><option>normal</option><option>hard</option></select></label>
+        <label>Resource abundance <select name="resources"><option>scarce</option><option>normal</option><option>abundant</option></select></label>
+        <label>Trading between players <select name="trading"><option value="on">On</option><option value="off">Off</option></select></label>
+        <label>Quest reward multiplier <input name="questXp" type="number" min="0.5" max="3" step="0.25"></label>
+        <label>Allow mods <input name="allowMods" type="checkbox"></label>
+        <div id="modlist"></div>
+        <p class="note">Mods are data-only packs (items, recipes, quests, small rule tweaks). They can't run code, read files or use the network. A world that has ever used mods is permanently marked <b>modded</b>; its characters were always private to this world anyway. Mod changes apply after restarting the world.</p>
+        <div class="row"><button class="primary" type="submit">Save settings</button><span id="cfgmsg" role="status"></span></div>
+      </form>
+    </section>
+
+    <section>
+      <h2>Players</h2>
+      <table id="players" aria-label="Characters"></table>
+    </section>
+
+    <section>
+      <h2>Saves &amp; backups</h2>
+      <div id="saves"></div>
+      <div class="row"><button id="savenow">Save now</button></div>
+      <p class="note">Snapshots are written atomically and checksummed; the last 10 are kept in <code>backups/</code>. To restore, stop the world and run <code>lanternfall restore &lt;backup-name&gt;</code>.</p>
+    </section>
+  </div>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let token = sessionStorage.getItem('lf.admin') || '';
+let state = null;
+async function api(method, path, body) {
+  const r = await fetch(path, { method, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+async function load() {
+  try { state = await api('GET', '/admin/api/state'); } catch (e) { $('#loginerr').textContent = e.message; $('#app').hidden = true; $('#login').hidden = false; return; }
+  sessionStorage.setItem('lf.admin', token);
+  $('#login').hidden = true; $('#app').hidden = false;
+  render();
+}
+function render() {
+  const s = state, p2p = s.p2p;
+  const peers = p2p && p2p.peers ? p2p.peers : [];
+  $('#status').innerHTML = `<p><b>${esc(s.config.name)}</b> · realm <code>${esc(s.realm.id.slice(0, 8))}…</code> · ${s.realm.everModded ? '<span class="bad">modded</span>' : 'unmodded'} · ${s.online.length} online: ${s.online.map(esc).join(', ') || 'nobody'}</p>
+    <p>Friend tunnel: ${p2p ? (p2p.error ? `<span class="bad">${esc(p2p.error)}</span>` : `<span class="ok">ready</span> · ${peers.length} connected (${peers.map((x) => x.path).join(', ') || '—'})`) : '<span class="bad">not running</span> — start the world with <code>lanternfall host</code> to let friends join.'}</p>`;
+  $('#invites').innerHTML = '<tr><th>Code</th><th>For</th><th>Uses left</th><th>Expires</th><th></th></tr>' + s.invites.map((i) =>
+    `<tr><td><code>${esc(i.code)}</code></td><td>${esc(i.label)}</td><td>${i.usesLeft < 0 ? '∞' : i.usesLeft}</td><td>${i.expires && !i.expires.startsWith('0001') ? new Date(i.expires).toLocaleString() : 'never'}</td>
+    <td><button class="danger" data-revoke="${esc(i.code)}">Revoke</button></td></tr>`).join('');
+  for (const b of document.querySelectorAll('[data-revoke]')) b.onclick = async () => { await api('DELETE', '/admin/api/invites/' + encodeURIComponent(b.dataset.revoke)); load(); };
+  const f = $('#cfg');
+  for (const [k, v] of Object.entries(s.config)) { const el = f.elements[k]; if (!el) continue; if (el.type === 'checkbox') el.checked = v; else el.value = v; }
+  $('#modlist').innerHTML = (s.mods || []).length ? '<p><b>Installed mods</b></p>' + s.mods.map((m) => `<label>${esc(m.name || m.dir)} ${m.version ? 'v' + esc(m.version) : ''}
+      <span><input type="checkbox" data-mod="${esc(m.id)}" ${s.config.enabledMods && s.config.enabledMods.includes(m.id) ? 'checked' : ''} ${m.id ? '' : 'disabled'}>
+      ${m.loaded ? '<span class="ok">loaded</span>' : ''} ${m.error ? `<span class="bad">${esc(m.error)}</span>` : ''}</span></label>`).join('') : `<p class="note">No mods installed. Put mod folders in <code>${esc(s.save.dataDir)}/mods/</code>.</p>`;
+  $('#players').innerHTML = '<tr><th>Name</th><th>Levels</th><th>Last seen</th><th></th></tr>' + s.characters.map((c) =>
+    `<tr><td>${esc(c.name)} ${c.online ? '<span class="ok">●</span>' : ''} ${c.banned ? '<span class="bad">banned</span>' : ''}</td><td class="note">${Object.entries(c.levels || {}).map(([k, v]) => k + ' ' + v).join(', ')}</td>
+    <td class="note">${c.lastSeen && !c.lastSeen.startsWith('0001') ? new Date(c.lastSeen).toLocaleString() : ''}</td>
+    <td class="row">${c.online ? `<button data-act="kick" data-name="${esc(c.name)}">Kick</button>` : ''}${c.banned ? `<button data-act="unban" data-name="${esc(c.name)}">Unban</button>` : `<button class="danger" data-act="ban" data-name="${esc(c.name)}">Ban</button>`}</td></tr>`).join('');
+  for (const b of document.querySelectorAll('[data-act]')) b.onclick = async () => {
+    if (b.dataset.act === 'ban' && !confirm('Ban ' + b.dataset.name + '? They will be disconnected and unable to rejoin.')) return;
+    await api('POST', '/admin/api/players', { action: b.dataset.act, name: b.dataset.name }); load();
+  };
+  const sv = s.save;
+  $('#saves').innerHTML = `<p>Last save: ${new Date(sv.lastSave).toLocaleString()} ${sv.error ? `<span class="bad">· SAVE FAILING: ${esc(sv.error)}</span>` : '<span class="ok">· OK</span>'}</p>
+    ${sv.recovered ? `<p class="bad">On startup the main save was damaged; the world was recovered from <code>${esc(sv.recoveredFrom)}</code>.</p>` : ''}
+    <p class="note">World folder: <code>${esc(sv.dataDir)}</code> · ${sv.backups.length} backups</p>`;
+}
+$('#unlock').onclick = () => { token = $('#token').value.trim(); load(); };
+$('#token').onkeydown = (e) => { if (e.key === 'Enter') $('#unlock').click(); };
+$('#mkinvite').onclick = async () => {
+  const r = await api('POST', '/admin/api/invites', { label: $('#ilabel').value, uses: +$('#iuses').value, hours: +$('#ihours').value });
+  $('#newinvite').innerHTML = r.shareText
+    ? `<p>Send this line to your friend <b>privately</b>:</p><div class="share" id="sharetext">${esc(r.shareText)}</div><div class="row"><button id="copy">Copy</button><span class="note">They run <code>lanternfall join</code> and paste it.</span></div>`
+    : `<p>Invite code: <code>${esc(r.invite.code)}</code></p><p class="bad">The friend tunnel isn't running, so there's no full invite line. Start the world with <code>lanternfall host</code>.</p>`;
+  if ($('#copy')) $('#copy').onclick = () => navigator.clipboard.writeText(r.shareText).then(() => { $('#copy').textContent = 'Copied ✓'; });
+  load();
+};
+$('#cfg').onsubmit = async (e) => {
+  e.preventDefault();
+  const f = e.target, c = {};
+  for (const k of ['name', 'description', 'access', 'difficulty', 'resources', 'trading']) c[k] = f.elements[k].value;
+  c.maxPlayers = +f.elements.maxPlayers.value; c.questXp = +f.elements.questXp.value;
+  c.pvp = f.elements.pvp.checked; c.allowMods = f.elements.allowMods.checked;
+  c.enabledMods = [...document.querySelectorAll('[data-mod]')].filter((x) => x.checked).map((x) => x.dataset.mod);
+  try {
+    const r = await api('PUT', '/admin/api/config', c);
+    $('#cfgmsg').innerHTML = r.restartRequired ? '<span class="ok">Saved.</span> Restart the world to apply mod changes.' : '<span class="ok">Saved and applied.</span>';
+    load();
+  } catch (err) { $('#cfgmsg').innerHTML = `<span class="bad">${esc(err.message)}</span>`; }
+};
+$('#savenow').onclick = async () => { try { await api('POST', '/admin/api/save'); load(); } catch (e) { alert(e.message); } };
+if (token) load();
+setInterval(() => { if (state && document.visibilityState === 'visible') load(); }, 5000);
+</script>
+</body>
+</html>
