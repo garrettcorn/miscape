@@ -120,6 +120,12 @@ web/                browser client (embedded into the binary)
 mods/               example mod
 ```
 
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md). First-time contributors sign the
+[Contributor License Agreement](CLA.md) by leaving a one-line comment on their pull request; a bot walks you through it.
+You keep your copyright, and the CLA guarantees your contribution stays open source.
+
 ## License
 
 Copyright © 2026 Garrett Cornwell.

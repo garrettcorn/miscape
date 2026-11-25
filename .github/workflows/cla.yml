@@ -1,0 +1,146 @@
+name: CLA
+
+# Checks that every commit author in a pull request has signed CLA.md.
+# Contributors sign by commenting the exact phrase below on their PR.
+# Signatures are recorded in signatures.json on the `cla-signatures` branch,
+# and a "CLA" commit status is set on the PR (make it a required check in
+# branch protection to enforce it).
+#
+# Security: this uses pull_request_target so it can comment on PRs from forks,
+# so it must NEVER check out or run code from the pull request. It only reads
+# PR metadata and comments through the API.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write      # write signatures.json on the cla-signatures branch
+  pull-requests: read
+  issues: write        # bot comment on the PR conversation
+  statuses: write      # CLA commit status
+
+# One run at a time, so concurrent signatures can't clobber each other.
+concurrency:
+  group: cla-signatures
+  cancel-in-progress: false
+
+jobs:
+  cla:
+    if: >-
+      github.event_name == 'pull_request_target' ||
+      (github.event.issue.pull_request &&
+       (contains(github.event.comment.body, 'I hereby sign the CLA') || github.event.comment.body == 'recheck'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const PHRASE = 'I have read the CLA Document and I hereby sign the CLA';
+            const CLA_VERSION = '1.0';
+            const BRANCH = 'cla-signatures';
+            const FILE = 'signatures.json';
+            const ALLOW = ['garrettcorn']; // copyright holder: no CLA needed
+            const MARK = '<!-- lanternfall-cla-bot -->';
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request ? context.payload.pull_request.number : context.payload.issue.number;
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
+            const claUrl = `https://github.com/${owner}/${repo}/blob/${pr.base.repo.default_branch}/CLA.md`;
+
+            async function load() {
+              try {
+                const { data } = await github.rest.repos.getContent({ owner, repo, path: FILE, ref: BRANCH });
+                return { sha: data.sha, list: JSON.parse(Buffer.from(data.content, 'base64').toString('utf8')) };
+              } catch (e) {
+                if (e.status !== 404) throw e;
+                return { sha: null, list: [] };
+              }
+            }
+            async function ensureBranch() {
+              try {
+                await github.rest.repos.getBranch({ owner, repo, branch: BRANCH });
+              } catch (e) {
+                if (e.status !== 404) throw e;
+                const { data: base } = await github.rest.repos.getBranch({ owner, repo, branch: pr.base.repo.default_branch });
+                await github.rest.git.createRef({ owner, repo, ref: `refs/heads/${BRANCH}`, sha: base.commit.sha });
+              }
+            }
+            async function save(entries) {
+              await ensureBranch();
+              for (let attempt = 0; attempt < 5; attempt++) {
+                const cur = await load();
+                const have = new Set(cur.list.map((s) => s.id));
+                const merged = cur.list.concat(entries.filter((s) => !have.has(s.id)));
+                try {
+                  await github.rest.repos.createOrUpdateFileContents({
+                    owner, repo, path: FILE, branch: BRANCH, sha: cur.sha || undefined,
+                    message: `CLA signed by ${entries.map((s) => s.login).join(', ')} (PR ${prNumber})`,
+                    content: Buffer.from(JSON.stringify(merged, null, 2) + '\n').toString('base64'),
+                  });
+                  return;
+                } catch (e) {
+                  if (e.status !== 409 && e.status !== 422) throw e;
+                }
+              }
+              throw new Error('Could not save CLA signatures after several attempts.');
+            }
+            const norm = (s) => (s || '').trim().replace(/\s+/g, ' ').replace(/\.$/, '').toLowerCase();
+
+            // Who needs to sign: every commit author on the PR.
+            const commits = await github.paginate(github.rest.pulls.listCommits, { owner, repo, pull_number: prNumber, per_page: 100 });
+            const authors = new Map();
+            const unlinked = new Set();
+            for (const c of commits) {
+              const u = c.author;
+              if (!u) { unlinked.add(c.commit.author ? c.commit.author.name : 'unknown'); continue; }
+              if (u.type === 'Bot' || ALLOW.includes(u.login)) continue;
+              authors.set(u.id, u.login);
+            }
+
+            // Record new signatures from comments on this PR.
+            const sig = await load();
+            const signed = new Set(sig.list.map((s) => s.id));
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: prNumber, per_page: 100 });
+            const fresh = [];
+            for (const cm of comments) {
+              if (!cm.user || cm.user.type === 'Bot' || signed.has(cm.user.id)) continue;
+              if (norm(cm.body) !== norm(PHRASE)) continue;
+              fresh.push({ login: cm.user.login, id: cm.user.id, signedAt: cm.created_at, claVersion: CLA_VERSION, pullRequest: prNumber, comment: cm.html_url });
+              signed.add(cm.user.id);
+            }
+            if (fresh.length) await save(fresh);
+
+            const missing = [...authors].filter(([id]) => !signed.has(id)).map(([, login]) => login);
+            const ok = missing.length === 0 && unlinked.size === 0;
+
+            await github.rest.repos.createCommitStatus({
+              owner, repo, sha: pr.head.sha, context: 'CLA', target_url: claUrl,
+              state: ok ? 'success' : 'failure',
+              description: (ok ? 'All contributors have signed the CLA'
+                : missing.length ? `Waiting for CLA: ${missing.join(', ')}` : 'Some commits are not linked to a GitHub account').slice(0, 139),
+            });
+
+            // Keep one bot comment up to date.
+            const mine = comments.find((cm) => cm.user && cm.user.type === 'Bot' && (cm.body || '').includes(MARK));
+            let body;
+            if (ok) {
+              if (!mine) return; // nothing to say (e.g. maintainer-only PR)
+              body = `${MARK}\n✅ All contributors have signed the [CLA](${claUrl}). Thank you!`;
+            } else {
+              body = `${MARK}\nThanks for contributing to Lanternfall! Before we can merge this, every commit author needs to sign our [Contributor License Agreement](${claUrl}). ` +
+                `You keep the copyright in your work, and the CLA promises your contribution will always stay available as open source.\n\n`;
+              if (missing.length) {
+                body += `To sign, read the [CLA](${claUrl}) and reply to this pull request with exactly:\n\n` +
+                  '```\n' + PHRASE + '\n```\n\nStill needed from: ' + missing.map((l) => '@' + l).join(', ') + '\n\n';
+              }
+              if (unlinked.size) {
+                body += `Some commits are by authors whose email isn't linked to a GitHub account (${[...unlinked].join(', ')}). ` +
+                  'Please add that email to your GitHub account (Settings → Emails) or amend the commits, then comment `recheck`.\n';
+              }
+            }
+            if (mine) {
+              if (mine.body !== body) await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number: prNumber, body });
+            }
