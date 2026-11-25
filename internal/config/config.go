@@ -24,7 +24,7 @@ const (
 
 // Env holds process-level settings. Every field maps to an LF_* variable.
 type Env struct {
-	Addr       string // LF_ADDR: HTTP listen address (default 127.0.0.1:8080)
+	Addr       string // LF_ADDR: HTTP listen address (default 127.0.0.1:23710)
 	DataDir    string // LF_DATA_DIR: world data directory (default ./data/<mode>)
 	Mode       string // LF_MODE: official | private
 	ModsDir    string // LF_MODS_DIR: mods directory (default <data>/mods)
@@ -186,10 +186,17 @@ func defaultAddr() string {
 	if p := os.Getenv("PORT"); p != "" {
 		return "127.0.0.1:" + p
 	}
-	return "127.0.0.1:8080"
+	return "127.0.0.1:" + strconv.Itoa(DefaultPort)
 }
 
 // DefaultSourceURL is the upstream source repository. If you run a modified
 // version for others over a network, AGPL-3.0 section 13 requires you to offer
 // your modified source: set LF_SOURCE_URL to where it is published.
 const DefaultSourceURL = "https://github.com/garrettcorn/miscape"
+
+// Default ports, chosen to be uncommon (below the OS ephemeral range) so they
+// rarely collide with other local dev servers.
+const (
+	DefaultPort     = 23710 // world server (serve / host)
+	DefaultJoinPort = 23711 // `lanternfall join` companion
+)

@@ -63,7 +63,7 @@ jobs:
           cat > "dist/$NAME/START-HERE.txt" <<'EOF'
           Lanternfall
           ===========
-          Play on your own computer:   lanternfall serve   then open http://127.0.0.1:8080/
+          Play on your own computer:   lanternfall serve   then open http://127.0.0.1:23710/
           Host a world for friends:    lanternfall host    (see docs/HOSTING.md)
           Join a friend's world:       lanternfall join    and paste their invite
 

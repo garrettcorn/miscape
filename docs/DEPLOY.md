@@ -8,14 +8,14 @@ go build -o lanternfall ./cmd/lanternfall
 ```
 
 ```bash
-LF_MODE=official LF_ADDR=127.0.0.1:8080 LF_DATA_DIR=/var/lib/lanternfall/shard1 LF_PUBLIC_URL=https://play.example.com ./lanternfall serve --mode official
+LF_MODE=official LF_ADDR=127.0.0.1:23710 LF_DATA_DIR=/var/lib/lanternfall/shard1 LF_PUBLIC_URL=https://play.example.com ./lanternfall serve --mode official
 ```
 
 Put a TLS reverse proxy in front, for example Caddy:
 
 ```
 play.example.com {
-    reverse_proxy 127.0.0.1:8080
+    reverse_proxy 127.0.0.1:23710
 }
 ```
 

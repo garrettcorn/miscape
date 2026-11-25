@@ -34,7 +34,7 @@ Requirements: Go 1.27.4+ (the `go` command fetches it automatically if you have 
 go run ./cmd/lanternfall serve
 ```
 
-Open http://127.0.0.1:8080/, pick a name, and play. World data is saved in `./data/private/`.
+Open http://127.0.0.1:23710/, pick a name, and play. World data is saved in `./data/private/`.
 
 ## Host a world for friends
 
@@ -42,7 +42,7 @@ Open http://127.0.0.1:8080/, pick a name, and play. World data is saved in `./da
 go run ./cmd/lanternfall host
 ```
 
-Then open the admin screen (http://127.0.0.1:8080/admin), paste the admin token
+Then open the admin screen (http://127.0.0.1:23710/admin), paste the admin token
 printed in the terminal, and create an invite. Each friend runs:
 
 ```bash

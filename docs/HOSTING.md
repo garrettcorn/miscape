@@ -14,8 +14,8 @@ You'll see:
 
 ```
 🏮 Private world "My Lanternfall World" is running.
-   Play:   http://127.0.0.1:8080/
-   Admin:  http://127.0.0.1:8080/admin
+   Play:   http://127.0.0.1:23710/
+   Admin:  http://127.0.0.1:23710/admin
    Admin token (paste into the admin screen): ********
    ✓ Tunnel ready. To invite a friend: open the Admin screen → Invites → Create…
 ```
@@ -49,13 +49,13 @@ delete `host-key.json` if you use it.
 1. Install Lanternfall: get the `lanternfall` program, or run
    `go run ./cmd/lanternfall join` from the source.
 2. Run `lanternfall join` and paste the invite when asked.
-3. A browser opens at `http://127.0.0.1:8090/`. The invite code is already
+3. A browser opens at `http://127.0.0.1:23711/`. The invite code is already
    filled in. They pick a name and play. They keep the terminal window open
    while playing.
 4. Next time they run `lanternfall join` with any fresh invite from you, the
    browser offers **Continue as <name>**. The browser remembers the character
    per world *and per local address*, so they should keep using the same port
-   (default 8090). If port 8090 is busy, a random port is used and the browser
+   (default 23711). If port 23711 is busy, a random port is used and the browser
    won't find the saved character. Free the port, or pass `--port`.
 
 The join program checks the connection and explains problems in plain language:

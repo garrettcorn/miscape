@@ -71,7 +71,7 @@ func main() {
 func usage() {
 	fmt.Fprint(os.Stderr, `Lanternfall `+server.Version+`
 
-  lanternfall serve [--mode private|official]  Run a world on this machine (LF_ADDR, default 127.0.0.1:8080)
+  lanternfall serve [--mode private|official]  Run a world on this machine (LF_ADDR, default 127.0.0.1:23710)
   lanternfall host  [--keep-address]           Run a private world and let friends join over Tailcat
   lanternfall join  [invite]                    Join a friend's private world (opens your browser)
   lanternfall backups                           List backups of the world in LF_DATA_DIR
@@ -181,7 +181,7 @@ func cmdHost(args []string) error {
 
 func cmdJoin(args []string) error {
 	fs := flag.NewFlagSet("join", flag.ExitOnError)
-	port := fs.Int("port", 8090, "local port for your browser")
+	port := fs.Int("port", config.DefaultJoinPort, "local port for your browser")
 	noOpen := fs.Bool("no-browser", false, "don't open a browser automatically")
 	verbose := fs.Bool("verbose", false, "verbose Tailcat networking logs")
 	fs.Parse(args)

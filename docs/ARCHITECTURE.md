@@ -149,7 +149,7 @@ practical architecture:
                                          ▼
                                 lanternfall host  (Go game server)
                                          ▲
- Host's own browser ──HTTP/WS──► 127.0.0.1:8080 (loopback, admin allowed)
+ Host's own browser ──HTTP/WS──► 127.0.0.1:23710 (loopback, admin allowed)
 ```
 
 - The friend runs one command and pastes the invite. The companion connects

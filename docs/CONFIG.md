@@ -4,7 +4,7 @@
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `LF_ADDR` | `127.0.0.1:8080` (or `127.0.0.1:$PORT`) | HTTP/WebSocket listen address. Private worlds should stay on loopback. |
+| `LF_ADDR` | `127.0.0.1:23710` (or `127.0.0.1:$PORT`) | HTTP/WebSocket listen address. Private worlds should stay on loopback. |
 | `LF_MODE` | `private` (`serve --mode`) | `official` or `private`. A data dir created in one mode refuses to open in the other. |
 | `LF_DATA_DIR` | `./data/<mode>` | World folder: `world.json`, `state.json`, `backups/`, secrets, `mods/`. |
 | `LF_MODS_DIR` | `<data>/mods` | Where mods are discovered. |
