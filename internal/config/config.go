@@ -31,6 +31,7 @@ type Env struct {
 	WorldList  string // LF_WORLD_LIST: JSON file listing official worlds for /api/worlds
 	DERPMapURL string // LF_DERP_MAP_URL: custom Tailcat DERP map (bring your own relay)
 	PublicURL  string // LF_PUBLIC_URL: allowed WebSocket Origin for official deployments
+	SourceURL  string // LF_SOURCE_URL: where players can get this server's source (AGPL-3.0 section 13)
 	Autosave   int    // LF_AUTOSAVE_SEC (default 30)
 }
 
@@ -39,6 +40,7 @@ func FromEnv(mode string) Env {
 		Addr: getenv("LF_ADDR", defaultAddr()), Mode: getenv("LF_MODE", mode),
 		WorldList: os.Getenv("LF_WORLD_LIST"), DERPMapURL: os.Getenv("LF_DERP_MAP_URL"),
 		PublicURL: os.Getenv("LF_PUBLIC_URL"),
+		SourceURL: getenv("LF_SOURCE_URL", DefaultSourceURL),
 	}
 	e.DataDir = getenv("LF_DATA_DIR", filepath.Join("data", e.Mode))
 	e.ModsDir = getenv("LF_MODS_DIR", filepath.Join(e.DataDir, "mods"))
@@ -186,3 +188,8 @@ func defaultAddr() string {
 	}
 	return "127.0.0.1:8080"
 }
+
+// DefaultSourceURL is the upstream source repository. If you run a modified
+// version for others over a network, AGPL-3.0 section 13 requires you to offer
+// your modified source: set LF_SOURCE_URL to where it is published.
+const DefaultSourceURL = "https://github.com/garrettcorn/miscape"

@@ -188,3 +188,4 @@ body.touch #hotbar { top: 5.8em; bottom: auto; left: max(12px, env(safe-area-ins
 body.touch #toasts { top: 11em; max-width: 92vw; text-align: center; }
 .panelhead { position: relative; padding-right: 3.2em; }
 .panelhead .close { position: absolute; right: .4em; top: .5em; }
+.hint a { color: var(--quest); }

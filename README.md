@@ -7,6 +7,7 @@
 [![Downloads](https://img.shields.io/github/downloads/garrettcorn/miscape/total)](https://github.com/garrettcorn/miscape/releases)
 [![Go version](https://img.shields.io/github/go-mod/go-version/garrettcorn/miscape)](go.mod)
 [![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-informational)](https://garrettcorn.github.io/miscape/#download)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 
 **🌐 [Download & play: garrettcorn.github.io/miscape](https://garrettcorn.github.io/miscape/)**
 
@@ -118,3 +119,23 @@ internal/p2p        Tailcat host listener + friend join companion
 web/                browser client (embedded into the binary)
 mods/               example mod
 ```
+
+## License
+
+Copyright © 2026 Garrett Cornwell.
+
+Lanternfall is free software: you can redistribute it and/or modify it under the
+terms of the [GNU Affero General Public License v3.0](LICENSE) (or, at your option, any later version).
+
+In short: you may use, study, change and share it, including commercially, but
+if you distribute it **or run a modified version that other people connect to
+over a network**, you must make your full source code available under the same
+license. Running a modified server? Set `LF_SOURCE_URL` to where your source is
+published. It's shown to players on the join screen and in `/api/info`.
+
+The AGPL does not grant rights to the **Lanternfall** name or logo. Please
+don't present a fork as the official game. Commercial licenses for uses the
+AGPL doesn't fit may be available from the copyright holder.
+
+Third-party dependencies keep their own licenses (Tailcat and Tailscale:
+BSD-3-Clause; coder/websocket: ISC), all compatible with the AGPL.

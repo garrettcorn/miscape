@@ -372,6 +372,8 @@ type Info struct {
 	Access  string   `json:"access"`
 	PvP     bool     `json:"pvp"`
 	Trading bool     `json:"trading"`
+	Source  string   `json:"source"`
+	License string   `json:"license"`
 }
 
 func (s *Server) info() Info {
@@ -380,7 +382,7 @@ func (s *Server) info() Info {
 		inf = Info{Game: "lanternfall", Version: Version, Proto: [2]int{protocol.ProtoMin, protocol.ProtoMax},
 			Realm: s.G.Realm.ID, Kind: s.G.Realm.Kind, Name: s.G.Cfg.Name, Desc: s.G.Cfg.Description,
 			Modded: s.G.Realm.EverModded, Mods: s.G.C.Mods, Players: len(s.G.Players), Max: s.G.Cfg.MaxPlayers,
-			Access: s.G.Cfg.Access, PvP: s.G.Cfg.PvP, Trading: s.G.Cfg.Trading == "on"}
+			Access: s.G.Cfg.Access, PvP: s.G.Cfg.PvP, Trading: s.G.Cfg.Trading == "on", Source: s.Env.SourceURL, License: "AGPL-3.0-or-later"}
 	})
 	return inf
 }

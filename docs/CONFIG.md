@@ -13,6 +13,7 @@
 | `LF_PUBLIC_URL` | — | Official deployments: allowed WebSocket Origin host, e.g. `https://play.example.com`. |
 | `LF_DERP_MAP_URL` | Tailcat default | Custom DERP map, to use your own relay(s) instead of the free public ones. |
 | `LF_INVITE` | — | `join`: invite line (alternative to pasting). Treat as secret. |
+| `LF_SOURCE_URL` | upstream repo | Source link shown to players (`/api/info`, join screen). **Required for modified public servers** under AGPL-3.0 section 13: point it at your modified source. |
 | `PORT` | — | Used when `LF_ADDR` is unset (dev tools, PaaS). |
 
 No secrets live in source control. Secrets are generated at runtime into the

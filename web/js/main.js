@@ -78,6 +78,9 @@ class Game {
       return;
     }
     this.info = info;
+    if (/^https?:\/\//.test(info.source || '')) {
+      $('#sourcelink').innerHTML = `Free software under ${esc(info.license || 'AGPL-3.0')} · <a href="${esc(info.source)}" target="_blank" rel="noopener">Source code</a>`;
+    }
     const kind = info.kind === 'official' ? '<span class="badge official">Official world</span>' : '<span class="badge private">Private world</span>';
     wi.innerHTML = `<h3>${esc(info.name)}</h3>${kind}${info.modded ? '<span class="badge modded">Modded</span>' : ''}
       <span class="note">${info.players}/${info.max} players · PvP ${info.pvp ? 'on' : 'off'} · trading ${info.trading ? 'on' : 'off'}</span>

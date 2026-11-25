@@ -17,7 +17,7 @@ import (
 )
 
 func testEnv(dir string) config.Env {
-	return config.Env{Addr: "127.0.0.1:0", DataDir: dir, Mode: config.ModePrivate, ModsDir: dir + "/mods", Autosave: 30}
+	return config.Env{Addr: "127.0.0.1:0", DataDir: dir, Mode: config.ModePrivate, ModsDir: dir + "/mods", Autosave: 30, SourceURL: config.DefaultSourceURL}
 }
 
 func start(t *testing.T, dir string, local bool) (*Server, *httptest.Server) {
@@ -286,5 +286,22 @@ func TestInfoHasNoSecrets(t *testing.T) {
 	resp.Body.Close()
 	if strings.Contains(string(b), s.AdminToken) || strings.Contains(string(b), "token") {
 		t.Fatal("info leaks secrets: " + string(b))
+	}
+}
+
+func TestInfoOffersSourceCode(t *testing.T) {
+	s, ts := start(t, t.TempDir(), true)
+	defer ts.Close()
+	defer s.Shutdown()
+	resp, err := http.Get(ts.URL + "/api/info")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var inf Info
+	json.NewDecoder(resp.Body).Decode(&inf)
+	// AGPL-3.0 section 13: network users must be offered the source.
+	if !strings.HasPrefix(inf.Source, "https://") || inf.License != "AGPL-3.0-or-later" {
+		t.Fatalf("info must advertise source and license: %+v", inf)
 	}
 }
