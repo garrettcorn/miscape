@@ -1,5 +1,15 @@
 # 🏮 Lanternfall
 
+[![CI](https://github.com/garrettcorn/miscape/actions/workflows/ci.yml/badge.svg)](https://github.com/garrettcorn/miscape/actions/workflows/ci.yml)
+[![Release](https://github.com/garrettcorn/miscape/actions/workflows/release.yml/badge.svg)](https://github.com/garrettcorn/miscape/actions/workflows/release.yml)
+[![Website](https://github.com/garrettcorn/miscape/actions/workflows/pages.yml/badge.svg)](https://garrettcorn.github.io/miscape/)
+[![Latest release](https://img.shields.io/github/v/release/garrettcorn/miscape?label=download)](https://github.com/garrettcorn/miscape/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/garrettcorn/miscape/total)](https://github.com/garrettcorn/miscape/releases)
+[![Go version](https://img.shields.io/github/go-mod/go-version/garrettcorn/miscape)](go.mod)
+[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-informational)](https://garrettcorn.github.io/miscape/#download)
+
+**🌐 [Download & play: garrettcorn.github.io/miscape](https://garrettcorn.github.io/miscape/)**
+
 A small, cozy multiplayer voxel RPG for the web. Explore the lantern-lit village
 of **Wickhollow**, chop and mine, craft gear, help villagers with quests, trade
 with friends, and, if you dare, carry a lantern into **the Gloam**.
