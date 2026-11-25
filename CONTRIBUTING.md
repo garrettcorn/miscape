@@ -28,6 +28,12 @@ available as open source** (Section 4).
 Every commit author in a pull request must have signed. Make sure the email
 on your commits is linked to your GitHub account, or the bot can't match you.
 
+## Changelog
+
+Please don't edit `CHANGELOG.md` in pull requests. The maintainer writes entries at release time
+following [Common Changelog](https://common-changelog.org/), and links them to your commits. Clear,
+imperative commit messages ('Add trading timeout', 'Fix wisp leash') make that easy.
+
 ## Development
 
 ```bash

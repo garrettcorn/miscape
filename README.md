@@ -8,6 +8,7 @@
 [![Go version](https://img.shields.io/github/go-mod/go-version/garrettcorn/miscape)](go.mod)
 [![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-informational)](https://garrettcorn.github.io/miscape/#download)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
+[![Common Changelog](https://common-changelog.org/badge.svg)](CHANGELOG.md)
 
 **🌐 [Download & play: garrettcorn.github.io/miscape](https://garrettcorn.github.io/miscape/)**
 
@@ -83,9 +84,14 @@ so you only need to face them roughly.
   through `.github/workflows/pages.yml` whenever `site/` changes on `main`.
   Preview it locally with `go run ./tools/sitepreview`. Set
   `publicWorldUrl` in [`site/config.js`](site/config.js) once an official world is online.
-- To publish a release, push a version tag. `.github/workflows/release.yml`
-  tests, cross-compiles Windows/macOS/Linux zips, and attaches them to a
-  GitHub Release. The site's download buttons always point at the latest one.
+- To publish a release, first add an entry to [`CHANGELOG.md`](CHANGELOG.md)
+  following [Common Changelog](https://common-changelog.org/), with a
+  `## [X.Y.Z] - YYYY-MM-DD` heading, Changed/Added/Removed/Fixed groups, and
+  commit links. There's no Unreleased section. Commit it, then push a version tag.
+  `.github/workflows/release.yml` tests, cross-compiles Windows/macOS/Linux zips,
+  and publishes a GitHub Release whose notes are that changelog entry. The release
+  fails if the entry is missing. The site's download buttons always point at the
+  latest release.
 
 ```bash
 git tag v0.1.0

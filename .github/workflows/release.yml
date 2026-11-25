@@ -86,10 +86,26 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
+      # Release notes come from CHANGELOG.md (Common Changelog). The entry must
+      # be committed before the tag is pushed; the release fails without it.
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          awk -v v="$VERSION" 'index($0, "## [" v "]") == 1 {f=1; next} f && /^## \[/ {exit} f && /^\[[^]]+\]: / {exit} f {print}' CHANGELOG.md \
+            | sed -e '/./,$!d' | sed -e ':a' -e '/^\n*$/{$d;N;ba' -e '}' > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error file=CHANGELOG.md::No '## [$VERSION] - YYYY-MM-DD' entry found. Add it (Common Changelog) before tagging."
+            exit 1
+          fi
+          cat notes.md
       - name: Create or update the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -99,6 +115,7 @@ jobs:
           cat dist/*.sha256 > dist/SHA256SUMS.txt
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/*.zip dist/SHA256SUMS.txt --clobber
+            gh release edit "$TAG" --notes-file notes.md
           else
-            gh release create "$TAG" dist/*.zip dist/SHA256SUMS.txt --title "Lanternfall $TAG" --generate-notes
+            gh release create "$TAG" dist/*.zip dist/SHA256SUMS.txt --title "Lanternfall $TAG" --notes-file notes.md
           fi
