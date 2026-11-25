@@ -52,6 +52,7 @@ class Game {
 
   applyQuality() {
     this.q = quality();
+    applyAccessibility();
     this.r.resize(this.q.resScale);
     if (this.world) for (const key of [...this.r.chunks.keys()]) { const [cx, cz, lod] = key.split(',').map(Number); if (!lod) this.dirty.add(`${cx},${cz},0`); }
   }

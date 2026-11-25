@@ -9,6 +9,8 @@ const SKILL_ICON = { woodcutting: '🪓', mining: '⛏', crafting: '🔨', comba
 export function applyAccessibility() {
   document.documentElement.style.setProperty('--ui-scale', settings.textScale);
   document.body.classList.toggle('reduce-motion', !!settings.reduceMotion);
+  // Background blur costs GPU time over the 3D scene: use solid panels when asked, or on the Low preset.
+  document.body.classList.toggle('no-glass', !!settings.reduceTransparency || quality().name === 'low');
   $('#perf').hidden = !settings.showPerf;
 }
 
@@ -291,6 +293,7 @@ export class UI {
       <h4>Accessibility</h4>
       <label>Text size <select data-set="textScale" data-fid="ts">${[0.85, 1, 1.15, 1.3, 1.5].map((v) => `<option value="${v}" ${+settings.textScale === v ? 'selected' : ''}>${Math.round(v * 100)}%</option>`).join('')}</select></label>
       <label>Reduce motion &amp; effects (no vignette, shake, sway, floating numbers) <input type="checkbox" ${settings.reduceMotion ? 'checked' : ''} data-set="reduceMotion" data-fid="rm"></label>
+      <label>Reduce transparency (solid panels instead of glass; always on with Low graphics) <input type="checkbox" ${settings.reduceTransparency ? 'checked' : ''} data-set="reduceTransparency" data-fid="rt"></label>
       <label>Look sensitivity <input type="range" min="0.3" max="2.5" step="0.1" value="${settings.sensitivity}" data-set="sensitivity" data-fid="se"></label>
       <label>Invert look Y <input type="checkbox" ${settings.invertY ? 'checked' : ''} data-set="invertY" data-fid="iy"></label>
       <label>Show performance overlay <input type="checkbox" ${settings.showPerf ? 'checked' : ''} data-set="showPerf" data-fid="pf"></label>

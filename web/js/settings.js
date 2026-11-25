@@ -19,7 +19,7 @@ export const DEFAULT_KEYS = {
 };
 
 const DEFAULTS = {
-  quality: 'auto', textScale: 1, reduceMotion: false, showPerf: false, invertY: false, sensitivity: 1,
+  quality: 'auto', textScale: 1, reduceMotion: false, reduceTransparency: false, showPerf: false, invertY: false, sensitivity: 1,
   keys: { ...DEFAULT_KEYS }, custom: null,
 };
 
@@ -32,6 +32,7 @@ function load() {
 
 export const settings = load();
 if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches && localStorage.getItem('lf.settings') === null) settings.reduceMotion = true;
+if (window.matchMedia && matchMedia('(prefers-reduced-transparency: reduce)').matches && localStorage.getItem('lf.settings') === null) settings.reduceTransparency = true;
 
 export function save() {
   try { localStorage.setItem('lf.settings', JSON.stringify(settings)); } catch { /* private mode */ }
