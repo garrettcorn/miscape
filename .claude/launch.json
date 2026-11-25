@@ -7,6 +7,13 @@
       "runtimeArgs": ["run", "./cmd/lanternfall", "serve"],
       "port": 8137,
       "autoPort": false
+    },
+    {
+      "name": "site",
+      "runtimeExecutable": "go",
+      "runtimeArgs": ["run", "./tools/sitepreview"],
+      "port": 8150,
+      "autoPort": false
     }
   ]
 }

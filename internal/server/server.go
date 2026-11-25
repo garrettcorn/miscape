@@ -28,7 +28,8 @@ import (
 	"lanternfall/internal/store"
 )
 
-const Version = "0.1.0"
+// Version is overridden at release build time with -ldflags "-X lanternfall/internal/server.Version=..."
+var Version = "0.1.0"
 
 // Server owns the game loop. All game access happens via s.do on the loop.
 type Server struct {

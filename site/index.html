@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lanternfall — a cozy voxel RPG</title>
+<meta name="description" content="Lanternfall is a small, cozy multiplayer voxel RPG. Download the world server, host a world for friends, and play in your browser.">
+<meta property="og:title" content="Lanternfall">
+<meta property="og:description" content="A cozy voxel RPG of lanterns, little quests and friendly faces. Host a world, invite friends, play in your browser.">
+<meta property="og:image" content="img/village.jpg">
+<meta name="theme-color" content="#141c29">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏮</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#download">Skip to download</a>
+
+<header class="hero">
+  <nav class="top" aria-label="Site">
+    <span class="brand"><span aria-hidden="true">🏮</span> Lanternfall</span>
+    <span class="navlinks">
+      <a href="#play">Play</a>
+      <a href="#download">Download</a>
+      <a href="#faq">FAQ</a>
+      <a id="ghlink" href="https://github.com/garrettcorn/miscape">GitHub</a>
+    </span>
+  </nav>
+  <div class="herobody">
+    <h1>Lanternfall</h1>
+    <p class="tag">A cozy voxel RPG of lanterns, little quests and friendly faces.
+      Chop and mine, craft gear, help the villagers of Wickhollow, trade with friends —
+      and, if you dare, carry a lantern into <em>the Gloam</em>.</p>
+    <div class="cta">
+      <a class="btn primary big" id="dl-main" href="#download">Download</a>
+      <a class="btn big" id="play-main" href="#play">Play in your browser</a>
+    </div>
+    <p class="meta" id="version-line">Free · Windows, macOS &amp; Linux · plays in any modern browser</p>
+  </div>
+</header>
+
+<main>
+  <section class="shots" aria-label="Screenshots">
+    <figure><img src="img/village.jpg" alt="The lantern-lit plaza of Wickhollow with Mabel the Lamplighter and a stone well" loading="lazy" width="800" height="600"><figcaption>Wickhollow, a safe little village</figcaption></figure>
+    <figure><img src="img/gloam.jpg" alt="The dim Gloam, lit by glowing violet crystals and twisted deadwood" loading="lazy" width="800" height="600"><figcaption>The Gloam — optional, dim, and dangerous</figcaption></figure>
+  </section>
+
+  <section id="play" class="band">
+    <h2>Play in your browser</h2>
+    <p class="lead">The game itself runs in your browser — no install for the game. A world is run by the small <b>Lanternfall</b> program (or by a public server), and your browser connects to it.</p>
+    <div class="cards">
+      <article class="card" id="public-card">
+        <h3>🌍 Public world</h3>
+        <div id="public-world"><p class="muted">No public world is running yet. For now, host your own or join a friend's.</p></div>
+      </article>
+      <article class="card">
+        <h3>🏡 Your own world</h3>
+        <ol>
+          <li><a href="#download">Download</a> and unzip Lanternfall.</li>
+          <li>Run <code>lanternfall serve</code> (or <code>host</code> to invite friends — on Windows, double-click <b>start-world.bat</b>).</li>
+          <li>Open your world:</li>
+        </ol>
+        <a class="btn" href="http://127.0.0.1:8080/" target="_blank" rel="noopener">Open my world ↗</a>
+        <p class="muted small">This link only works while Lanternfall is running on this computer.</p>
+      </article>
+      <article class="card">
+        <h3>🤝 A friend's world</h3>
+        <ol>
+          <li>Ask your friend for an invite (it starts with <code>LF1.</code>).</li>
+          <li>Run <code>lanternfall join</code> (Windows: <b>join-friend.bat</b>) and paste it.</li>
+          <li>Your browser opens the game. If not:</li>
+        </ol>
+        <a class="btn" href="http://127.0.0.1:8090/" target="_blank" rel="noopener">Open friend's world ↗</a>
+        <p class="muted small">Works while <code>lanternfall join</code> is running. Connections are end-to-end encrypted via <a href="https://github.com/tailscale/tailcat">Tailcat</a>.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="download">
+    <h2>Download the world server</h2>
+    <p class="lead">One small program to run a world on your computer, host it for friends, or join theirs. <span id="dl-version"></span></p>
+    <div class="recommended" id="recommended"></div>
+    <table class="dl" aria-label="All downloads">
+      <thead><tr><th>Platform</th><th>File</th></tr></thead>
+      <tbody id="dl-table"></tbody>
+    </table>
+    <p class="muted small">Checksums: <a id="sums" href="#">SHA256SUMS.txt</a> · <a id="all-releases" href="#">All releases &amp; release notes</a> · Build from source: <code>go run ./cmd/lanternfall serve</code></p>
+    <div class="note">
+      <b>First launch warnings.</b> Builds aren't code-signed yet, so
+      <b>Windows</b> may show “Windows protected your PC” (choose <i>More info → Run anyway</i>) and
+      <b>macOS</b> may block it (right-click → <i>Open</i>, or run <code>xattr -d com.apple.quarantine lanternfall</code>).
+      Only download from this page or the GitHub releases.
+    </div>
+  </section>
+
+  <section class="band features">
+    <h2>What's in it</h2>
+    <ul class="grid">
+      <li><b>🪓 Gather &amp; craft</b> Woodcutting, Mining and Crafting — from planks to a glimmer blade.</li>
+      <li><b>⚔ Gentle combat</b> Auto-targeted melee that's friendly to controllers and touch.</li>
+      <li><b>📜 Little quests</b> Help Mabel relight Wickhollow, then earn the Warden's trust.</li>
+      <li><b>🤝 Safe trading</b> Both players lock and confirm; the swap happens all at once or not at all.</li>
+      <li><b>🎮 Your controls</b> Gamepad first, remappable keyboard &amp; mouse, and touch.</li>
+      <li><b>🧩 Simple mods</b> Data-only packs for items, recipes and quests — no code, no risk to your files.</li>
+    </ul>
+  </section>
+
+  <section id="faq">
+    <h2>FAQ</h2>
+    <details><summary>Is my progress shared between worlds?</summary>
+      <p>No. Each world keeps its own characters, saved by whoever runs it. Progress in a friend's world (or a modded world) never moves to a public world.</p></details>
+    <details><summary>Can I play on a phone or tablet?</summary>
+      <p>Yes, the game has touch controls — but a phone can't run the Lanternfall program, so phones can play on a public world (once one is running). Joining a friend's private world currently needs a computer.</p></details>
+    <details><summary>Is it safe to share an invite?</summary>
+      <p>Share invites only privately (direct messages), like a house key. The host can make single-use, expiring invites and revoke them any time.</p></details>
+    <details><summary>What do I need?</summary>
+      <p>Windows 10+, macOS 12+, or Linux, and a browser with WebGL2 (current Chrome, Edge, Firefox or Safari). Graphics settings scale down for older machines.</p></details>
+    <details><summary>Where are the docs?</summary>
+      <p><a class="doclink" data-path="docs/HOSTING.md" href="#">Hosting guide</a> · <a class="doclink" data-path="docs/MODS.md" href="#">Mods</a> · <a class="doclink" data-path="README.md" href="#">README</a></p></details>
+  </section>
+</main>
+
+<footer>
+  <p>Lanternfall is an early prototype (v0.1). Original game, art and setting.</p>
+</footer>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -52,7 +52,7 @@ out vec4 o;
 void main() {
   vec4 t = texture(uTex, vec3(vUV, vLayer));
   if ((vFlags & 4) != 0 && t.a < 0.5) discard;
-  float g = gloamF(vWorld.x);
+  float g = max(gloamF(vWorld.x), gloamF(uCam.x) * 0.85);
   vec3 ambient = mix(vec3(1.0, 0.97, 0.9), vec3(0.24, 0.21, 0.38), g);
   vec3 col;
   if ((vFlags & 1) != 0) col = t.rgb * mix(1.05, 1.35, g);
@@ -80,7 +80,7 @@ ${COMMON}
 in vec3 vWorld; in vec3 vN; in vec4 vCol;
 out vec4 o;
 void main() {
-  float g = gloamF(vWorld.x);
+  float g = max(gloamF(vWorld.x), gloamF(uCam.x) * 0.85);
   vec3 col;
   if (vCol.a > 1.5) col = vCol.rgb * mix(1.1, 1.5, g);           // emissive
   else {

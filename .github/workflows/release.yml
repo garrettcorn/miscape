@@ -1,0 +1,104 @@
+name: Release
+
+# Push a tag like v0.1.0 to build every platform and publish a GitHub Release.
+# Download links of the form .../releases/latest/download/<asset> always point
+# at the newest release, which is what the website uses.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build, e.g. v0.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - run: go test ./...
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { goos: windows, goarch: amd64, ext: ".exe" }
+          - { goos: darwin, goarch: arm64, ext: "" }
+          - { goos: darwin, goarch: amd64, ext: "" }
+          - { goos: linux, goarch: amd64, ext: "" }
+          - { goos: linux, goarch: arm64, ext: "" }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          NAME="lanternfall-${{ matrix.goos }}-${{ matrix.goarch }}"
+          mkdir -p "dist/$NAME"
+          go build -trimpath -ldflags "-s -w -X lanternfall/internal/server.Version=$VERSION" \
+            -o "dist/$NAME/lanternfall${{ matrix.ext }}" ./cmd/lanternfall
+          cp README.md LICENSE* "dist/$NAME/" 2>/dev/null || true
+          mkdir -p "dist/$NAME/docs" "dist/$NAME/mods"
+          cp docs/HOSTING.md docs/MODS.md docs/CONFIG.md "dist/$NAME/docs/"
+          cp -r mods/example-sweetberries "dist/$NAME/mods/"
+          cat > "dist/$NAME/START-HERE.txt" <<'EOF'
+          Lanternfall
+          ===========
+          Play on your own computer:   lanternfall serve   then open http://127.0.0.1:8080/
+          Host a world for friends:    lanternfall host    (see docs/HOSTING.md)
+          Join a friend's world:       lanternfall join    and paste their invite
+
+          On Windows you can double-click start-world.bat or join-friend.bat.
+          EOF
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            printf '@echo off\r\n"%%~dp0lanternfall.exe" host\r\npause\r\n' > "dist/$NAME/start-world.bat"
+            printf '@echo off\r\n"%%~dp0lanternfall.exe" join\r\npause\r\n' > "dist/$NAME/join-friend.bat"
+          fi
+          (cd dist && zip -qr "$NAME.zip" "$NAME")
+          (cd dist && sha256sum "$NAME.zip" > "$NAME.zip.sha256")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            dist/*.zip
+            dist/*.sha256
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          cat dist/*.sha256 > dist/SHA256SUMS.txt
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/*.zip dist/SHA256SUMS.txt --clobber
+          else
+            gh release create "$TAG" dist/*.zip dist/SHA256SUMS.txt --title "Lanternfall $TAG" --generate-notes
+          fi

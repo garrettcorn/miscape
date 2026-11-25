@@ -66,6 +66,24 @@ go build -o bin/lanternfall ./cmd/lanternfall
 Start with **Mabel the Lamplighter** by the plaza. Creatures are auto-targeted,
 so you only need to face them roughly.
 
+## Website & releases
+
+- The player website lives in [`site/`](site/) and deploys to GitHub Pages
+  through `.github/workflows/pages.yml` whenever `site/` changes on `main`.
+  Preview it locally with `go run ./tools/sitepreview`. Set
+  `publicWorldUrl` in [`site/config.js`](site/config.js) once an official world is online.
+- To publish a release, push a version tag. `.github/workflows/release.yml`
+  tests, cross-compiles Windows/macOS/Linux zips, and attaches them to a
+  GitHub Release. The site's download buttons always point at the latest one.
+
+```bash
+git tag v0.1.0
+```
+
+```bash
+git push origin v0.1.0
+```
+
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md): client tech, Go server, persistence, worlds, Tailcat role and limits
