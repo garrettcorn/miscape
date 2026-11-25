@@ -4,3 +4,4 @@
 host-key*.json
 admin-token
 .env
+/site/play/

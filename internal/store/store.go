@@ -52,13 +52,7 @@ func New(dir string) (*Store, error) {
 // Save atomically replaces state.json with v. The previous file is never
 // truncated in place, so a crash mid-save leaves either old or new content.
 func (s *Store) Save(v any) error {
-	payload, err := json.Marshal(v)
-	if err != nil {
-		return fmt.Errorf("encode state: %w", err)
-	}
-	sum := sha256.Sum256(payload)
-	env := envelope{Format: FormatVersion, SavedAt: s.now().UTC(), SHA256: hex.EncodeToString(sum[:]), Payload: payload}
-	b, err := json.Marshal(env)
+	b, err := Encode(v, s.now())
 	if err != nil {
 		return err
 	}
@@ -136,16 +130,35 @@ func loadFile(path string, v any) error {
 	if err != nil {
 		return err
 	}
+	if err := Decode(b, v); err != nil {
+		return fmt.Errorf("%s: %w", filepath.Base(path), err)
+	}
+	return nil
+}
+
+// Encode wraps v in the checksummed snapshot envelope. It does no I/O, so it
+// is shared by the file store and the in-browser world (IndexedDB).
+func Encode(v any, now time.Time) ([]byte, error) {
+	payload, err := json.Marshal(v)
+	if err != nil {
+		return nil, fmt.Errorf("encode state: %w", err)
+	}
+	sum := sha256.Sum256(payload)
+	return json.Marshal(envelope{Format: FormatVersion, SavedAt: now.UTC(), SHA256: hex.EncodeToString(sum[:]), Payload: payload})
+}
+
+// Decode verifies an envelope (format and checksum) and decodes its payload.
+func Decode(b []byte, v any) error {
 	var env envelope
 	if err := json.Unmarshal(b, &env); err != nil {
-		return fmt.Errorf("%s: corrupt envelope: %w", filepath.Base(path), err)
+		return fmt.Errorf("corrupt envelope: %w", err)
 	}
 	if env.Format != FormatVersion {
-		return fmt.Errorf("%s: unsupported format %d", filepath.Base(path), env.Format)
+		return fmt.Errorf("unsupported format %d", env.Format)
 	}
 	sum := sha256.Sum256(env.Payload)
 	if hex.EncodeToString(sum[:]) != env.SHA256 {
-		return fmt.Errorf("%s: checksum mismatch", filepath.Base(path))
+		return errors.New("checksum mismatch")
 	}
 	return json.Unmarshal(env.Payload, v)
 }

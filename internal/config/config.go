@@ -20,6 +20,7 @@ import (
 const (
 	ModeOfficial = "official"
 	ModePrivate  = "private"
+	ModeBrowser  = "browser" // single-player world running inside the player's browser
 )
 
 // Env holds process-level settings. Every field maps to an LF_* variable.

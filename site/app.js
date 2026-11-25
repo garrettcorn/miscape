@@ -67,10 +67,8 @@
   // Public world card.
   var pw = (cfg.publicWorldUrl || '').trim();
   if (/^https:\/\//.test(pw)) {
-    $('#public-world').innerHTML = '<p>Jump straight in — nothing to install.</p><a class="btn primary" href="' + pw + '">Play now ↗</a>';
-    var pm = $('#play-main');
-    pm.href = pw;
-    pm.textContent = 'Play now in your browser';
+    $('#public-world').innerHTML = '<p>Play with everyone on the public world — nothing to install.</p><a class="btn primary" href="' + pw + '">Join the public world ↗</a>';
+    $('#public-card').hidden = false;
   }
 
   render(null);

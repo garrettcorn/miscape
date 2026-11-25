@@ -143,3 +143,30 @@ func (g *Game) Characters() []CharacterSummary {
 	sort.Slice(out, func(a, b int) bool { return out[a].Name < out[b].Name })
 	return out
 }
+
+// ReissueToken gives an existing character a fresh login token (invalidating
+// the old one). Only for single-player browser worlds, where the player owns
+// the whole save (e.g. after importing it on another device).
+func (g *Game) ReissueToken(name string) (string, bool) {
+	id, ok := g.names[strings.ToLower(name)]
+	if !ok {
+		return "", false
+	}
+	c := g.Chars[id]
+	delete(g.tokens, c.TokenHash)
+	tok := NewToken()
+	c.TokenHash = HashToken(tok)
+	g.tokens[c.TokenHash] = id
+	g.SaveSoon = true
+	return tok, true
+}
+
+// CharacterNames lists characters in this world, sorted.
+func (g *Game) CharacterNames() []string {
+	out := make([]string, 0, len(g.Chars))
+	for _, c := range g.Chars {
+		out = append(out, c.Name)
+	}
+	sort.Strings(out)
+	return out
+}

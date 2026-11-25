@@ -117,3 +117,4 @@ footer { text-align: center; color: var(--muted); padding: 32px 16px 48px; font-
   .dl td a { word-break: break-all; }
 }
 main > section { scroll-margin-top: 80px; }
+[hidden] { display: none !important; }

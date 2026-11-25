@@ -86,3 +86,80 @@ export class Net {
 
   close() { if (this.ws) this.ws.close(); }
 }
+
+// Transport for the in-browser world: same interface as Net, but talks to
+// the Go engine running in a Web Worker instead of a WebSocket server.
+export class WorkerNet extends Net {
+  constructor() {
+    super();
+    this.worker = null;
+    this.readyInfo = null;
+    this.waiters = {};
+    this.onStatus = null; // (msg) => void for 'saved' | 'saveError' | 'storage'
+  }
+
+  // Starts the worker and resolves with the world's info (like /api/info).
+  start() {
+    if (this.started) return this.started;
+    this.started = new Promise((resolve, reject) => {
+      const w = new Worker('js/worker.js');
+      this.worker = w;
+      w.onerror = (e) => reject({ code: 'worker_failed', text: 'The in-browser world failed to start: ' + (e.message || 'unknown error') });
+      w.onmessage = (ev) => {
+        const m = ev.data;
+        switch (m.t) {
+          case 'ready': this.readyInfo = m.info; resolve(m.info); break;
+          case 'fatal': reject({ code: 'world_unreadable', text: m.text }); this.emit('fatal', m); break;
+          case 'text': this.onText(m.data); break;
+          case 'bin': this.bytesIn += m.data.byteLength; this.emit('binary', m.data); break;
+          case 'saved': case 'saveError': case 'storage': if (this.onStatus) this.onStatus(m); break;
+          case 'reload': location.reload(); break;
+          default: { const f = this.waiters[m.t]; if (f) { delete this.waiters[m.t]; f(m); } }
+        }
+      };
+      w.postMessage({ t: 'start' });
+    });
+    return this.started;
+  }
+
+  onText(s) {
+    this.bytesIn += s.length;
+    let m;
+    try { m = JSON.parse(s); } catch { return; }
+    if (m.t === 'welcome') { this.state = 'open'; if (this.pendingHello) { this.pendingHello.resolve(m); this.pendingHello = null; } }
+    if (m.t === 'error' && this.pendingHello) { this.pendingHello.reject(m); this.pendingHello = null; }
+    if (m.t === 'ack') {
+      const p = this.pending.get(m.rid);
+      if (p) { this.pending.delete(m.rid); p.resolve(m); }
+    }
+    this.emit(m.t, m);
+  }
+
+  async connect(hello) {
+    await this.start();
+    this.hello = hello;
+    return new Promise((resolve, reject) => {
+      this.pendingHello = { resolve, reject };
+      this.worker.postMessage({ t: 'hello', data: JSON.stringify(hello) });
+    });
+  }
+
+  sendRaw(m) {
+    if (!this.worker) return;
+    const s = JSON.stringify(m);
+    this.bytesOut += s.length;
+    this.worker.postMessage({ t: 'send', data: s });
+  }
+
+  ask(t, extra, transfer) {
+    return new Promise((resolve) => {
+      this.waiters[t === 'import' ? 'importResult' : t] = resolve;
+      this.worker.postMessage({ t, ...extra }, transfer || []);
+    });
+  }
+  exportWorld() { return this.ask('export').then((m) => m.data); }
+  importWorld(bytes) { return this.ask('import', { data: bytes }, [bytes.buffer]); }
+  flush() { if (this.worker) this.worker.postMessage({ t: 'flush' }); }
+  startFresh() { this.worker.postMessage({ t: 'startFresh' }); }
+  close() { this.flush(); }
+}

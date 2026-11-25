@@ -199,6 +199,32 @@ export class UI {
       case 'rebind': this.rebind(arg, el); return;
       case 'resetKeys': settings.keys = { ...DEFAULT_KEYS }; save(); this.renderPanel(); return;
       case 'leave': location.reload(); return;
+      case 'exportWorld': {
+        const bytes = await this.g.net.exportWorld();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/json' }));
+        a.download = `lanternfall-world-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        this.toast('World exported. Keep the file somewhere safe.', 'good');
+        return;
+      }
+      case 'importWorld': {
+        const input = document.createElement('input');
+        input.type = 'file'; input.accept = '.json,application/json';
+        input.onchange = async () => {
+          const f = input.files && input.files[0];
+          if (!f) return;
+          if (f.size > 32 << 20) { this.toast('That file is too large to be a world save.', 'warn'); return; }
+          if (!confirm('Replace this browser’s world with the imported one? Your current world is kept as a backup in this browser.')) return;
+          const res = await this.g.net.importWorld(new Uint8Array(await f.arrayBuffer()));
+          if (!res.ok) { this.toast(res.text, 'warn'); return; }
+          this.toast('World imported. Reloading…', 'good');
+          setTimeout(() => location.reload(), 600);
+        };
+        input.click();
+        return;
+      }
     }
     if (r && !r.ok && r.err) this.toast(r.err, 'warn');
   }
@@ -299,6 +325,13 @@ export class UI {
       <label>Show performance overlay <input type="checkbox" ${settings.showPerf ? 'checked' : ''} data-set="showPerf" data-fid="pf"></label>
       <h4>World</h4>
       <p class="note">${esc(this.g.realmText())}</p>
+      ${this.g.browserWorld ? `<div class="row">
+        <button class="btn" data-do="exportWorld" data-fid="ex">⬇ Export world</button>
+        <button class="btn" data-do="importWorld" data-fid="im">⬆ Import world…</button>
+      </div>
+      <p class="note">Saved automatically every 20 seconds, after important moments, and when you switch away.
+        ${this.g.lastSaved ? 'Last saved ' + new Date(this.g.lastSaved).toLocaleTimeString() + '. ' : ''}
+        ${this.g.storagePersisted ? 'This browser agreed to keep your world’s storage.' : 'This browser may clear the world’s storage when space runs low, so export a copy now and then.'}</p>` : ''}
       <button class="btn danger" data-do="leave" data-fid="leave">Leave world</button>
     </div>`;
   }

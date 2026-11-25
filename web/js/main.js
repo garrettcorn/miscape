@@ -3,7 +3,7 @@ import { World } from './world.js';
 import { meshChunk, meshChunkLOD } from './mesher.js';
 import { Body, step, raycast, cameraBoom, WALK, SPRINT } from './physics.js';
 import { Input, glyph } from './input.js';
-import { Net, PROTO, CLIENT } from './net.js';
+import { Net, WorkerNet, PROTO, CLIENT } from './net.js';
 import { UI, esc, applyAccessibility } from './ui.js';
 import { settings, quality, save } from './settings.js';
 import { drawPerson, drawBramblet, drawWisp } from './models.js';
@@ -12,6 +12,7 @@ import { B, BLOCKS } from './blocks.js';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
+const BROWSER_WORLD = document.querySelector('meta[name="lanternfall-mode"]')?.content === 'browser';
 const NPC_HATS = { mabel: 'tall', bertram: 'cap', ott: 'helm' };
 const COLORS = ['#4a90d9', '#e26d5a', '#5cb85c', '#f0ad4e', '#9b59b6', '#1abc9c', '#e84393', '#f5f0e1'];
 
@@ -26,7 +27,20 @@ class Game {
     this.canvas = $('#gl');
     try { this.r = new Renderer(this.canvas); } catch (e) { fatal(e.message); throw e; }
     this.input = new Input(this.canvas);
-    this.net = new Net();
+    // Browser-world mode: the world runs in a Web Worker on this page (the
+    // build marks the page with <meta name="lanternfall-mode" content="browser">).
+    this.browserWorld = BROWSER_WORLD;
+    this.net = BROWSER_WORLD ? new WorkerNet() : new Net();
+    if (BROWSER_WORLD) {
+      this.net.onStatus = (m) => {
+        if (m.t === 'saveError') this.ui.toast('Couldn’t save to this browser: ' + m.text, 'warn');
+        if (m.t === 'storage') this.storagePersisted = m.persisted;
+        if (m.t === 'saved') this.lastSaved = m.at;
+      };
+      // Save when the tab is hidden or closed.
+      addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') this.net.flush(); });
+      addEventListener('pagehide', () => this.net.flush());
+    }
     this.ui = new UI(this);
     this.input.onUI = (d) => this.ui.nav(d);
     this.me = null;
@@ -60,6 +74,7 @@ class Game {
   realmText() {
     const r = this.realm;
     if (!r) return '';
+    if (r.kind === 'browser') return 'Browser world: it runs and saves entirely in this browser on this device. Clearing site data or using private browsing can erase it, so export a copy now and then. It never transfers to hosted or official worlds.';
     return r.kind === 'official'
       ? `Official world “${r.name}”. Characters and progress here belong to this official world only.`
       : `Private world “${r.name}” hosted by a player. Characters, items and levels here are saved by the host and stay in this world — they never transfer to official worlds${r.modded ? '. This world uses mods: ' + (r.mods || []).join(', ') : ''}.`;
@@ -70,8 +85,20 @@ class Game {
     $('#screen-join').hidden = false;
     const wi = $('#worldinfo');
     let info;
+    if (this.browserWorld) {
+      wi.innerHTML = '<p class="note">Starting your world in this browser…</p>';
+      try {
+        info = await this.net.start();
+      } catch (e) {
+        wi.innerHTML = `<b>Your saved world couldn't be opened.</b><p class="note">${esc(e.text || e)}</p>`;
+        $('#joinform').innerHTML = `<div class="form"><button class="btn primary" id="fresh">Start a new world</button>
+          <span class="note">Your old world data is kept aside in this browser, not deleted.</span></div>`;
+        $('#fresh').onclick = () => this.net.startFresh();
+        return;
+      }
+    }
     try {
-      info = await (await fetch('/api/info', { cache: 'no-store' })).json();
+      if (!info) info = await (await fetch('/api/info', { cache: 'no-store' })).json();
     } catch {
       wi.innerHTML = `<b>Can't reach the world server.</b><p class="note">If you're joining a friend, make sure <code>lanternfall join</code> is still running.</p>`;
       $('#joinform').innerHTML = `<button class="btn primary" id="retry">Try again</button>`;
@@ -82,19 +109,25 @@ class Game {
     if (/^https?:\/\//.test(info.source || '')) {
       $('#sourcelink').innerHTML = `Free software under ${esc(info.license || 'AGPL-3.0')} · <a href="${esc(info.source)}" target="_blank" rel="noopener">Source code</a>`;
     }
-    const kind = info.kind === 'official' ? '<span class="badge official">Official world</span>' : '<span class="badge private">Private world</span>';
+    const kind = info.kind === 'official' ? '<span class="badge official">Official world</span>'
+      : info.kind === 'browser' ? '<span class="badge private">Browser world</span>' : '<span class="badge private">Private world</span>';
     wi.innerHTML = `<h3>${esc(info.name)}</h3>${kind}${info.modded ? '<span class="badge modded">Modded</span>' : ''}
-      <span class="note">${info.players}/${info.max} players · PvP ${info.pvp ? 'on' : 'off'} · trading ${info.trading ? 'on' : 'off'}</span>
+      <span class="note">${info.kind === 'browser' ? 'Single-player · nothing to install' : `${info.players}/${info.max} players · PvP ${info.pvp ? 'on' : 'off'} · trading ${info.trading ? 'on' : 'off'}`}</span>
       ${info.desc ? `<p>${esc(info.desc)}</p>` : ''}
       <p class="sep">${info.kind === 'official'
         ? 'Your character here is an official-world character.'
-        : 'Characters you make here are <b>saved by the host</b> and <b>stay in this world</b>. They are separate from official-world characters, and nothing from this world can be moved into an official one.'}</p>`;
+        : info.kind === 'browser'
+          ? 'This world runs and is <b>saved in this browser</b> on this device. Use <b>Settings → Export world</b> to keep a backup. Progress here stays in this world.'
+          : 'Characters you make here are <b>saved by the host</b> and <b>stay in this world</b>. They are separate from official-world characters, and nothing from this world can be moved into an official one.'}</p>
+      ${info.recovered ? '<p class="err">Your latest save was damaged, so the world was restored from an earlier backup.</p>' : ''}`;
     // Companion diagnostics (only present when joining through `lanternfall join`).
     let companion = null;
-    try {
-      const r = await fetch('/companion/status', { cache: 'no-store' });
-      if (r.ok && (r.headers.get('content-type') || '').includes('json')) companion = await r.json();
-    } catch { /* direct connection */ }
+    if (!this.browserWorld) {
+      try {
+        const r = await fetch('/companion/status', { cache: 'no-store' });
+        if (r.ok && (r.headers.get('content-type') || '').includes('json')) companion = await r.json();
+      } catch { /* direct connection */ }
+    }
     const dg = $('#diag');
     if (companion) {
       dg.hidden = false;
@@ -109,7 +142,8 @@ class Game {
         }
       } catch { /* ignore */ }
     }
-    const saved = this.savedChar(info.realm);
+    // In a browser world the player owns the whole save, so characters found in it can be resumed by name.
+    const saved = this.savedChar(info.realm) || (this.browserWorld && info.characters && info.characters.length ? { name: info.characters[0], resume: true } : null);
     const invite = sessionStorage.getItem('lf.invite') || '';
     const form = $('#joinform');
     const showNew = !saved || this.forceNew;
@@ -134,7 +168,7 @@ class Game {
         if (e.code === 'bad_token') { this.forgetChar(info.realm); this.forceNew = true; setTimeout(() => this.showJoin(e.text + ' Make a new character to play here.'), 1200); }
       }
     };
-    if ($('#continue')) $('#continue').onclick = () => go({ t: 'hello', proto: PROTO, client: CLIENT, token: saved.token });
+    if ($('#continue')) $('#continue').onclick = () => go(saved.resume ? { t: 'hello', proto: PROTO, client: CLIENT, name: saved.name } : { t: 'hello', proto: PROTO, client: CLIENT, token: saved.token });
     if ($('#newchar')) $('#newchar').onclick = () => { this.forceNew = true; this.showJoin(); };
     if ($('#join')) {
       $('#join').onclick = () => {
@@ -160,7 +194,7 @@ class Game {
     if (!this.joinLoop) { this.joinLoop = true; const pl = () => { if (!this.me) { this.input.poll(0.016); requestAnimationFrame(pl); } }; pl(); }
     if (params.get('autojoin')) {
       // Test/automation convenience: ?autojoin=Name joins immediately (never used for secrets).
-      if (saved) go({ t: 'hello', proto: PROTO, client: CLIENT, token: saved.token });
+      if (saved) go(saved.resume ? { t: 'hello', proto: PROTO, client: CLIENT, name: saved.name } : { t: 'hello', proto: PROTO, client: CLIENT, token: saved.token });
       else go({ t: 'hello', proto: PROTO, client: CLIENT, name: params.get('autojoin'), color: COLORS[(Math.random() * COLORS.length) | 0] });
     }
   }
