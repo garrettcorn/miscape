@@ -44,6 +44,7 @@ spread across frames with a 3–5 ms budget.)
 |---|---|
 | Client download | 143 KB raw / **44 KB gzipped** (HTML+CSS+JS, no images) |
 | Whole world chunk data | 55 KB RLE (640 KB raw) |
+| In-browser world engine (`lanternfall.wasm`) | 5.9 MB raw / **1.6 MB gzipped**, downloaded once and then cached |
 | Server binary | 31 MB (includes Tailcat/WireGuard stack) |
 | Network, 1 other player + 7 creatures in view | ~10 KB/s down (idle or moving), ~1.1 KB/s up while moving |
 | Tailcat join (same machine) | tunnel up in ~0.2 s via DERP, then upgraded to direct path |

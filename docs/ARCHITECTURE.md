@@ -87,6 +87,45 @@ Rendering pipeline:
   enough to replace with Postgres row-level transactions when player counts
   grow (see ROADMAP).
 
+## 4a. In-browser worlds
+
+The site's `/play/` page runs a single-player world with no server at all.
+
+```
+ Page (main thread)                  Web Worker
+ client (web/js) ──postMessage──►   worker.js ──► lanternfall.wasm (Go, internal/local)
+   WorkerNet ◄─────postMessage──                     same game.Game, protocol, snapshot format
+                                     IndexedDB "lanternfall": state + backup-<time> (5 kept)
+```
+
+- `cmd/lanternfall-web` compiles the same `internal/game` rules to WebAssembly
+  (`GOOS=js GOARCH=wasm`). The engine ticks at 20 Hz in the worker, so the
+  page's render loop never waits on game logic.
+- `WorkerNet` has the same interface as the WebSocket `Net`, so the client
+  code is identical. Messages are the normal protocol JSON and binary chunk
+  frames.
+- **Saves** use the same checksummed envelope as `state.json` (`store.Encode`).
+  The engine autosaves:
+  - every 20 s;
+  - right after important events;
+  - when the page is hidden or closed.
+
+  A backup is kept every 5 minutes, up to 5. On load, the newest valid
+  snapshot wins. An unreadable save is kept aside as `unreadable-<time>`
+  rather than deleted. The page asks for persistent storage. If the browser
+  refuses, the game suggests exporting.
+- **Export and import**: export downloads the snapshot. Import checks the
+  checksum and the realm kind, backs up the current world, then replaces it.
+  Characters in an imported world resume by name, because the whole save
+  belongs to the local player.
+- **Realm separation**: browser worlds have realm kind `browser`. They only
+  import `browser` saves, and hosted servers refuse them. Editing local
+  storage therefore can't carry progress into a hosted or official world.
+- **Trust**: the player controls this whole world, so it's a single-player
+  sandbox. The rules are still enforced the same way, but no other world
+  trusts anything from it.
+- The configuration is fixed: 1 player, trading off, no mods.
+
 ## 5. Official worlds vs player-hosted worlds
 
 | | Official world | Player-hosted world |

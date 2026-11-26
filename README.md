@@ -27,6 +27,27 @@ with friends, and, if you dare, carry a lantern into **the Gloam**.
 > release: small content, no real account system, and only measured on the
 > devices listed in [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
+## Play in your browser
+
+Open **https://garrettcorn.github.io/miscape/play/**. There's nothing to
+install. It's a single-player world: the Go game engine runs as WebAssembly
+inside the page and saves to this browser (IndexedDB), with automatic backups.
+Use **Settings → Export world** to keep a copy or move it to another device.
+Browser worlds are their own realm, so their progress stays separate from
+hosted worlds.
+
+To build it locally:
+
+```bash
+go run ./tools/buildplay
+```
+
+```bash
+go run ./tools/sitepreview
+```
+
+Then open http://127.0.0.1:8150/play/.
+
 ## Quick start (play locally)
 
 Requirements: Go 1.27.4+ (the `go` command fetches it automatically if you have an older 1.27).
@@ -81,7 +102,9 @@ so you only need to face them roughly.
 ## Website & releases
 
 - The player website lives in [`site/`](site/) and deploys to GitHub Pages
-  through `.github/workflows/pages.yml` whenever `site/` changes on `main`.
+  through `.github/workflows/pages.yml` whenever `site/`, `web/` or the engine
+  changes on `main`. That workflow also builds the in-browser world into
+  `/play/` with `tools/buildplay`.
   Preview it locally with `go run ./tools/sitepreview`. Set
   `publicWorldUrl` in [`site/config.js`](site/config.js) once an official world is online.
 - To publish a release, first add an entry to [`CHANGELOG.md`](CHANGELOG.md)
@@ -120,8 +143,11 @@ internal/world      voxel grid, curated world builder, chunk RLE
 internal/content    data-driven content + declarative mod loader (base.json)
 internal/store      atomic checksummed snapshots, backups, recovery
 internal/protocol   versioned wire format + validation
+internal/local      single-player browser world host (runs as WebAssembly)
 internal/server     HTTP/WebSocket sessions, game loop, autosave, admin API
 internal/p2p        Tailcat host listener + friend join companion
+cmd/lanternfall-web engine entry point for the browser (GOOS=js GOARCH=wasm)
+tools/              buildplay (assembles site/play/), sitepreview
 web/                browser client (embedded into the binary)
 mods/               example mod
 ```
