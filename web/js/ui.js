@@ -582,6 +582,11 @@ export class UI {
   }
 
   showDialog(d) {
+    // Each new conversation with an NPC moves on to their next line.
+    const fresh = !this.panel || this.panel.kind !== 'dialog' || !this.dialog || this.dialog.npc !== d.npc;
+    this.talks = this.talks || {};
+    if (fresh) this.talks[d.npc] = (this.talks[d.npc] ?? -1) + 1;
+    d.line = (d.lines || [])[(this.talks[d.npc] || 0) % Math.max(1, (d.lines || []).length)];
     this.dialog = d;
     if (!this.panel || this.panel.kind !== 'dialog') {
       this.openPanel('dialog');
@@ -603,7 +608,7 @@ export class UI {
       else if (qs.status === 'active') { html += `<p>“How's it going with <b>${esc(q.name)}</b>? Check your quest tracker.”</p>`; spoke = true; }
       else if (qs.status === 'locked') { html += `<p class="note">${esc(q.name)} unlocks after “${esc(this.g.quests[q.requires]?.name)}”.</p>`; }
     }
-    if (!spoke) html += `<p>“${esc((d.lines || [])[0] || 'Hello!')}”</p>`;
+    if (!spoke) html += `<p>“${esc(d.line || 'Hello!')}”</p>`;
     if (d.shop && d.shop.length) {
       html += `<h4>Buy <span class="note">· you have ${me.inv.coin || 0} coins</span></h4><div class="grid">` + d.shop.map((s) => {
         const it = this.item(s.item), afford = (me.inv.coin || 0) >= s.price;

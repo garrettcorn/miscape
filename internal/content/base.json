@@ -1,17 +1,17 @@
 {
   "items": [
-    {"id": "coin", "name": "Coin", "desc": "Round, warm, and slightly dented.", "kind": "currency", "tradeable": true, "stack": 999, "color": "#f2c14e"},
-    {"id": "log", "name": "Log", "desc": "Mossmeadow timber.", "kind": "material", "tradeable": true, "stack": 64, "value": 1, "color": "#9a6b3f"},
-    {"id": "plank", "name": "Plank", "desc": "Smooth and placeable.", "kind": "block", "block": 8, "tradeable": true, "stack": 64, "color": "#d9a066"},
+    {"id": "coin", "name": "Coin", "desc": "A copper cartwheel penny, stamped with King George III.", "kind": "currency", "tradeable": true, "stack": 999, "color": "#f2c14e"},
+    {"id": "log", "name": "Log", "desc": "Good Lancashire timber.", "kind": "material", "tradeable": true, "stack": 64, "value": 1, "color": "#9a6b3f"},
+    {"id": "plank", "name": "Plank", "desc": "Sawn smooth, ready for building.", "kind": "block", "block": 8, "tradeable": true, "stack": 64, "color": "#d9a066"},
     {"id": "stone", "name": "Stone", "desc": "A sturdy building block.", "kind": "block", "block": 9, "tradeable": true, "stack": 64, "value": 1, "color": "#9aa3ad"},
     {"id": "copper_ore", "name": "Copper Ore", "desc": "Green-flecked and promising.", "kind": "material", "model": "gem", "tradeable": true, "stack": 64, "value": 3, "color": "#d9824b"},
-    {"id": "glimmer_shard", "glow": true, "name": "Glimmer Shard", "desc": "Hums softly in the dark.", "kind": "material", "model": "gem", "tradeable": true, "stack": 64, "value": 8, "color": "#b48cff"},
-    {"id": "berry", "name": "Berry", "desc": "Restores 4 health.", "kind": "food", "heal": 4, "tradeable": true, "stack": 32, "value": 1, "color": "#e0457b"},
+    {"id": "glimmer_shard", "glow": true, "name": "Wisp-light Shard", "desc": "A cold glow gathered on the moors. Folk say the will-o'-the-wisps leave them behind.", "kind": "material", "model": "gem", "tradeable": true, "stack": 64, "value": 8, "color": "#b48cff"},
+    {"id": "berry", "name": "Bilberry", "desc": "Restores 4 health. Bilberries grow wild on the northern moors.", "kind": "food", "heal": 4, "tradeable": true, "stack": 32, "value": 1, "color": "#e0457b"},
     {"id": "wooden_sword", "name": "Wooden Sword", "desc": "Better than a stick. Slightly.", "kind": "weapon", "model": "sword", "damage": 3, "cooldownMs": 650, "tradeable": true, "stack": 1, "value": 2, "color": "#c08a4a"},
-    {"id": "copper_sword", "name": "Copper Sword", "desc": "Bright and dependable.", "kind": "weapon", "model": "sword", "damage": 5, "cooldownMs": 600, "tradeable": true, "stack": 1, "value": 10, "color": "#e09060"},
-    {"id": "glimmer_blade", "glow": true, "name": "Glimmer Blade", "desc": "Forged with light from below.", "kind": "weapon", "model": "sword", "damage": 9, "cooldownMs": 550, "tradeable": true, "stack": 1, "value": 40, "color": "#c9a8ff"},
-    {"id": "lantern", "glow": true, "name": "Lantern", "desc": "Carried lanterns push back the Gloam's dark.", "kind": "tool", "model": "lantern", "light": true, "tradeable": true, "stack": 1, "value": 6, "color": "#ffd27a"},
-    {"id": "warden_token", "name": "Warden's Token", "desc": "Proof Ott trusts you. Not tradeable.", "kind": "material", "model": "gem", "tradeable": false, "stack": 1, "color": "#7fd1c7"}
+    {"id": "copper_sword", "name": "Copper Sword", "desc": "Bright and dependable, from a Manchester anvil.", "kind": "weapon", "model": "sword", "damage": 5, "cooldownMs": 600, "tradeable": true, "stack": 1, "value": 10, "color": "#e09060"},
+    {"id": "glimmer_blade", "glow": true, "name": "Wisp-light Blade", "desc": "Copper quenched in wisp-light. It never quite stops glowing.", "kind": "weapon", "model": "sword", "damage": 9, "cooldownMs": 550, "tradeable": true, "stack": 1, "value": 40, "color": "#c9a8ff"},
+    {"id": "lantern", "glow": true, "name": "Lantern", "desc": "Carried lanterns keep the darkness of the moors at bay.", "kind": "tool", "model": "lantern", "light": true, "tradeable": true, "stack": 1, "value": 6, "color": "#ffd27a"},
+    {"id": "warden_token", "name": "Watchman's Token", "desc": "Proof that Ottiwell the watchman trusts you. Not tradeable.", "kind": "material", "model": "gem", "tradeable": false, "stack": 1, "color": "#7fd1c7"}
   ],
   "recipes": [
     {"id": "planks", "output": "plank", "count": 4, "inputs": {"log": 1}, "level": 1, "xp": 4},
@@ -21,9 +21,9 @@
     {"id": "glimmer_blade", "output": "glimmer_blade", "count": 1, "inputs": {"copper_sword": 1, "glimmer_shard": 4}, "level": 5, "xp": 90, "station": "anvil"}
   ],
   "mobs": [
-    {"id": "bramblet", "name": "Bramblet", "model": "bramblet", "hp": 8, "damage": 1, "cooldownMs": 1400, "speed": 2.2, "aggro": 5, "xp": 15,
+    {"id": "bramblet", "name": "Boggart", "model": "bramblet", "hp": 8, "damage": 1, "cooldownMs": 1400, "speed": 2.2, "aggro": 5, "xp": 15,
      "drops": [{"item": "berry", "min": 1, "max": 2, "chance": 0.6}, {"item": "coin", "min": 1, "max": 3, "chance": 0.8}]},
-    {"id": "gloamwisp", "name": "Gloamwisp", "model": "wisp", "hp": 28, "damage": 4, "cooldownMs": 1200, "speed": 3.0, "aggro": 9, "xp": 45,
+    {"id": "gloamwisp", "name": "Will-o'-the-Wisp", "model": "wisp", "hp": 28, "damage": 4, "cooldownMs": 1200, "speed": 3.0, "aggro": 9, "xp": 45,
      "drops": [{"item": "glimmer_shard", "min": 1, "max": 2, "chance": 0.7}, {"item": "coin", "min": 4, "max": 9, "chance": 1}]}
   ],
   "spawns": [
@@ -34,27 +34,27 @@
   ],
   "nodes": [
     {"block": 6, "name": "Tree", "item": "log", "skill": "woodcutting", "level": 1, "xp": 10, "hits": 3, "regrowSec": 45},
-    {"block": 20, "name": "Gloam Deadwood", "item": "log", "skill": "woodcutting", "level": 3, "xp": 22, "hits": 4, "regrowSec": 60},
-    {"block": 19, "name": "Berry Bush", "item": "berry", "skill": "woodcutting", "level": 1, "xp": 3, "hits": 1, "regrowSec": 40},
+    {"block": 20, "name": "Moorland Deadwood", "item": "log", "skill": "woodcutting", "level": 3, "xp": 22, "hits": 4, "regrowSec": 60},
+    {"block": 19, "name": "Bilberry Bush", "item": "berry", "skill": "woodcutting", "level": 1, "xp": 3, "hits": 1, "regrowSec": 40},
     {"block": 3, "name": "Rock", "item": "stone", "skill": "mining", "level": 1, "xp": 6, "hits": 2, "regrowSec": 60},
     {"block": 10, "name": "Copper Vein", "item": "copper_ore", "skill": "mining", "level": 2, "xp": 18, "hits": 3, "regrowSec": 50},
-    {"block": 12, "name": "Glimmer Crystal", "item": "glimmer_shard", "skill": "mining", "level": 4, "xp": 40, "hits": 4, "regrowSec": 90}
+    {"block": 12, "name": "Wisp-light Crystal", "item": "glimmer_shard", "skill": "mining", "level": 4, "xp": 40, "hits": 4, "regrowSec": 90}
   ],
   "quests": [
-    {"id": "lights_for_wickhollow", "name": "Lights for Wickhollow", "giver": "mabel",
-     "intro": "Oh, a new face! The lamps keep going out and the Bramblets keep nibbling my posts. Could you fetch some logs, make yourself a little sword, and shoo a few Bramblets away?",
-     "outro": "You're a natural! Here, take these — and a copper start for a lantern of your own.",
+    {"id": "lights_for_wickhollow", "name": "Lights for Manchester", "giver": "mabel",
+     "intro": "A new face! Since Mr Arkwright's mill went up on Miller Street, this town never sleeps, and my lamps never stay lit. Boggarts have been at the lamp posts again. Fetch me some timber, make yourself a sword, and see off a few of the creatures.",
+     "outro": "You'll do nicely. Here's your pay, and some copper toward a lantern of your own.",
      "steps": [
-       {"kind": "gather", "target": "log", "count": 4, "text": "Chop 4 logs in Mossmeadow"},
+       {"kind": "gather", "target": "log", "count": 4, "text": "Chop 4 logs in the countryside"},
        {"kind": "craft", "target": "wooden_sword", "count": 1, "text": "Craft a Wooden Sword"},
-       {"kind": "kill", "target": "bramblet", "count": 3, "text": "Shoo away 3 Bramblets"}
+       {"kind": "kill", "target": "bramblet", "count": 3, "text": "See off 3 boggarts"}
      ],
      "reward": {"coins": 25, "items": {"copper_ore": 2, "berry": 3}, "xp": {"combat": 40, "crafting": 30}}},
-    {"id": "what_glimmers_below", "name": "What Glimmers Below", "giver": "ott", "requires": "lights_for_wickhollow",
-     "intro": "Past this gate the Gloam begins. It's dim, and the wisps don't care for visitors. Bring me 3 Glimmer Shards and I'll know you can handle yourself. Carry a lantern — and if it gets bad, use your Hearth Lantern to come home.",
-     "outro": "Well done. Not many come back with their pockets glowing. Take this token, and my thanks.",
+    {"id": "what_glimmers_below", "name": "Lights on the Moors", "giver": "ott", "requires": "lights_for_wickhollow",
+     "intro": "North of here the road runs up to the Highland moors. Lights dance there at night: will-o'-the-wisps, leading travellers into the bogs. Bring me 3 wisp-light shards and I'll know you can look after yourself. Carry a lantern, and if it goes badly, your Hearth Lantern will bring you home.",
+     "outro": "Back in one piece, and with your pockets glowing. Take this token, and my thanks.",
      "steps": [
-       {"kind": "deliver", "target": "glimmer_shard", "count": 3, "text": "Bring 3 Glimmer Shards to Ott"}
+       {"kind": "deliver", "target": "glimmer_shard", "count": 3, "text": "Bring 3 wisp-light shards to Ottiwell"}
      ],
      "reward": {"coins": 80, "items": {"warden_token": 1}, "xp": {"mining": 60, "combat": 60}}}
   ],
@@ -64,11 +64,14 @@
     {"npc": "bertram", "item": "lantern", "price": 30}
   ],
   "npcs": [
-    {"id": "mabel", "name": "Mabel the Lamplighter", "at": "manchester", "dx": -4, "dz": -3, "yaw": 0.6, "color": "#e8a33d", "hat": "tall",
-     "lines": ["Every lamp in Wickhollow has a name. That one's Gus."]},
-    {"id": "bertram", "name": "Bertram's Stall", "at": "manchester", "dx": 5, "dz": 3, "yaw": 3.8, "color": "#6aa84f", "hat": "cap",
-     "lines": ["Berries! Planks! Lanterns for the bold! I buy logs and ore too."]},
-    {"id": "ott", "name": "Ott the Gate Warden", "at": "town:manchester:gate", "dx": 2, "dz": 0, "yaw": 1.57, "color": "#5b8fb9", "hat": "helm",
-     "lines": ["The Gloam is optional, friend. Nobody will think less of you for staying in the sun."]}
+    {"id": "mabel", "name": "Mabel Hartley, Lamplighter", "at": "manchester", "dx": -4, "dz": -3, "yaw": 0.6, "color": "#e8a33d", "hat": "tall",
+     "lines": ["They've lit Philips and Lee's mill over in Salford with gas, they say. One day every street will glow like it.",
+               "Mr Blake the poet writes of \"dark Satanic Mills\". I'd rather they were well-lit ones."]},
+    {"id": "bertram", "name": "Bertram Oakes, Shudehill Market", "at": "manchester", "dx": 5, "dz": 3, "yaw": 3.8, "color": "#6aa84f", "hat": "cap",
+     "lines": ["Bilberries! Planks! Lanterns for the moors! I buy logs and ore too.",
+               "Coal's been cheap since the Duke of Bridgewater's canal opened in 1761. Barges bring it in from Worsley."]},
+    {"id": "ott", "name": "Ottiwell Kershaw, Watchman", "at": "town:manchester:gate", "dx": 2, "dz": 0, "yaw": 1.57, "color": "#5b8fb9", "hat": "helm",
+     "lines": ["The moors are no shame to avoid, friend. Nobody will think less of you for staying by the fire.",
+               "Shakespeare had Puck do what the wisps do: \"Mislead night-wanderers, laughing at their harm.\""]}
   ]
 }
