@@ -253,3 +253,38 @@ func BenchmarkGenChunk(b *testing.B) {
 		w.EncodeChunk(int(m.X)/world.Chunk+i%150, (int(m.Z)/world.Chunk+i/150)%(w.CZ-2)+1)
 	}
 }
+
+func TestRegionsNameTheCountryside(t *testing.T) {
+	for _, lvl := range []string{"level1", "level2"} {
+		w := level(t, lvl)
+		for _, c := range []struct {
+			lat, lon float64
+			want     string
+		}{
+			{48.8, 2.3, "the European countryside"},          // Paris
+			{55.7, 37.6, "the European countryside"},         // Moscow
+			{40.0, -77.0, "the North American countryside"},  // Pennsylvania
+			{-15.8, -47.9, "the South American countryside"}, // Brasília
+			{24, 15, "the African countryside"},              // Sahara
+			{30.0, 31.2, "the African countryside"},          // Cairo
+			{24.7, 46.7, "the Asian countryside"},            // Riyadh
+			{39.9, 116.4, "the Asian countryside"},           // Beijing
+			{-25, 134, "the Australian countryside"},         // Alice Springs
+			{72, -40, "the North American countryside"},      // Greenland
+			{30, -40, "the Atlantic Ocean"},
+			{0, -150, "the Pacific Ocean"},
+			{-20, 75, "the Indian Ocean"},
+			{35, 18, "the Mediterranean Sea"},
+		} {
+			x, z := w.Def.LatLon(c.lat, c.lon)
+			if got := w.ZoneName(x, z); got != c.want {
+				t.Errorf("%s %v,%v: %q, want %q", lvl, c.lat, c.lon, got, c.want)
+			}
+		}
+		// Ground a town keeps dry, where the map has sea, is still on land.
+		g, _ := w.Point("town:manchester:gate")
+		if got := w.ZoneName(g.X, g.Z-1); got != "the European countryside" {
+			t.Errorf("%s: just outside the north gate is %q", lvl, got)
+		}
+	}
+}

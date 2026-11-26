@@ -142,6 +142,12 @@ func (g *Game) handleMove(p *Player, m *protocol.In) {
 			g.toast(p, "You enter "+g.W.ZoneName(c.X, c.Z)+". Creatures here hit harder, and a knock-out costs coins. Hold Hearth to return home.", "danger")
 		}
 	}
+	// Moving between continents, or between land and sea, changes the place
+	// name shown in the HUD even when the zone kind stays "wild".
+	if place := g.placeKey(c); place != p.place {
+		p.place = place
+		p.dirtyMe = true
+	}
 	g.Dirty = true
 	if p.trade != nil {
 		o := g.Players[p.trade.other(p.ID)]
@@ -149,4 +155,13 @@ func (g *Game) handleMove(p *Player, m *protocol.In) {
 			g.cancelTrade(p.trade, "You moved too far apart.")
 		}
 	}
+}
+
+// placeKey identifies what the HUD shows for where a character is.
+func (g *Game) placeKey(c *Character) string {
+	s := g.W.ZoneName(c.X, c.Z)
+	if g.atSea(c) {
+		s += "|sea"
+	}
+	return s
 }

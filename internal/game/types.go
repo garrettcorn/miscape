@@ -54,6 +54,7 @@ type Player struct {
 	dead             bool
 	dirtyMe          bool
 	fullWarned       time.Time
+	place            string // last place name sent to the client (see placeKey)
 }
 
 type Mob struct {

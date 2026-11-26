@@ -136,7 +136,9 @@ export class UI {
     $('#hptext').textContent = `${me.hp}/${me.mhp}`;
     const z = $('#zone');
     // Zone kinds come from the server; names come from the world's map files.
-    const zn = me.zone === 'town' ? `🏙 ${me.zoneName} — safe` : me.zone === 'danger' ? `⚠ DANGER · ${me.zoneName}` : '🌿 The countryside';
+    const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+    const wild = `${me.sea ? '🌊' : '🌿'} ${cap(me.zoneName || 'the countryside')}`; // e.g. "The European countryside"
+    const zn = me.zone === 'town' ? `🏙 ${me.zoneName} — safe` : me.zone === 'danger' ? `⚠ DANGER · ${me.zoneName}` : wild;
     z.textContent = zn;
     z.className = me.zone === 'danger' ? 'gloam' : '';
     $('#vignette').classList.toggle('on', me.zone === 'danger' && !settings.reduceMotion);

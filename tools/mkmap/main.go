@@ -42,10 +42,18 @@ func main() {
 	w := flag.Int("w", 3072, "output width")
 	h := flag.Int("h", 1536, "output height")
 	probe := flag.String("probe", "", "print source colors at space-separated lat,lon pairs and exit")
+	regions := flag.String("regions", "", "write a continents and oceans image to this path (from -mask and -names; no -src needed)")
+	names := flag.String("names", "maps/earth/regions.json", "regions JSON (names and colors) for -regions")
 	relief := flag.String("relief", "", "write a relief layer (grey PNG) from a shaded-relief + ocean-depth raster to this path, using -mask to tell land from sea")
 	mask := flag.String("mask", "maps/earth/terrain.png", "terrain image used as the land/sea mask for -relief")
 	flag.Parse()
 	log.SetFlags(0)
+	if *regions != "" {
+		if err := makeRegions(*regions, *mask, *legendPath, *names); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	if *src == "" {
 		log.Fatal("-src is required")
 	}
@@ -369,4 +377,181 @@ func makeRelief(img *rgbImage, out, maskPath, legendPath string, w, h int) error
 	st, _ := f.Stat()
 	fmt.Printf("wrote %s (%dx%d, %d KB)\n", out, w, h, st.Size()/1024)
 	return nil
+}
+
+// makeRegions writes the continents-and-oceans image: each pixel of the
+// terrain mask gets the color of its continent (land) or ocean (sea) from
+// regions.json, decided by the boundary rules below. The result can be
+// repainted by hand like the terrain.
+//
+//	go run ./tools/mkmap -regions maps/earth/regions.png
+func makeRegions(out, maskPath, legendPath, namesPath string) error {
+	lb, err := os.ReadFile(legendPath)
+	if err != nil {
+		return err
+	}
+	legend, err := world.ParseLegend(lb)
+	if err != nil {
+		return err
+	}
+	mb, err := os.ReadFile(maskPath)
+	if err != nil {
+		return err
+	}
+	tm, err := world.DecodeTerrain(mb, legend)
+	if err != nil {
+		return err
+	}
+	nb, err := os.ReadFile(namesPath)
+	if err != nil {
+		return err
+	}
+	regions, err := world.ParseRegions(nb)
+	if err != nil {
+		return err
+	}
+	pal := color.Palette{}
+	idx := map[string]uint8{}
+	for _, r := range regions {
+		v, _ := strconv.ParseUint(strings.TrimPrefix(r.Color, "#"), 16, 32)
+		idx[r.Name] = uint8(len(pal))
+		pal = append(pal, color.RGBA{uint8(v >> 16), uint8(v >> 8), uint8(v), 255})
+	}
+	img := image.NewPaletted(image.Rect(0, 0, tm.W, tm.H), pal)
+	counts := map[string]int{}
+	for y := 0; y < tm.H; y++ {
+		lat := 90 - (float64(y)+0.5)/float64(tm.H)*180
+		for x := 0; x < tm.W; x++ {
+			lon := (float64(x)+0.5)/float64(tm.W)*360 - 180
+			t := tm.At(x, y)
+			name := oceanAt(lat, lon)
+			if !t.IsWater() {
+				name = continentAt(lat, lon)
+			}
+			i, ok := idx[name]
+			if !ok {
+				return fmt.Errorf("regions.json has no %q", name)
+			}
+			img.SetColorIndex(x, y, i)
+			counts[name]++
+		}
+	}
+	f, err := os.Create(out)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if err := (&png.Encoder{CompressionLevel: png.BestCompression}).Encode(f, img); err != nil {
+		return err
+	}
+	st, _ := f.Stat()
+	fmt.Printf("wrote %s (%dx%d, %d KB)\n", out, tm.W, tm.H, st.Size()/1024)
+	for _, r := range regions {
+		fmt.Printf("  %-20s %5.1f%%\n", r.Name, 100*float64(counts[r.Name])/float64(tm.W*tm.H))
+	}
+	return nil
+}
+
+// continentAt names the continent of a land point. The boundaries follow
+// the usual conventions, simplified: Europe/Asia along the Urals, the
+// Caucasus and the Bosporus; Africa/Asia at Suez and the Red Sea; North/South
+// America at the Panama–Colombia border; Greenland is North American, Iceland
+// European, New Guinea and the Pacific islands Oceanian.
+func continentAt(lat, lon float64) string {
+	switch {
+	case lat < -60:
+		return "Antarctica"
+	case lon > 165 && lat < -25, // New Zealand
+		lon > 110 && lon < 155 && lat < -10, // Australia
+		lon > 130 && lat < 0,                // New Guinea, Melanesia
+		lon < -130 && lat < 30 && lat > -50: // Polynesia, Hawaii
+		return "Australia & Oceania"
+	case lon >= -25 && lon <= -12 && lat > 62 && lat < 67.5:
+		return "Europe" // Iceland
+	case lat > 59 && lon > -75 && lon < -10:
+		return "North America" // Greenland
+	case lon < -25:
+		if lat < 7.2 || (lat < 12.5 && lon > -77.4) {
+			return "South America"
+		}
+		return "North America"
+	case lon > 168 && lat > 50 && lat < 56:
+		return "North America" // the far end of the Aleutians (not Chukotka, further north)
+	}
+	// Africa: south of the Mediterranean, west of Suez and the Red Sea (which
+	// runs from Suez at 29.9N 32.5E to Bab-el-Mandeb at 12.6N 43.3E).
+	if lat < 37.5 && lon < 52 {
+		redSea := 32.5 + (29.9-lat)/(29.9-12.6)*(43.3-32.5)
+		if lat < 12.6 || lon < math.Min(redSea, 32.5+math.Max(0, 29.9-lat)) || (lat < 29.9 && lon < redSea) {
+			if !(lat > 29.9 && lon > 32.4) { // Sinai and the Levant are Asian
+				return "Africa"
+			}
+		}
+	}
+	// Europe: west of the Urals (60E) north of the Caucasus and Caspian
+	// (about 47E between 41N and 50N), and west of the Bosporus (29E) further
+	// south.
+	if lat > 34 {
+		switch {
+		case lat >= 50 && lon < 60:
+			return "Europe"
+		case lat >= 41.2 && lon < 47:
+			if lat < 41.2 || !(lon > 29 && lat < 42.2) { // Anatolia is Asian
+				return "Europe"
+			}
+		case lon < 26.5:
+			return "Europe"
+		}
+	}
+	return "Asia"
+}
+
+// oceanAt names the ocean or sea of a water point.
+func oceanAt(lat, lon float64) string {
+	switch {
+	case lat > 30 && lat < 46.5 && lon > -5.6 && lon < 36.5 && !(lat > 40.5 && lon > 27) && !(lat > 42.5 && lon < 3.2): // not the Bay of Biscay
+		return "Mediterranean Sea"
+	case lat > 40.5 && lat < 47.5 && lon > 27 && lon < 42:
+		return "Black Sea"
+	case lat > 36 && lat < 47.5 && lon > 46 && lon < 55.5:
+		return "Caspian Sea"
+	case lat > 66:
+		return "Arctic Ocean"
+	case lat < -60:
+		return "Southern Ocean"
+	}
+	if lat < 0 {
+		switch {
+		case lon >= -67 && lon < 20:
+			return "Atlantic Ocean"
+		case lon >= 20 && lon < 147:
+			if lon > 105 && lat > -8 {
+				return "Pacific Ocean" // the seas north of Australia
+			}
+			return "Indian Ocean"
+		}
+		return "Pacific Ocean"
+	}
+	// Northern hemisphere: the Atlantic reaches from the Americas to Europe and
+	// Africa, including the Caribbean, the Gulf of Mexico and Hudson Bay.
+	var west float64
+	switch {
+	case lat < 8:
+		west = -78
+	case lat < 18:
+		west = -87
+	case lat < 31:
+		west = -98
+	case lat < 50:
+		west = -82
+	default:
+		west = -100
+	}
+	if lon >= west && lon < 30 {
+		return "Atlantic Ocean"
+	}
+	if lon >= 30 && lon < 105 && lat < 30 {
+		return "Indian Ocean"
+	}
+	return "Pacific Ocean"
 }

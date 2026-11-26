@@ -316,7 +316,9 @@ func (w *World) ZoneAt(x, z float64) string {
 	return k
 }
 
-// ZoneName is the display name of the zone at (x,z) ("" in the wild).
+// ZoneName is the display name of the zone at (x,z): a town or danger zone's
+// name, or in the wild the region's countryside ("the European countryside",
+// "the Atlantic Ocean").
 func (w *World) ZoneName(x, z float64) string {
 	_, n := w.zoneAt(x, z)
 	return n
@@ -333,7 +335,27 @@ func (w *World) zoneAt(x, z float64) (kind, name string) {
 			return zd.Kind, zd.Name
 		}
 	}
+	if r := w.RegionAt(x, z); r != nil {
+		if r.Sea && !w.terrainAt(wrapI(int(math.Floor(x)), w.W), int(math.Floor(z))).IsWater() {
+			// Dry land the regions map calls sea (a coast, or ground a town
+			// keeps dry): it belongs to the nearest continent.
+			if l := w.landRegionNear(x, z); l != nil {
+				r = l
+			}
+		}
+		return ZoneWild, r.Countryside
+	}
 	return ZoneWild, ""
+}
+
+// RegionAt is the continent or ocean at a point, or nil if the level has no
+// regions image.
+func (w *World) RegionAt(x, z float64) *Region {
+	if w.Def.regions == nil {
+		return nil
+	}
+	s := float64(w.Def.Scale)
+	return w.Def.regions.At(int(math.Floor(w.WrapX(x)/s)), int(math.Floor(z/s)))
 }
 
 // Terrain returns the ground type of column (x,z), from the map image (scaled
@@ -379,4 +401,24 @@ func DecodeChunk(data []byte) ([]uint8, bool) {
 		}
 	}
 	return out, len(out) == Chunk*Chunk*SizeY && len(data)%2 == 0
+}
+
+// landRegionNear finds the nearest continent to (x,z) in the regions image,
+// searching a few map pixels out.
+func (w *World) landRegionNear(x, z float64) *Region {
+	rm, s := w.Def.regions, float64(w.Def.Scale)
+	px, pz := int(math.Floor(w.WrapX(x)/s)), int(math.Floor(z/s))
+	for r := 1; r <= 12; r++ {
+		for dz := -r; dz <= r; dz++ {
+			for dx := -r; dx <= r; dx++ {
+				if max(abs(dx), abs(dz)) != r {
+					continue
+				}
+				if reg := rm.At(px+dx, pz+dz); reg != nil && !reg.Sea {
+					return reg
+				}
+			}
+		}
+	}
+	return nil
 }

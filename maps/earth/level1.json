@@ -3,6 +3,8 @@
   "level": 1,
   "map": "terrain.png",
   "legend": "legend.json",
+  "regions": "regions.png",
+  "regionNames": "regions.json",
   "relief": "display/relief.png",
   "scale": 1,
   "groundY": 12,

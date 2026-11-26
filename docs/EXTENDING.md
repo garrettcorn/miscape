@@ -29,6 +29,7 @@ server and the in-browser world:
 | File | What it is |
 |---|---|
 | `terrain.png` | One pixel per level-1 column (3072×1536, equirectangular: x is longitude from 180°W, z is latitude from the North Pole). Each colour is a terrain type. |
+| `regions.png`, `regions.json` | Continents and oceans: one pixel per level-1 column, each colour named in `regions.json` with its `countryside` text (shown in the HUD out in the wild, e.g. "the European countryside"), whether it's `sea`, and where its world-map `label` goes (`[lat, lon]`, optional `mapLabel` and `minZoom`). Made with `tools/mkmap -regions` from the terrain mask and boundary rules (Urals, Caucasus, Bosporus, Suez and the Red Sea, Panama); repaint it to move a border. |
 | `relief.png` | Optional. A grey relief and ocean-depth layer (1536×768) blended over the terrain on the world map; 128 is flat. Made with `tools/mkmap -relief` from Natural Earth's *Gray Earth with Shaded Relief, Hypsography and Ocean Bottom*. Map display only; the ground in the game stays flat. |
 | `legend.json` | Colour → terrain: `ocean`, `shallows`, `grass`, `forest`, `desert`, `snow`, `ice`, `tundra`, `rock`. Colours not in the legend use the nearest one, so soft brushes are fine. |
 | `level1.json` | The level: map, legend, `scale` (blocks per pixel), ground height, seed, the `spawn` place, and its `places` and `zones`. |

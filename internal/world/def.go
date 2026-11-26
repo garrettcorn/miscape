@@ -16,22 +16,25 @@ import (
 // Places and zones use latitude/longitude (or offsets from a place), so they
 // land on the same spot at every level's scale.
 type Def struct {
-	Name     string    `json:"name"`
-	Level    int       `json:"level"`
-	Inherits string    `json:"inherits,omitempty"` // file name of the parent level, e.g. "level1"
-	Map      string    `json:"map,omitempty"`      // terrain image (PNG), relative to the level file
-	Legend   string    `json:"legend,omitempty"`   // color -> terrain JSON
-	Relief   string    `json:"relief,omitempty"`   // optional grey relief + ocean-depth layer for the world map
-	Scale    int       `json:"scale"`              // blocks per map pixel
-	GroundY  int       `json:"groundY,omitempty"`  // y of the top ground block
-	Seed     uint64    `json:"seed,omitempty"`
-	Spawn    string    `json:"spawn,omitempty"` // place id where new characters start
-	Places   []Place   `json:"places"`
-	Zones    []ZoneDef `json:"zones"`
+	Name        string    `json:"name"`
+	Level       int       `json:"level"`
+	Inherits    string    `json:"inherits,omitempty"`    // file name of the parent level, e.g. "level1"
+	Map         string    `json:"map,omitempty"`         // terrain image (PNG), relative to the level file
+	Legend      string    `json:"legend,omitempty"`      // color -> terrain JSON
+	Relief      string    `json:"relief,omitempty"`      // optional grey relief + ocean-depth layer for the world map
+	Regions     string    `json:"regions,omitempty"`     // optional continents and oceans image
+	RegionNames string    `json:"regionNames,omitempty"` // names for the regions image colors
+	Scale       int       `json:"scale"`                 // blocks per map pixel
+	GroundY     int       `json:"groundY,omitempty"`     // y of the top ground block
+	Seed        uint64    `json:"seed,omitempty"`
+	Spawn       string    `json:"spawn,omitempty"` // place id where new characters start
+	Places      []Place   `json:"places"`
+	Zones       []ZoneDef `json:"zones"`
 
 	// Resolved by LoadDef.
 	Dir     string `json:"-"` // the folder the level was loaded from, e.g. "earth"
 	terrain *TerrainMap
+	regions *RegionMap
 	W, H    int
 }
 
@@ -128,6 +131,13 @@ func loadDef(fsys fs.FS, dir, name string, depth int) (*Def, error) {
 		return nil, fmt.Errorf("level %s: %w", name, err)
 	}
 	d.terrain = tm
+	if d.Regions != "" {
+		rm, err := loadRegions(fsys, path.Join(dir, d.Regions), path.Join(dir, d.RegionNames))
+		if err != nil {
+			return nil, fmt.Errorf("level %s: %w", name, err)
+		}
+		d.regions = rm
+	}
 	d.Dir = dir
 	d.W, d.H = tm.W*d.Scale, tm.H*d.Scale
 	if d.W%Chunk != 0 || d.H%Chunk != 0 {
@@ -143,6 +153,7 @@ func (d *Def) inherit(p *Def) {
 	}
 	if d.Map == "" {
 		d.Map, d.Legend, d.Relief = p.Map, p.Legend, p.Relief
+		d.Regions, d.RegionNames = p.Regions, p.RegionNames
 	}
 	if d.Scale == 0 {
 		d.Scale = p.Scale * 2
@@ -246,4 +257,41 @@ func (d *Def) Place(id string) *Place {
 		}
 	}
 	return nil
+}
+
+var regionCache = map[mapCacheKey]*RegionMap{}
+
+func loadRegions(fsys fs.FS, imgPath, namesPath string) (*RegionMap, error) {
+	key := mapCacheKey{fsys, imgPath + "|" + namesPath}
+	mapCacheMu.Lock()
+	defer mapCacheMu.Unlock()
+	if rm := regionCache[key]; rm != nil {
+		return rm, nil
+	}
+	nb, err := fs.ReadFile(fsys, namesPath)
+	if err != nil {
+		return nil, err
+	}
+	regions, err := ParseRegions(nb)
+	if err != nil {
+		return nil, err
+	}
+	ib, err := fs.ReadFile(fsys, imgPath)
+	if err != nil {
+		return nil, err
+	}
+	rm, err := DecodeRegions(ib, regions)
+	if err != nil {
+		return nil, err
+	}
+	regionCache[key] = rm
+	return rm, nil
+}
+
+// RegionList is the level's regions (continents and oceans), or nil.
+func (d *Def) RegionList() []*Region {
+	if d.regions == nil {
+		return nil
+	}
+	return d.regions.Regions
 }

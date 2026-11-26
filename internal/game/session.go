@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -147,7 +148,7 @@ func (g *Game) meMsg(p *Player) M {
 	}
 	return M{"t": "me", "name": c.Name, "color": c.Color, "hp": c.HP, "mhp": c.MaxHP(), "inv": c.Inv, "eq": c.Equipped, "skills": skills,
 		"quests": c.Quests, "slots": g.slotsUsed(c.Inv), "maxSlots": InventorySlots,
-		"zone": g.W.ZoneAt(c.X, c.Z), "zoneName": g.W.ZoneName(c.X, c.Z), "hearth": hearth, "trade": g.tradeView(p)}
+		"zone": g.W.ZoneAt(c.X, c.Z), "zoneName": g.W.ZoneName(c.X, c.Z), "sea": g.atSea(c), "hearth": hearth, "trade": g.tradeView(p)}
 }
 
 // OnlineNames lists online players (for /api/info and admin).
@@ -182,6 +183,7 @@ func (g *Game) worldView() M {
 		// The terrain image for the world map: pixel = block / scale.
 		"map":   g.mapView(),
 		"spawn": []float64{sp.X, sp.Y, sp.Z}, "anvil": []float64{a.X, a.Y, a.Z},
+		"regions": g.regionView(),
 	}
 }
 
@@ -193,4 +195,25 @@ func (g *Game) mapView() M {
 		m["relief"] = "maps/" + d.Dir + "/" + d.Relief
 	}
 	return m
+}
+
+// regionView lists the level's continents and oceans with where to label
+// them on the world map.
+func (g *Game) regionView() []M {
+	var out []M
+	for _, r := range g.W.Def.RegionList() {
+		x, z := g.W.Def.LatLon(r.Label[0], r.Label[1])
+		label := r.MapLabel
+		if label == "" {
+			label = r.Name
+		}
+		out = append(out, M{"name": label, "sea": r.Sea, "x": x, "z": z, "minZoom": r.MinZoom})
+	}
+	return out
+}
+
+// atSea reports whether a character is out on open water (for the HUD).
+func (g *Game) atSea(c *Character) bool {
+	r := g.W.RegionAt(c.X, c.Z)
+	return r != nil && r.Sea && g.wet(int(math.Floor(c.X)), int(math.Floor(c.Z)))
 }

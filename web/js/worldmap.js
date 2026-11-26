@@ -118,6 +118,38 @@ export class WorldMap {
     el.textContent = `${zone ? zone.name + ' · ' : ''}${this.latLon(x, z)}`;
   }
 
+  // Continent and ocean names. Every copy of the wrapping map that's on screen
+  // gets its labels; small seas only appear once zoomed in. A label is skipped
+  // where it would cover a town or zone name, your marker, or another label
+  // (boxes: [centerX, centerY, width, height]); continents win over seas.
+  drawRegionLabels(ctx, W, H, z, dpr, toX, toY, boxes) {
+    const regions = (this.g.worldInfo && this.g.worldInfo.regions) || [];
+    const iw = this.g.world.sx * z;
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const hits = (b) => boxes.some((o) => Math.abs(o[0] - b[0]) < (o[2] + b[2]) / 2 && Math.abs(o[1] - b[1]) < (o[3] + b[3]) / 2);
+    for (const r of [...regions].sort((a, b) => a.sea - b.sea)) {
+      if (r.minZoom && this.zoom < r.minZoom) continue;
+      const size = Math.round(Math.min(22, Math.max(11, 9 + this.zoom * 6)) * dpr * (r.sea ? 0.85 : 1));
+      ctx.font = r.sea ? `italic 600 ${size}px Georgia, serif` : `800 ${size}px system-ui, sans-serif`;
+      const text = r.sea ? r.name : r.name.toUpperCase();
+      const py = toY(r.z);
+      if (py < -size || py > H + size) continue;
+      for (let px = toX(r.x) - Math.ceil(W / iw + 1) * iw; px < W + iw; px += iw) {
+        if (px < -W || px > 2 * W) continue;
+        if ('letterSpacing' in ctx) ctx.letterSpacing = r.sea ? '0px' : `${Math.round(size * 0.18)}px`;
+        const box = [px, py, ctx.measureText(text).width + 6 * dpr, size * 1.2];
+        if (hits(box)) continue;
+        boxes.push(box);
+        ctx.lineWidth = 3 * dpr; ctx.strokeStyle = r.sea ? 'rgba(10,30,60,.55)' : 'rgba(0,0,0,.55)';
+        ctx.strokeText(text, px, py);
+        ctx.fillStyle = r.sea ? 'rgba(190,225,255,.85)' : 'rgba(255,255,255,.92)';
+        ctx.fillText(text, px, py);
+      }
+    }
+    ctx.restore();
+  }
+
   draw() {
     const cv = this.canvas, g = this.g, w = g.world;
     if (!cv || !document.body.contains(cv) || !w) return;
@@ -155,6 +187,10 @@ export class WorldMap {
     // Zones and town names (a name is skipped if it would overlap one already drawn).
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     const labels = [];
+    // Zoomed out, continent names matter more than town names; zoomed in, the
+    // other way round. Whichever is drawn first wins any overlap.
+    const regionsFirst = this.zoom < 0.5;
+    if (regionsFirst) { this.drawRegionLabels(ctx, W, H, z, dpr, toX, toY, labels); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; }
     for (const zn of g.zones || []) {
       const px = toX(zn.x), py = toY(zn.z), r = Math.max(zn.r * z, 4 * dpr);
       ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2);
@@ -166,13 +202,16 @@ export class WorldMap {
       ctx.stroke(); ctx.setLineDash([]);
       ctx.font = `700 ${12 * dpr}px system-ui, sans-serif`;
       const tw = ctx.measureText(zn.name).width, ly = py - r - 3 * dpr, lh = 14 * dpr;
-      if (labels.some((l) => Math.abs(l[0] - px) < (l[2] + tw) / 2 && Math.abs(l[1] - ly) < lh)) continue;
-      labels.push([px, ly, tw]);
+      const box = [px, ly - lh / 2, tw, lh];
+      if (labels.some((o) => Math.abs(o[0] - box[0]) < (o[2] + box[2]) / 2 && Math.abs(o[1] - box[1]) < (o[3] + box[3]) / 2)) continue;
+      labels.push(box);
       ctx.lineWidth = 3 * dpr; ctx.strokeStyle = 'rgba(0,0,0,.7)';
       ctx.strokeText(zn.name, px, py - r - 3 * dpr);
       ctx.fillStyle = danger ? '#ffc2dc' : '#fff1c8';
       ctx.fillText(zn.name, px, py - r - 3 * dpr);
     }
+    if (g.body) labels.push([toX(g.body.x), toY(g.body.z), 22 * dpr, 22 * dpr]);
+    if (!regionsFirst) this.drawRegionLabels(ctx, W, H, z, dpr, toX, toY, labels);
     for (const p of g.others.values()) {
       ctx.beginPath(); ctx.arc(toX(p.x), toY(p.z), 4 * dpr, 0, Math.PI * 2);
       ctx.fillStyle = '#7cc4ff'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = dpr; ctx.stroke();
