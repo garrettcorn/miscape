@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.5.0] - 2026-11-26
+
+_If you are upgrading: characters keep everything, and their combat XP becomes Melee XP. Update servers, join companions and browsers together (protocol 3)._
+
+### Changed
+
+- **Breaking:** bump the protocol to version 3 ([`326e865`](https://github.com/garrettcorn/miscape/commit/326e865))
+- **Breaking:** bump the save format to version 3, turning combat XP into Melee XP ([`15e0d29`](https://github.com/garrettcorn/miscape/commit/15e0d29))
+- Replace the four skills with 14 grouped skills defined in content: Melee, Range, Magic, Slaying, Mining, Woodcutting, Fishing, Hunting, Farming, Crafting, Cooking, Firemaking, Agility and Thieving ([`15e0d29`](https://github.com/garrettcorn/miscape/commit/15e0d29))
+- Cap skill levels at 10 × the world level, so level 1 worlds go up to 10 ([`15e0d29`](https://github.com/garrettcorn/miscape/commit/15e0d29))
+- Train and power each weapon from its style's skill, and base health on combat level ([`15e0d29`](https://github.com/garrettcorn/miscape/commit/15e0d29))
+- Redesign the Skills tab with groups, progress bars, the level cap and each skill's next unlock ([`15e0d29`](https://github.com/garrettcorn/miscape/commit/15e0d29))
+- Name the countryside after its continent in the HUD, for example "the European countryside" ([`de08041`](https://github.com/garrettcorn/miscape/commit/de08041))
+
+### Added
+
+- Add fishing at rippling spots along the coasts, with herring, trout, salmon and cod by level ([`82d7f0f`](https://github.com/garrettcorn/miscape/commit/82d7f0f))
+- Add campfires, lit from logs or coal with a tinderbox, that light the dark, keep wisps away and burn out ([`82d7f0f`](https://github.com/garrettcorn/miscape/commit/82d7f0f))
+- Add cooking at a campfire or Manchester's kitchen range, with a chance to burn food at low levels ([`82d7f0f`](https://github.com/garrettcorn/miscape/commit/82d7f0f))
+- Add rowan and yew trees, tin, coal and iron outcrops, and an iron sword ([`82d7f0f`](https://github.com/garrettcorn/miscape/commit/82d7f0f))
+- Add Hannah Leigh the fishwife and her quest "Supper for the Mill Hands" ([`82d7f0f`](https://github.com/garrettcorn/miscape/commit/82d7f0f))
+- Add skill requirements to recipes, gathering, equipment and quests ([`15e0d29`](https://github.com/garrettcorn/miscape/commit/15e0d29))
+- Add XP popups and level-up messages that name what each level unlocks ([`15e0d29`](https://github.com/garrettcorn/miscape/commit/15e0d29))
+- Add a minimap and a full world map ([`933a87c`](https://github.com/garrettcorn/miscape/commit/933a87c))
+- Add land relief and ocean depths to the world map ([`4a18d44`](https://github.com/garrettcorn/miscape/commit/4a18d44))
+- Add continent and ocean labels to the world map ([`de08041`](https://github.com/garrettcorn/miscape/commit/de08041))
+- Add swimming, with a swim animation, and climbing out of water onto land ([`4a18d44`](https://github.com/garrettcorn/miscape/commit/4a18d44))
+
+### Fixed
+
+- Fix the lantern staying at the hip instead of swinging in the hand ([`4a18d44`](https://github.com/garrettcorn/miscape/commit/4a18d44))
+- Fix Ottiwell and the warning sign standing over water outside Manchester ([`4a18d44`](https://github.com/garrettcorn/miscape/commit/4a18d44))
+
 ## [0.3.0] - 2026-11-26
 
 _If you are upgrading: characters from 0.2.0 worlds keep their items, skills and quests and start in Manchester; blocks placed on the old map are not carried over. Update servers, join companions and browsers together (protocol 2)._
@@ -59,6 +92,8 @@ _If you are upgrading: browsers remember characters per address, so to keep play
 ## [0.1.0] - 2026-11-25
 
 _Initial release._
+
+[0.5.0]: https://github.com/garrettcorn/miscape/releases/tag/v0.5.0
 
 [0.3.0]: https://github.com/garrettcorn/miscape/releases/tag/v0.3.0
 
