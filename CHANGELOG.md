@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.2] - 2026-11-26
+
+### Fixed
+
+- Fix buying an item from a shopkeeper when another shopkeeper also sells it, such as salt from Nance ([`cca1dab`](https://github.com/garrettcorn/miscape/commit/cca1dab))
+- Fix selling a whole stack of more than 64 items ([`cca1dab`](https://github.com/garrettcorn/miscape/commit/cca1dab))
+
 ## [0.8.1] - 2026-11-26
 
 ### Fixed
@@ -148,6 +155,8 @@ _If you are upgrading: browsers remember characters per address, so to keep play
 ## [0.1.0] - 2026-11-25
 
 _Initial release._
+
+[0.8.2]: https://github.com/garrettcorn/miscape/releases/tag/v0.8.2
 
 [0.8.1]: https://github.com/garrettcorn/miscape/releases/tag/v0.8.1
 
