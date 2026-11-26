@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.9.0] - 2026-11-26
+
+_If you are upgrading: saves migrate on load (characters get adventure points for quests they had finished, and remember Manchester). Update servers, join companions and browsers together (protocol 6)._
+
+### Changed
+
+- **Breaking:** bump the protocol to version 6 and the save format to version 5 ([`961a0a8`](https://github.com/garrettcorn/miscape/commit/961a0a8))
+- Keep earning XP at half rate past the world's level cap; it counts toward the next world ([`4514acc`](https://github.com/garrettcorn/miscape/commit/4514acc))
+- Gather rowan, yew and ores in hotspots rather than scattered across the countryside ([`961a0a8`](https://github.com/garrettcorn/miscape/commit/961a0a8))
+- Let the Hearth Lantern take you to any town you have visited, and wake knocked-out players in the nearest one ([`961a0a8`](https://github.com/garrettcorn/miscape/commit/961a0a8))
+- Find better fish and snare catches further from home ([`961a0a8`](https://github.com/garrettcorn/miscape/commit/961a0a8))
+
+### Added
+
+- Add adventure points: every quest gives some, and later quests need them before they start ([`4514acc`](https://github.com/garrettcorn/miscape/commit/4514acc))
+- Add 13 towns across every continent, each known for particular skills ([`961a0a8`](https://github.com/garrettcorn/miscape/commit/961a0a8))
+- Add danger levels that rise with distance from Manchester, shown in the HUD and as a world-map overlay ([`961a0a8`](https://github.com/garrettcorn/miscape/commit/961a0a8))
+- Add mines, woods, fishing grounds and hunting grounds whose contents follow the danger level, marked on the world map and minimap ([`961a0a8`](https://github.com/garrettcorn/miscape/commit/961a0a8))
+- Add roaming creatures around players in the wilds, as strong as the danger where they appear ([`961a0a8`](https://github.com/garrettcorn/miscape/commit/961a0a8))
+- Add ten regional folklore creatures, from Black Shuck to the bunyip ([`76114d1`](https://github.com/garrettcorn/miscape/commit/76114d1))
+- Add people, shops and 15 quests to the new towns, warrants in Sydney, and agility courses in Rio and Sydney ([`76114d1`](https://github.com/garrettcorn/miscape/commit/76114d1))
+- Add silver ore and silver arrows ([`76114d1`](https://github.com/garrettcorn/miscape/commit/76114d1))
+
 ## [0.8.2] - 2026-11-26
 
 ### Fixed
@@ -155,6 +178,8 @@ _If you are upgrading: browsers remember characters per address, so to keep play
 ## [0.1.0] - 2026-11-25
 
 _Initial release._
+
+[0.9.0]: https://github.com/garrettcorn/miscape/releases/tag/v0.9.0
 
 [0.8.2]: https://github.com/garrettcorn/miscape/releases/tag/v0.8.2
 
