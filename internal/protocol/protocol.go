@@ -224,7 +224,7 @@ func Validate(m *In) error {
 			return bad("item/count")
 		}
 	case "buy", "sell":
-		if !validID(m.Item) || m.Count < 1 || m.Count > 64 {
+		if !validID(m.Item) || m.Count < 1 || m.Count > 999 {
 			return bad("item/count")
 		}
 	case "talk", "steal", "bounty_take", "bounty_claim":

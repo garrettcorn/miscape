@@ -340,13 +340,19 @@ func (g *Game) nearNPC(p *Player, id string) bool {
 	return g.W.Dist(c.X, c.Z, n.X, n.Z) <= NPCRange && math.Abs(c.Y-n.Y) < 3
 }
 
+// Buy buys from a shopkeeper the player is standing by. Several shopkeepers
+// may sell the same item, each at their own price; the one nearby is used.
 func (g *Game) Buy(p *Player, item string, count int) error {
+	seller := ""
 	for _, s := range g.C.Shop {
 		if s.Item != item {
 			continue
 		}
+		if seller == "" {
+			seller = s.NPC
+		}
 		if !g.nearNPC(p, s.NPC) {
-			return fail("Visit %s to buy that.", g.C.NPCs[s.NPC].Name)
+			continue
 		}
 		cost := s.Price * count
 		if p.Char.Inv["coin"] < cost {
@@ -360,6 +366,9 @@ func (g *Game) Buy(p *Player, item string, count int) error {
 		g.ensureEquip(p.Char)
 		p.dirtyMe, g.Dirty = true, true
 		return nil
+	}
+	if seller != "" {
+		return fail("Visit %s to buy that.", g.C.NPCs[seller].Name)
 	}
 	return fail("Nobody sells that.")
 }
