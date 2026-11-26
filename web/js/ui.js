@@ -14,6 +14,7 @@ const KIND_LABEL = { weapon: 'Weapon', food: 'Food', block: 'Building block', ma
 // (a stable id so focus survives re-renders).
 export const MENU_TABS = [
   { id: 'pack', label: '🎒 Pack', render: (ui) => ui.tab_pack() },
+  { id: 'map', label: '🗺 Map', render: (ui) => ui.g.worldMap.html(), after: (ui) => ui.g.worldMap.attach(), live: false },
   { id: 'craft', label: '🔨 Craft', render: (ui) => ui.tab_craft() },
   { id: 'skills', label: '⭐ Skills', render: (ui) => ui.tab_skills() },
   { id: 'quests', label: '📜 Quests', render: (ui) => ui.tab_quests() },
@@ -63,6 +64,7 @@ export function applyAccessibility() {
   // Background blur costs GPU time over the 3D scene: use solid panels when asked, or on the Low preset.
   document.body.classList.toggle('no-glass', !!settings.reduceTransparency || quality().name === 'low');
   $('#perf').hidden = !settings.showPerf;
+  document.body.classList.toggle('no-minimap', settings.showMinimap === false);
 }
 
 export class UI {
@@ -164,7 +166,11 @@ export class UI {
     hb.hidden = !(me.hearth > 0);
     $('#hearthfill').style.width = `${Math.min(1, me.hearth) * 100}%`;
     this.renderHotbar(me);
-    if (this.panel && this.panel.kind === 'menu') this.renderPanel();
+    // Tabs re-render with fresh stats, except ones that keep their own state (the map).
+    if (this.panel && this.panel.kind === 'menu') {
+      const tab = MENU_TABS.find((t) => t.id === this.panel.tab);
+      if (tab && tab.live === false) this.g.worldMap.draw(); else this.renderPanel();
+    }
     if (this.panel && this.panel.kind === 'trade') this.renderTrade();
     if (this.panel && this.panel.kind === 'dialog' && this.dialog) this.renderDialog();
     if (me.trade && !(this.panel && this.panel.kind === 'trade')) this.openTrade();
@@ -255,6 +261,7 @@ export class UI {
     this.lastTab = this.panel.tab;
     const tab = MENU_TABS.find((t) => t.id === this.panel.tab) || MENU_TABS[0];
     this.setBody(tab.render(this));
+    if (tab.after) tab.after(this);
   }
 
   // Replace the panel body, keeping scroll position and the focused control.
@@ -298,6 +305,8 @@ export class UI {
       }
       case 'item': { const [aid, id] = arg.split('|'); return this.runItemAction(aid, id); }
       case 'craftOnly': this.craftOnly = !this.craftOnly; this.renderPanel(); return;
+      case 'mapZoom': g.worldMap.setZoom(g.worldMap.zoom * (+arg > 0 ? 1.5 : 1 / 1.5)); return;
+      case 'mapCenter': g.worldMap.center = null; g.worldMap.draw(); return;
       case 'craft': {
         r = await n.request({ t: 'craft', recipe: arg });
         const rec = g.recipes.find((x) => x.id === arg);
@@ -551,6 +560,7 @@ export class UI {
       <label>Reduce transparency (solid panels instead of glass; always on with Low graphics) <input type="checkbox" ${settings.reduceTransparency ? 'checked' : ''} data-set="reduceTransparency" data-fid="rt"></label>
       <label>Look sensitivity <input type="range" min="0.3" max="2.5" step="0.1" value="${settings.sensitivity}" data-set="sensitivity" data-fid="se"></label>
       <label>Invert look Y <input type="checkbox" ${settings.invertY ? 'checked' : ''} data-set="invertY" data-fid="iy"></label>
+      <label>Show minimap <input type="checkbox" ${settings.showMinimap !== false ? 'checked' : ''} data-set="showMinimap" data-fid="mm"></label>
       <label>Show performance overlay <input type="checkbox" ${settings.showPerf ? 'checked' : ''} data-set="showPerf" data-fid="pf"></label>
       <h4>World</h4>
       <p class="note">${esc(this.g.realmText())}</p>
@@ -569,7 +579,7 @@ export class UI {
     const rows = Object.entries(ACTIONS).map(([a, label]) =>
       `<label>${esc(label)} <button class="btn bind" data-do="rebind" data-arg="${a}" data-fid="k-${a}">${esc(glyph('kb', a))}</button></label>`).join('');
     return `<div class="settings"><h4>Controller</h4>
-      <p class="note">Left stick move · Right stick look · Ⓐ jump · RT attack/gather · LT use/place · Ⓧ talk/trade · Ⓨ menu · LB/RB hotbar · D-pad ↓ Hearth · D-pad ← drop hotbar item · L3 sprint · Start settings · Back chat.
+      <p class="note">Left stick move · Right stick look · Ⓐ jump · RT attack/gather · LT use/place · Ⓧ talk/trade · Ⓨ menu · LB/RB hotbar · D-pad → map · D-pad ↓ Hearth · D-pad ← drop hotbar item · L3 sprint · Start settings · Back chat.
         In menus: Ⓐ choose · Ⓑ back · Ⓧ drop one · LB/RB switch tabs.</p>
       <h4>Touch</h4><p class="note">Left stick to move, drag the right side to look. ⚔ attack/gather (auto-targets the nearest creature), ✋ use/place, 💬 talk/trade. Drop items from the ☰ menu’s Pack.</p>
       <h4>Keyboard &amp; mouse (click to remap)</h4>${rows}<button class="btn" data-do="resetKeys" data-fid="rk">Reset to defaults</button></div>`;
@@ -680,6 +690,7 @@ export class UI {
       this.focusFirst();
       return;
     }
+    if (document.activeElement && document.activeElement.id === 'wmcanvas' && ['up', 'down', 'left', 'right'].includes(dir)) { this.g.worldMap.nav(dir); return; }
     const cur = document.activeElement;
     if (cur && (cur.type === 'range' || cur.tagName === 'SELECT') && (dir === 'left' || dir === 'right')) {
       if (cur.type === 'range') { cur.value = +cur.value + (dir === 'right' ? 1 : -1) * +cur.step; }

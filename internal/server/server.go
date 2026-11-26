@@ -26,6 +26,7 @@ import (
 	"lanternfall/internal/game"
 	"lanternfall/internal/protocol"
 	"lanternfall/internal/store"
+	"lanternfall/maps"
 )
 
 // Version is overridden at release build time with -ldflags "-X lanternfall/internal/server.Version=..."
@@ -322,6 +323,7 @@ func (s *Server) Handler(local bool) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("GET /", s.staticHandler())
 	mux.HandleFunc("GET /api/info", s.handleInfo)
+	mux.Handle("GET /maps/", mapHandler())
 	mux.HandleFunc("GET /api/worlds", s.handleWorlds)
 	mux.HandleFunc("GET /ws", func(w http.ResponseWriter, r *http.Request) { s.handleWS(w, r, local) })
 	if local && s.Mode == config.ModePrivate {
@@ -634,4 +636,18 @@ func (s *Server) checkAdmin(r *http.Request) bool {
 	}
 	got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 	return s.AdminToken != "" && subtle.ConstantTimeCompare([]byte(got), []byte(s.AdminToken)) == 1
+}
+
+// mapHandler serves the world-map terrain images (only PNGs) for the in-game
+// world map. They're part of the game, so they cache well.
+func mapHandler() http.Handler {
+	fsrv := http.StripPrefix("/maps/", http.FileServerFS(maps.FS))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, ".png") {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		fsrv.ServeHTTP(w, r)
+	})
 }

@@ -9,6 +9,8 @@ import { settings, quality, save } from './settings.js';
 import { drawPerson, drawDropped, MOB_MODELS } from './models.js';
 import { project } from './mat.js';
 import { showJoin } from './join.js';
+import { MiniMap } from './minimap.js';
+import { WorldMap } from './worldmap.js';
 import { B, BLOCKS } from './blocks.js';
 
 const $ = (s) => document.querySelector(s);
@@ -57,6 +59,8 @@ class Game {
     this.chunkPending = new Set();
     this.dirty = new Set();
     this.tags = new Map();
+    this.minimap = new MiniMap(this, $('#minimap'));
+    this.worldMap = new WorldMap(this);
     this.shake = 0;
     this.netWindow = { t: performance.now(), inB: 0, outB: 0, inRate: 0, outRate: 0 };
     applyAccessibility();
@@ -107,6 +111,7 @@ class Game {
     if (!this.world || this.world.sx !== W.sx || this.world.sz !== W.sz) {
       this.world = new World(W.sx, W.sy, W.sz, W.chunk);
       for (const k of [...this.r.chunks.keys()]) { const [cx, cz, lod] = k.split(',').map(Number); this.r.dropChunk(cx, cz, lod); }
+      this.minimap.reset();
     }
     this.worldInfo = W;
     this.zones = W.zones || [];
@@ -143,6 +148,7 @@ class Game {
       if (b[0] !== 1) return;
       const cx = b[1] | (b[2] << 8), cz = b[3] | (b[4] << 8); // uint16 chunk coordinates
       this.world.applyChunk(cx, cz, b.subarray(5));
+      this.minimap.invalidate(cx, cz);
       this.chunkPending.delete(`${cx},${cz}`);
       for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const nx = this.world.wrapC(cx + dx), nz = cz + dz;
@@ -151,6 +157,7 @@ class Game {
     });
     n.on('block', (m) => {
       this.world.set(m.x, m.y, m.z, m.b);
+      this.minimap.invalidate(Math.floor(this.world.wrapX(m.x) / this.world.cs), Math.floor(m.z / this.world.cs));
       const w = this.world, cs = w.cs, cx = Math.floor(w.wrapX(m.x) / cs), cz = Math.floor(m.z / cs);
       const lx = w.wrapX(m.x) - cx * cs, lz = m.z - cz * cs;
       this.urgent = this.urgent || new Set();
@@ -268,6 +275,7 @@ class Game {
     if (!ui.open) {
       if (inp.pressed.has('menu')) ui.openMenu();
       else if (inp.pressed.has('pause')) ui.openMenu('settings');
+      else if (inp.pressed.has('map')) ui.openMenu('map');
       if (inp.pressed.has('chat') && this.input.device !== 'touch') { ui.openChat(); }
       if (inp.pressed.has('hotPrev')) ui.cycleHot(-1);
       if (inp.pressed.has('hotNext')) ui.cycleHot(1);
@@ -415,7 +423,7 @@ class Game {
     const R = this.q.renderDist + 1;
     // Forget chunks well outside the view (the server can always resend them).
     if ((this.evictTick = (this.evictTick || 0) + 1) % 30 === 0) {
-      for (const [cx, cz] of w.evict(pcx, pcz, R + 3)) { this.r.dropChunk(cx, cz, 0); this.r.dropChunk(cx, cz, 1); }
+      for (const [cx, cz] of w.evict(pcx, pcz, R + 3)) { this.r.dropChunk(cx, cz, 0); this.r.dropChunk(cx, cz, 1); this.minimap.drop(cx, cz); }
     }
     if (this.chunkPending.size >= 8) return;
     const need = [];
@@ -522,6 +530,7 @@ class Game {
       playerLight, highlight: hl,
     });
     this.drawTags();
+    if (settings.showMinimap !== false && (this.mmTick = (this.mmTick || 0) + 1) % 3 === 0) this.minimap.draw();
   }
 
   drawTags() {

@@ -48,6 +48,14 @@ func main() {
 	copyFile(execJS, filepath.Join(out, "wasm_exec.js"))
 
 	copyFile("web/style.css", filepath.Join(out, "style.css"))
+	// Terrain images for the world map (served at maps/<world>/<file>.png).
+	pngs, err := filepath.Glob("maps/*/*.png")
+	must(err)
+	for _, p := range pngs {
+		dst := filepath.Join(out, p)
+		must(os.MkdirAll(filepath.Dir(dst), 0o755))
+		copyFile(p, dst)
+	}
 	ents, err := os.ReadDir("web/js")
 	must(err)
 	for _, e := range ents {

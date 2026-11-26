@@ -9,17 +9,17 @@ export const PRESETS = {
 export const ACTIONS = {
   forward: 'Move forward', back: 'Move back', left: 'Strafe left', right: 'Strafe right', jump: 'Jump', sprint: 'Sprint',
   primary: 'Attack / gather', use: 'Use item / place block', interact: 'Talk / trade', menu: 'Open menu', hearth: 'Hearth Lantern',
-  chat: 'Chat', pause: 'Settings / close', hotPrev: 'Previous hotbar slot', hotNext: 'Next hotbar slot', drop: 'Drop selected item',
+  chat: 'Chat', pause: 'Settings / close', hotPrev: 'Previous hotbar slot', hotNext: 'Next hotbar slot', drop: 'Drop selected item', map: 'World map',
 };
 
 export const DEFAULT_KEYS = {
   forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', sprint: 'ShiftLeft',
   primary: 'Mouse0', use: 'Mouse2', interact: 'KeyE', menu: 'Tab', hearth: 'KeyH', chat: 'Enter', pause: 'Escape',
-  hotPrev: 'KeyQ', hotNext: 'KeyR', drop: 'KeyG',
+  hotPrev: 'KeyQ', hotNext: 'KeyR', drop: 'KeyG', map: 'KeyM',
 };
 
 const DEFAULTS = {
-  quality: 'auto', textScale: 1, reduceMotion: false, reduceTransparency: false, showPerf: false, invertY: false, sensitivity: 1,
+  quality: 'auto', textScale: 1, showMinimap: true, reduceMotion: false, reduceTransparency: false, showPerf: false, invertY: false, sensitivity: 1,
   keys: { ...DEFAULT_KEYS }, custom: null,
 };
 

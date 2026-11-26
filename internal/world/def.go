@@ -29,6 +29,7 @@ type Def struct {
 	Zones    []ZoneDef `json:"zones"`
 
 	// Resolved by LoadDef.
+	Dir     string `json:"-"` // the folder the level was loaded from, e.g. "earth"
 	terrain *TerrainMap
 	W, H    int
 }
@@ -126,6 +127,7 @@ func loadDef(fsys fs.FS, dir, name string, depth int) (*Def, error) {
 		return nil, fmt.Errorf("level %s: %w", name, err)
 	}
 	d.terrain = tm
+	d.Dir = dir
 	d.W, d.H = tm.W*d.Scale, tm.H*d.Scale
 	if d.W%Chunk != 0 || d.H%Chunk != 0 {
 		return nil, fmt.Errorf("level %s: size %dx%d must be a multiple of %d", name, d.W, d.H, Chunk)

@@ -96,9 +96,15 @@ go build -o bin/lanternfall ./cmd/lanternfall
 | Talk / trade | Ⓧ | E | 💬 |
 | Menu (pack, craft, skills, quests, settings) | Ⓨ | Tab | ☰ |
 | Hearth Lantern (return home) | D-pad ↓ | H | 🏮 |
+| World map | D-pad → | M | ☰ → Map |
 | Hotbar | LB / RB | Q / R, 1–8, wheel | tap slot |
 | Drop the selected hotbar item | D-pad ← | G | from the Pack |
 | In menus: choose · back · drop one · switch tabs | Ⓐ · Ⓑ · Ⓧ · LB/RB | Enter · Esc · G · Q/R | tap |
+
+The **minimap** in the corner shows the land around you (north is up; yellow is
+you, gold NPCs, red creatures, blue players). The **world map** shows all of
+Earth, with towns and danger zones: drag or use the arrow keys / D-pad to pan,
+and the wheel, pinch or ＋/－ to zoom. The minimap can be turned off in Settings.
 
 Open the **Pack** to see each item's stats and to equip, eat or drop it.
 Dropped items float on the ground for 10 minutes; walk over them to pick them

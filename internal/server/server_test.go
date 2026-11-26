@@ -305,3 +305,27 @@ func TestInfoOffersSourceCode(t *testing.T) {
 		t.Fatalf("info must advertise source and license: %+v", inf)
 	}
 }
+
+// The world map image is served to the client; the level files next to it
+// are not (only PNGs).
+func TestWorldMapImageIsServed(t *testing.T) {
+	_, ts := start(t, t.TempDir(), false)
+	r, err := http.Get(ts.URL + "/maps/earth/terrain.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Body.Close()
+	if r.StatusCode != 200 || r.Header.Get("Content-Type") != "image/png" {
+		t.Fatalf("terrain.png: %d %s", r.StatusCode, r.Header.Get("Content-Type"))
+	}
+	for _, p := range []string{"/maps/earth/level1.json", "/maps/", "/maps/../go.mod"} {
+		r, err := http.Get(ts.URL + p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.Body.Close()
+		if r.StatusCode == 200 {
+			t.Fatalf("%s should not be served", p)
+		}
+	}
+}

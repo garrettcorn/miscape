@@ -2,7 +2,7 @@ import { settings } from './settings.js';
 
 // Gamepad "standard" mapping indices.
 const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, L3: 10, R3: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
-const PAD_ACTIONS = { [PAD.A]: 'jump', [PAD.X]: 'interact', [PAD.Y]: 'menu', [PAD.LB]: 'hotPrev', [PAD.RB]: 'hotNext', [PAD.LT]: 'use', [PAD.RT]: 'primary', [PAD.START]: 'pause', [PAD.BACK]: 'chat', [PAD.L3]: 'sprint', [PAD.DOWN]: 'hearth', [PAD.LEFT]: 'drop', [PAD.B]: 'back' };
+const PAD_ACTIONS = { [PAD.A]: 'jump', [PAD.X]: 'interact', [PAD.Y]: 'menu', [PAD.LB]: 'hotPrev', [PAD.RB]: 'hotNext', [PAD.LT]: 'use', [PAD.RT]: 'primary', [PAD.START]: 'pause', [PAD.BACK]: 'chat', [PAD.L3]: 'sprint', [PAD.DOWN]: 'hearth', [PAD.LEFT]: 'drop', [PAD.RIGHT]: 'map', [PAD.B]: 'back' };
 const DEAD = 0.18;
 
 const dz = (v) => (Math.abs(v) < DEAD ? 0 : (v - Math.sign(v) * DEAD) / (1 - DEAD));
@@ -40,7 +40,7 @@ export class Input {
       if (this.uiMode) {
         const m = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Escape: 'back', KeyQ: 'tabPrev', KeyR: 'tabNext' }[e.code];
         if (m) { e.preventDefault(); this.onUI && this.onUI(m); return; }
-        if (e.code === settings.keys.menu) { e.preventDefault(); this.onUI && this.onUI('back'); return; }
+        if (e.code === settings.keys.menu || e.code === settings.keys.map) { e.preventDefault(); this.onUI && this.onUI('back'); return; }
         if (e.code === settings.keys.drop) { e.preventDefault(); this.onUI && this.onUI('alt'); return; }
         return;
       }
@@ -193,7 +193,7 @@ export class Input {
 }
 
 export function glyph(device, action) {
-  const pad = { primary: 'RT', use: 'LT', interact: 'Ⓧ', menu: 'Ⓨ', jump: 'Ⓐ', hearth: 'D-pad ↓', drop: 'D-pad ←', pause: 'Start', back: 'Ⓑ', alt: 'Ⓧ', ok: 'Ⓐ' };
+  const pad = { primary: 'RT', use: 'LT', interact: 'Ⓧ', menu: 'Ⓨ', jump: 'Ⓐ', hearth: 'D-pad ↓', drop: 'D-pad ←', map: 'D-pad →', pause: 'Start', back: 'Ⓑ', alt: 'Ⓧ', ok: 'Ⓐ' };
   const touch = { primary: '⚔', use: '✋', interact: '💬', menu: '☰', jump: '⤒', hearth: '🏮' };
   if (device === 'pad') return pad[action] || action;
   if (device === 'touch') return touch[action] || action;
