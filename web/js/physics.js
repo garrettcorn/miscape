@@ -15,6 +15,13 @@ function blocked(world, x, y, z) {
   return false;
 }
 
+function feetBlocked(world, x, y, z) {
+  for (const dx of [-HALF + 0.01, HALF - 0.01]) for (const dz of [-HALF + 0.01, HALF - 0.01]) {
+    if (world.solidAt(x + dx, y, z + dz)) return true;
+  }
+  return false;
+}
+
 // Step the body by desired horizontal velocity (vx, vz) for dt seconds.
 export function step(world, b, vx, vz, jump, dt) {
   // Don't fall into unloaded terrain.
@@ -46,9 +53,14 @@ export function step(world, b, vx, vz, jump, dt) {
       if (b.onGround && !blocked(world, b.x, b.y + 1.01, nz) && !blocked(world, b.x, b.y + 1.01, b.z)) { b.y += 1.01; b.stepAnim = 1; b.z = nz; }
       else vz = 0;
     } else b.z = nz;
-    // Y
+    // Y. Falling checks the exact sole of the feet: blocked() samples 2 cm up
+    // (so walking doesn't snag on the floor), and at high frame rates a
+    // frame's fall is smaller than that, which made the body sink 1–2 cm and
+    // pop back up every frame — the whole view shook while standing still.
     const ny = b.y + b.vy * h;
-    if (blocked(world, b.x, ny, b.z)) {
+    if (b.vy < 0 && feetBlocked(world, b.x, ny, b.z)) {
+      b.y = Math.floor(ny) + 1; b.vy = 0; b.onGround = true;
+    } else if (blocked(world, b.x, ny, b.z)) {
       if (b.vy < 0) { b.y = Math.floor(ny) + 1; b.onGround = true; }
       b.vy = 0;
     } else { b.y = ny; b.onGround = false; }
