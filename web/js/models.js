@@ -7,6 +7,7 @@ export function rgb(hex) {
   return c;
 }
 const darker = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
+const LANTERN = { model: 'lantern', color: '#ffd27a', glow: true };
 const SKIN = [0.96, 0.8, 0.64], EYE = [0.12, 0.1, 0.12];
 
 // Add a box: world position (x,y,z) + yaw; local offset (ox,oy,oz) in the
@@ -43,19 +44,10 @@ export function drawPerson(r, e) {
   else if (e.hat === 'helm') box(r, x, y, z, yaw, 0, 1.84, 0, 0.46, 0.18, 0.46, [0.55, 0.6, 0.66]);
   else if (e.hat === 'cap') box(r, x, y, z, yaw, 0, 1.82, 0.03, 0.46, 0.12, 0.5, [0.85, 0.75, 0.3]);
   else box(r, x, y, z, yaw, 0, 1.8, -0.02, 0.44, 0.1, 0.44, darker(col, 0.4));
-  // weapon in right hand
-  if (e.weapon) {
-    const wc = rgb(e.weapon);
-    const c = Math.cos(yaw), s = Math.sin(yaw);
-    const hx = x + c * 0.34, hz = z - s * 0.34;
-    const p = walk * 0.8 + swing;
-    r.addBox((m, o) => trs(m, o, hx, y + 1.3, hz, yaw, 0.07, 0.7, 0.07, 0, -0.55 - 0.35, 0.18, p - 1.2), wc[0], wc[1], wc[2], e.weaponGlow ? 2 : 0);
-  }
-  if (e.lantern) {
-    const c = Math.cos(yaw), s = Math.sin(yaw);
-    const hx = x - c * 0.4 + s * 0.12, hz = z + s * 0.4 + c * 0.12;
-    r.addBox((m, o) => trs(m, o, hx, y + 0.78, hz, yaw, 0.16, 0.2, 0.16), 1.0, 0.85, 0.5, 2);
-  }
+  // held item in the right hand (moves with the arm), lantern on the left hip
+  const c = Math.cos(yaw), s = Math.sin(yaw);
+  if (e.held) drawHeld(r, e.held, x + c * 0.34, y + 1.3, z - s * 0.34, yaw, walk * 0.8 + swing);
+  if (e.lantern) drawHeld(r, LANTERN, x - c * 0.4 + s * 0.12, y + 0.7, z + s * 0.4 + c * 0.12, yaw, 0, 0, 0, 0);
 }
 
 export function drawBramblet(r, e, t) {
@@ -82,4 +74,90 @@ export function drawWisp(r, e, t) {
   // eyes (dark) facing yaw
   box(r, x, y - 0.06, z, e.yaw, -0.09, 0.05, 0.215, 0.08, 0.1, 0.02, [0.15, 0.05, 0.25]);
   box(r, x, y - 0.06, z, e.yaw, 0.09, 0.05, 0.215, 0.08, 0.1, 0.02, [0.15, 0.05, 0.25]);
+}
+
+// ---------- item models (held and dropped) ----------
+// Each model is a list of boxes in item space: +Y runs from the grip toward
+// the tip, the grip is at the origin. Colors: 'main' is the item's color;
+// the rest are fixed materials. Add a model here and to content.Models.
+const MAT = { grip: [0.36, 0.23, 0.13], dark: [0.22, 0.2, 0.2], metal: [0.62, 0.64, 0.68], leaf: [0.3, 0.6, 0.25] };
+export const ITEM_MODELS = {
+  sword: [
+    { c: 'grip', p: [0, 0, 0], s: [0.06, 0.22, 0.06] },
+    { c: 'shade', p: [0, -0.13, 0], s: [0.09, 0.07, 0.09] },
+    { c: 'shade', p: [0, 0.14, 0], s: [0.34, 0.07, 0.1] },
+    { c: 'main', p: [0, 0.53, 0], s: [0.17, 0.72, 0.05], glow: true },
+    { c: 'main', p: [0, 0.94, 0], s: [0.09, 0.12, 0.05], glow: true },
+  ],
+  axe: [
+    { c: 'grip', p: [0, 0.28, 0], s: [0.06, 0.78, 0.06] },
+    { c: 'main', p: [0.1, 0.58, 0], s: [0.2, 0.22, 0.05], glow: true },
+    { c: 'shade', p: [0.21, 0.58, 0], s: [0.04, 0.3, 0.05] },
+  ],
+  pickaxe: [
+    { c: 'grip', p: [0, 0.28, 0], s: [0.06, 0.78, 0.06] },
+    { c: 'main', p: [0, 0.64, 0], s: [0.56, 0.08, 0.07], glow: true },
+  ],
+  club: [
+    { c: 'grip', p: [0, 0.1, 0], s: [0.07, 0.34, 0.07] },
+    { c: 'main', p: [0, 0.5, 0], s: [0.15, 0.48, 0.15], glow: true },
+  ],
+  lantern: [
+    { c: 'dark', p: [0, 0.2, 0], s: [0.12, 0.04, 0.12] },
+    { c: 'main', p: [0, 0.08, 0], s: [0.16, 0.2, 0.16], glow: true, always: true },
+    { c: 'dark', p: [0, -0.04, 0], s: [0.18, 0.04, 0.18] },
+  ],
+  gem: [{ c: 'main', p: [0, 0, 0], s: [0.2, 0.26, 0.2], glow: true }],
+  food: [
+    { c: 'main', p: [0, 0, 0], s: [0.2, 0.2, 0.2] },
+    { c: 'leaf', p: [0.03, 0.13, 0], s: [0.1, 0.05, 0.06] },
+  ],
+  block: [{ c: 'main', p: [0, 0, 0], s: [0.3, 0.3, 0.3] }],
+  coin: [{ c: 'main', p: [0, 0, 0], s: [0.24, 0.24, 0.05], glow: true }],
+  bundle: [
+    { c: 'main', p: [-0.07, 0, 0], s: [0.12, 0.36, 0.12] },
+    { c: 'main', p: [0.07, 0, 0], s: [0.12, 0.36, 0.12] },
+    { c: 'shade', p: [0, 0, 0], s: [0.3, 0.06, 0.14] },
+  ],
+};
+// Center of each model, so dropped items spin around their middle.
+const CENTER = { sword: 0.4, axe: 0.3, pickaxe: 0.35, club: 0.3 };
+
+export function modelFor(it) {
+  if (!it) return 'bundle';
+  if (it.model && ITEM_MODELS[it.model]) return it.model;
+  return { weapon: 'sword', food: 'food', block: 'block', tool: it.light ? 'lantern' : 'pickaxe', currency: 'coin' }[it.kind] || 'bundle';
+}
+
+function partColor(part, col) {
+  if (part.c === 'main') return col;
+  if (part.c === 'shade') return darker(col, 0.6);
+  return MAT[part.c];
+}
+
+// Draw an item in a hand. (hx,hy,hz) is the shoulder, yaw/pitch are the arm's;
+// the item is held at the end of the arm, tilted forward by `tilt` and rolled
+// around its own length by `roll` so a blade shows its flat side.
+export function drawHeld(r, it, hx, hy, hz, yaw, pitch, tilt = 0.5, armLen = 0.52, roll = 1.0) {
+  const parts = ITEM_MODELS[modelFor(it)], col = rgb(it.color || '#888888');
+  // Hand position expressed in the tilted frame: Rx(-tilt) * (0, -armLen, 0).
+  const py = -armLen * Math.cos(tilt), pz = armLen * Math.sin(tilt);
+  // The roll turns the item frame, so express the hand offset in that frame too.
+  const cr = Math.cos(roll), sr = Math.sin(roll), hxo = -sr * pz, hzo = cr * pz;
+  const q = pitch + tilt;
+  for (const part of parts) {
+    const c = partColor(part, col), a = it.glow && part.glow || part.always ? 2 : 0;
+    r.addBox((m, o) => trs(m, o, hx, hy, hz, yaw, part.s[0], part.s[1], part.s[2], hxo + part.p[0], py + part.p[1], hzo + part.p[2], q, roll), c[0], c[1], c[2], a);
+  }
+}
+
+// Draw an item lying in the world: floating, bobbing and slowly turning.
+export function drawDropped(r, it, x, y, z, t, seed) {
+  const model = modelFor(it), parts = ITEM_MODELS[model], col = rgb(it.color || '#888888');
+  const k = 0.7, cy = (CENTER[model] || 0) * k;
+  const yaw = t * 1.3 + seed, by = y + 0.45 + Math.sin(t * 2.2 + seed) * 0.06;
+  for (const part of parts) {
+    const c = partColor(part, col), a = it.glow && part.glow || part.always ? 2 : 0;
+    r.addBox((m, o) => trs(m, o, x, by, z, yaw, part.s[0] * k, part.s[1] * k, part.s[2] * k, part.p[0] * k, part.p[1] * k - cy, part.p[2] * k, 0.35), c[0], c[1], c[2], a);
+  }
 }

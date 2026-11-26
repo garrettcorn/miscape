@@ -87,7 +87,7 @@ type In struct {
 var types = map[string]bool{
 	"hello": false, "move": false, "chunks": false, "ping": false,
 	"gather": true, "attack": true, "place": true, "break": true,
-	"craft": true, "eat": true, "equip": true,
+	"craft": true, "eat": true, "equip": true, "drop": true,
 	"talk": true, "quest_accept": true, "quest_turnin": true,
 	"buy": true, "sell": true,
 	"trade_request": true, "trade_respond": true, "trade_offer": true,
@@ -192,6 +192,10 @@ func Validate(m *In) error {
 		}
 		if !validID(m.Item) {
 			return bad("item")
+		}
+	case "drop":
+		if !validID(m.Item) || m.Count < 1 || m.Count > 999 {
+			return bad("item/count")
 		}
 	case "buy", "sell":
 		if !validID(m.Item) || m.Count < 1 || m.Count > 64 {

@@ -94,13 +94,16 @@ func (g *Game) ensureEquip(c *Character) {
 	}
 }
 
-// TotalItems counts every item across all characters (for conservation tests).
+// TotalItems counts every item in packs and on the ground (for conservation tests).
 func (g *Game) TotalItems() map[string]int {
 	t := map[string]int{}
 	for _, c := range g.Chars {
 		for k, v := range c.Inv {
 			t[k] += v
 		}
+	}
+	for _, d := range g.Drops {
+		t[d.Item] += d.Count
 	}
 	return t
 }

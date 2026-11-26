@@ -20,12 +20,21 @@ export function mul(a, b) {
   return o;
 }
 // Model matrix: translate, rotate around Y, then scale, with a pivot offset.
-export function trs(out, o, tx, ty, tz, ry, sx, sy, sz, px = 0, py = 0, pz = 0, rx = 0) {
+// Optional rz rolls the box around its own Y axis (R = Ry * Rx * Ry'), used
+// to turn a held blade's flat side toward the camera.
+export function trs(out, o, tx, ty, tz, ry, sx, sy, sz, px = 0, py = 0, pz = 0, rx = 0, rz = 0) {
   const c = Math.cos(ry), s = Math.sin(ry), cx = Math.cos(rx), sxr = Math.sin(rx);
   // R = Ry * Rx
-  const r00 = c, r01 = s * sxr, r02 = s * cx;
-  const r10 = 0, r11 = cx, r12 = -sxr;
-  const r20 = -s, r21 = c * sxr, r22 = c * cx;
+  let r00 = c, r01 = s * sxr, r02 = s * cx;
+  let r10 = 0, r11 = cx, r12 = -sxr;
+  let r20 = -s, r21 = c * sxr, r22 = c * cx;
+  if (rz) {
+    // Spin around the box's local Y: mix columns 0 and 2.
+    const cr = Math.cos(rz), sr = Math.sin(rz);
+    [r00, r02] = [cr * r00 - sr * r02, sr * r00 + cr * r02];
+    [r10, r12] = [cr * r10 - sr * r12, sr * r10 + cr * r12];
+    [r20, r22] = [cr * r20 - sr * r22, sr * r20 + cr * r22];
+  }
   out[o] = r00 * sx; out[o + 1] = r10 * sx; out[o + 2] = r20 * sx; out[o + 3] = 0;
   out[o + 4] = r01 * sy; out[o + 5] = r11 * sy; out[o + 6] = r21 * sy; out[o + 7] = 0;
   out[o + 8] = r02 * sz; out[o + 9] = r12 * sz; out[o + 10] = r22 * sz; out[o + 11] = 0;

@@ -1,10 +1,61 @@
 import { settings, save, PRESETS, ACTIONS, DEFAULT_KEYS, quality } from './settings.js';
 import { glyph } from './input.js';
+import { itemIcon } from './icons.js';
 
 const $ = (s) => document.querySelector(s);
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const SKILL_LABEL = { woodcutting: 'Woodcutting', mining: 'Mining', crafting: 'Crafting', combat: 'Combat' };
 const SKILL_ICON = { woodcutting: '🪓', mining: '⛏', crafting: '🔨', combat: '⚔' };
+const KIND_LABEL = { weapon: 'Weapon', food: 'Food', block: 'Building block', material: 'Material', tool: 'Tool', currency: 'Currency', missing: 'Unknown item' };
+
+// ---------- extension points ----------
+// Menu tabs, in order. To add a screen, push {id, label, render(ui) → html}.
+// Buttons inside use data-do / data-arg (handled by UI.act) and data-fid
+// (a stable id so focus survives re-renders).
+export const MENU_TABS = [
+  { id: 'pack', label: '🎒 Pack', render: (ui) => ui.tab_pack() },
+  { id: 'craft', label: '🔨 Craft', render: (ui) => ui.tab_craft() },
+  { id: 'skills', label: '⭐ Skills', render: (ui) => ui.tab_skills() },
+  { id: 'quests', label: '📜 Quests', render: (ui) => ui.tab_quests() },
+  { id: 'settings', label: '⚙ Settings', render: (ui) => ui.tab_settings() },
+  { id: 'controls', label: '🎮 Controls', render: (ui) => ui.tab_controls() },
+];
+
+// Pack filters: {id, label, test(item)}. Empty filters are hidden.
+export const PACK_FILTERS = [
+  { id: 'all', label: 'All', test: () => true },
+  { id: 'gear', label: 'Gear', test: (it) => it.kind === 'weapon' || it.kind === 'tool' },
+  { id: 'food', label: 'Food', test: (it) => it.kind === 'food' },
+  { id: 'materials', label: 'Materials', test: (it) => it.kind === 'material' || it.kind === 'missing' },
+  { id: 'blocks', label: 'Blocks', test: (it) => it.kind === 'block' },
+];
+
+// What you can do with an item in your pack. Each action says when it
+// applies and which request it sends; the server checks every rule again.
+//   {id, label(item, ctx), when(item, ctx), primary?, request(id, ctx), toast?(item, ctx)}
+//   ctx = {me, count, equipped}
+const droppable = (it) => it.tradeable && it.kind !== 'missing';
+export const ITEM_ACTIONS = [
+  { id: 'equip', primary: true, label: () => 'Equip', when: (it, c) => it.kind === 'weapon' && !c.equipped, request: (id) => ({ t: 'equip', item: id }) },
+  { id: 'unequip', label: () => 'Unequip', when: (it, c) => it.kind === 'weapon' && c.equipped, request: () => ({ t: 'equip', item: '' }) },
+  { id: 'eat', primary: true, label: (it) => `Eat (+${it.heal} HP)`, when: (it) => it.kind === 'food', request: (id) => ({ t: 'eat', item: id }) },
+  { id: 'drop1', label: (it, c) => (c.count > 1 ? 'Drop 1' : 'Drop'), when: droppable, request: (id) => ({ t: 'drop', item: id, count: 1 }), toast: (it) => `Dropped ${it.name}.` },
+  { id: 'dropAll', label: (it, c) => `Drop all ${c.count}`, when: (it, c) => droppable(it) && c.count > 1, request: (id, c) => ({ t: 'drop', item: id, count: c.count }), toast: (it, c) => `Dropped ${c.count}× ${it.name}.` },
+];
+
+// Short facts about an item, shared by the pack, crafting and shop screens.
+export function itemFacts(it) {
+  const f = [];
+  if (it.kind === 'weapon') f.push(`⚔ ${it.damage} damage`, `⏱ ${(it.cooldownMs / 1000).toFixed(2)}s per swing`);
+  if (it.kind === 'food') f.push(`❤ restores ${it.heal} health`);
+  if (it.light) f.push('🏮 lights your way in the Gloam while you carry it');
+  if (it.kind === 'block') f.push('🧱 pick it on the hotbar to place it');
+  if (it.value > 0) f.push(`🪙 sells for ${it.value}`);
+  if (it.kind !== 'missing' && !it.tradeable) f.push('🔒 can’t be traded or dropped');
+  if (it.stack > 1 && it.kind !== 'currency') f.push(`stacks to ${it.stack}`);
+  if (it.kind === 'missing') f.push('From a mod that is turned off. It’s kept safe and works again if the mod returns.');
+  return f;
+}
 
 export function applyAccessibility() {
   document.documentElement.style.setProperty('--ui-scale', settings.textScale);
@@ -19,11 +70,16 @@ export class UI {
     this.g = game;
     this.panel = null; // {kind, tab}
     this.dialog = null;
+    this.modal = null; // open confirm dialog
     this.hot = 0;
+    this.lastTab = 'pack';
+    this.pack = { sel: null, filter: 'all' };
+    this.craftOnly = false;
     $('#panel').addEventListener('click', (e) => {
       const b = e.target.closest('[data-close]');
       if (b) this.close();
     });
+    $('#modalback').addEventListener('click', () => this.closeModal(false));
     $('#chatinput').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         const v = e.target.value.trim();
@@ -61,9 +117,16 @@ export class UI {
     i.focus();
   }
 
-  item(id) { return this.g.items[id] || { name: id + ' (missing mod)', color: '#666666', kind: 'missing' }; }
+  item(id) { return this.g.items[id] || { id, name: id + ' (missing mod)', color: '#666666', kind: 'missing' }; }
 
-  icon(id) { return `<span class="ic" style="background:${esc(this.item(id).color)}"></span>`; }
+  icon(id) { return itemIcon(this.item(id)); }
+
+  // Send a request; show the server's reason if it says no.
+  async req(msg) {
+    const r = await this.g.net.request(msg);
+    if (r && !r.ok && r.err) this.toast(r.err, 'warn');
+    return r || {};
+  }
 
   updateHUD(me) {
     const g = this.g;
@@ -120,8 +183,16 @@ export class UI {
     if (n) { this.hot = (this.hot + d + n) % n; this.renderHotbar(this.g.me); }
   }
 
+  // Drop one of the selected hotbar item (the in-game drop button).
+  async dropHot() {
+    const id = this.hotSel;
+    if (!id) { this.toast('Select something on the hotbar to drop it, or drop items from your pack.', 'info'); return; }
+    const r = await this.req({ t: 'drop', item: id, count: 1 });
+    if (r.ok) this.toast(`Dropped ${this.item(id).name}.`, 'info');
+  }
+
   // ---------- panels ----------
-  get open() { return !!this.panel; }
+  get open() { return !!this.panel || !!this.modal; }
 
   show(kind, title, tabs, tab) {
     this.panel = { kind, tab };
@@ -134,7 +205,15 @@ export class UI {
     this.focusFirst();
   }
 
+  openPanel(kind) {
+    this.panel = { kind };
+    $('#tabs').innerHTML = '';
+    $('#panel').hidden = false;
+    this.g.input.setUIMode(true);
+  }
+
   close() {
+    if (this.modal) { this.closeModal(false); return; }
     if (this.panel && this.panel.kind === 'trade' && this.g.me.trade) {
       this.g.net.request({ t: 'trade_cancel', trade: this.g.me.trade.id });
     }
@@ -143,29 +222,57 @@ export class UI {
     this.g.input.setUIMode(false);
   }
 
-  openMenu(tab = 'pack') {
-    this.show('menu', 'Adventurer\'s Pack', [['pack', '🎒 Pack'], ['craft', '🔨 Craft'], ['skills', '⭐ Skills'], ['quests', '📜 Quests'], ['settings', '⚙ Settings'], ['controls', '🎮 Controls']], tab);
+  // Opens the menu on `tab`, or on the tab you last used.
+  openMenu(tab) {
+    tab = MENU_TABS.some((t) => t.id === tab) ? tab : this.lastTab;
+    this.lastTab = tab;
+    this.show('menu', 'Adventurer’s Pack', MENU_TABS.map((t) => [t.id, t.label]), tab);
+  }
+
+  // Button hints along the bottom of the panel, for the device in use.
+  footHints() {
+    const d = this.g.input.device === 'pad' ? 'pad' : this.g.input.device === 'touch' ? null : 'kb';
+    const el = $('#panelfoot');
+    if (!d) { el.textContent = ''; el.hidden = true; return; }
+    el.hidden = false;
+    const p = this.panel || {};
+    const h = d === 'pad' ? ['Ⓐ choose', 'Ⓑ close'] : ['Enter choose', 'Esc close'];
+    if (p.kind === 'menu') h.push(d === 'pad' ? 'LB/RB switch tabs' : 'Q/R switch tabs');
+    if (p.kind === 'menu' && p.tab === 'pack') h.push(`${glyph(d, 'alt')} drop one`, d === 'pad' ? 'Ⓐ twice to use' : 'double-click to use');
+    el.textContent = h.join(' · ');
   }
 
   renderPanel() {
     if (!this.panel) return;
+    if (this.panel.kind === 'dialog') return this.renderDialog();
+    if (this.panel.kind === 'trade') return this.renderTrade();
+    this.lastTab = this.panel.tab;
+    const tab = MENU_TABS.find((t) => t.id === this.panel.tab) || MENU_TABS[0];
+    this.setBody(tab.render(this));
+  }
+
+  // Replace the panel body, keeping scroll position and the focused control.
+  setBody(html) {
     const body = $('#panelbody');
-    const keepFocus = document.activeElement && body.contains(document.activeElement) ? document.activeElement.dataset.fid : null;
-    if (this.panel.kind === 'menu') {
-      const tab = this.panel.tab;
-      body.innerHTML = this['tab_' + tab]();
-      this.wire(body);
-    } else if (this.panel.kind === 'dialog') return this.renderDialog();
-    else if (this.panel.kind === 'trade') return this.renderTrade();
-    if (keepFocus) { const el = body.querySelector(`[data-fid="${keepFocus}"]`); if (el) el.focus(); }
+    const keep = document.activeElement && body.contains(document.activeElement) ? document.activeElement.dataset.fid : null;
+    const top = body.scrollTop;
+    body.innerHTML = html;
+    body.scrollTop = top;
+    this.wire(body);
+    this.footHints();
+    if (keep) { const el = body.querySelector(`[data-fid="${CSS.escape(keep)}"]`); if (el) el.focus({ preventScroll: true }); else this.focusFirst(); }
   }
 
   wire(root) {
     for (const el of root.querySelectorAll('[data-do]')) {
-      el.onclick = () => this.act(el.dataset.do, el.dataset.arg, el);
+      if (el.type === 'checkbox') el.onchange = () => this.act(el.dataset.do, el.dataset.arg, el);
+      else el.onclick = () => this.act(el.dataset.do, el.dataset.arg, el);
     }
     for (const el of root.querySelectorAll('[data-set]')) {
       el.onchange = () => this.setSetting(el.dataset.set, el);
+    }
+    for (const el of root.querySelectorAll('[data-dbl]')) {
+      el.ondblclick = () => this.act(el.dataset.dbl, el.dataset.arg, el);
     }
   }
 
@@ -173,13 +280,33 @@ export class UI {
     const g = this.g, n = g.net;
     let r;
     switch (what) {
-      case 'equip': r = await n.request({ t: 'equip', item: arg }); break;
-      case 'eat': r = await n.request({ t: 'eat', item: arg }); break;
-      case 'craft': r = await n.request({ t: 'craft', recipe: arg }); break;
+      case 'select':
+        // With a controller, Ⓐ on the selected tile uses it (Ⓐ elsewhere selects).
+        if (this.pack.sel === arg && g.input.device === 'pad') return this.act('primary', arg);
+        this.pack.sel = arg; this.renderPanel(); return;
+      case 'filter': this.pack.filter = arg; this.pack.sel = null; this.renderPanel(); return;
+      case 'primary': {
+        const a = this.itemActions(arg).find((x) => x.primary);
+        if (a) await this.runItemAction(a.id, arg);
+        return;
+      }
+      case 'item': { const [aid, id] = arg.split('|'); return this.runItemAction(aid, id); }
+      case 'craftOnly': this.craftOnly = !this.craftOnly; this.renderPanel(); return;
+      case 'craft': {
+        r = await n.request({ t: 'craft', recipe: arg });
+        const rec = g.recipes.find((x) => x.id === arg);
+        if (r.ok && rec) this.toast(`Made ${rec.count > 1 ? rec.count + '× ' : ''}${this.item(rec.output).name}.`, 'good');
+        break;
+      }
       case 'accept': r = await n.request({ t: 'quest_accept', quest: arg }); if (r.ok) this.talk(this.dialog.npc); break;
       case 'turnin': r = await n.request({ t: 'quest_turnin', quest: arg }); if (r.ok) this.talk(this.dialog.npc); break;
       case 'buy': r = await n.request({ t: 'buy', item: arg, count: 1 }); break;
-      case 'sell': r = await n.request({ t: 'sell', item: arg, count: +el.dataset.n || 1 }); break;
+      case 'sell': {
+        const it = this.item(arg), cnt = +el.dataset.n || 1;
+        if ((it.kind === 'weapon' || it.kind === 'tool') && !await this.confirm({ title: `Sell ${it.name}?`, text: `You’ll get ${it.value * cnt} coins.`, ok: 'Sell' })) return;
+        r = await n.request({ t: 'sell', item: arg, count: cnt });
+        break;
+      }
       case 'hearth': this.close(); r = await n.request({ t: 'hearth' }); break;
       case 'offer': {
         const tr = g.me.trade; if (!tr) return;
@@ -198,9 +325,13 @@ export class UI {
       case 'preset': settings.quality = arg; settings.custom = null; save(); this.g.applyQuality(); this.renderPanel(); return;
       case 'rebind': this.rebind(arg, el); return;
       case 'resetKeys': settings.keys = { ...DEFAULT_KEYS }; save(); this.renderPanel(); return;
-      case 'leave': location.reload(); return;
+      case 'leave':
+        if (!await this.confirm({ title: 'Leave this world?', text: g.browserWorld ? 'Your world is saved before you go.' : 'Your character is saved by the world.', ok: 'Leave' })) return;
+        if (g.browserWorld && n.flush) await n.flush();
+        location.reload();
+        return;
       case 'exportWorld': {
-        const bytes = await this.g.net.exportWorld();
+        const bytes = await n.exportWorld();
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/json' }));
         a.download = `lanternfall-world-${new Date().toISOString().slice(0, 10)}.json`;
@@ -216,8 +347,8 @@ export class UI {
           const f = input.files && input.files[0];
           if (!f) return;
           if (f.size > 32 << 20) { this.toast('That file is too large to be a world save.', 'warn'); return; }
-          if (!confirm('Replace this browser’s world with the imported one? Your current world is kept as a backup in this browser.')) return;
-          const res = await this.g.net.importWorld(new Uint8Array(await f.arrayBuffer()));
+          if (!await this.confirm({ title: 'Replace this world?', text: 'The imported world replaces the one in this browser. Your current world is kept as a backup here.', ok: 'Import', danger: true })) return;
+          const res = await n.importWorld(new Uint8Array(await f.arrayBuffer()));
           if (!res.ok) { this.toast(res.text, 'warn'); return; }
           this.toast('World imported. Reloading…', 'good');
           setTimeout(() => location.reload(), 600);
@@ -227,6 +358,59 @@ export class UI {
       }
     }
     if (r && !r.ok && r.err) this.toast(r.err, 'warn');
+  }
+
+  // ---------- item actions ----------
+  itemCtx(id) { const me = this.g.me; return { me, count: me.inv[id] || 0, equipped: me.eq === id }; }
+
+  itemActions(id) {
+    const it = this.item(id), c = this.itemCtx(id);
+    return ITEM_ACTIONS.filter((a) => a.when(it, c));
+  }
+
+  async runItemAction(aid, id) {
+    const a = ITEM_ACTIONS.find((x) => x.id === aid);
+    const it = this.item(id), c = this.itemCtx(id);
+    if (!a || !a.when(it, c)) return;
+    const r = await this.req(a.request(id, c));
+    if (r.ok && a.toast) this.toast(a.toast(it, c), 'info');
+  }
+
+  // The secondary button (Ⓧ / drop key) while a panel is open.
+  alt() {
+    if (this.modal || !this.panel || this.panel.kind !== 'menu' || this.panel.tab !== 'pack') return;
+    const f = document.activeElement;
+    const id = f && f.classList.contains('tile') ? f.dataset.arg : this.pack.sel;
+    if (id) this.runItemAction('drop1', id);
+  }
+
+  // ---------- confirm dialog (controller, keyboard and touch friendly) ----------
+  confirm({ title, text = '', ok = 'OK', cancel = 'Cancel', danger = false }) {
+    if (this.modal) this.closeModal(false);
+    const wasUI = this.g.input.uiMode;
+    this.g.input.setUIMode(true);
+    const m = $('#modal');
+    m.innerHTML = `<h3 id="modaltitle">${esc(title)}</h3>${text ? `<p>${esc(text)}</p>` : ''}
+      <div class="row end"><button class="btn" data-m="0">${esc(cancel)}</button><button class="btn ${danger ? 'danger' : 'primary'}" data-m="1">${esc(ok)}</button></div>`;
+    m.hidden = false;
+    $('#modalback').hidden = false;
+    return new Promise((resolve) => {
+      this.modal = { resolve, wasUI, back: document.activeElement, backFid: document.activeElement && document.activeElement.dataset.fid };
+      for (const b of m.querySelectorAll('[data-m]')) b.onclick = () => this.closeModal(b.dataset.m === '1');
+      m.querySelector('[data-m="1"]').focus();
+    });
+  }
+
+  closeModal(ok) {
+    const md = this.modal;
+    if (!md) return;
+    this.modal = null;
+    $('#modal').hidden = true;
+    $('#modalback').hidden = true;
+    if (!md.wasUI && !this.panel) this.g.input.setUIMode(false);
+    const again = md.backFid && document.querySelector(`#panel [data-fid="${CSS.escape(md.backFid)}"]`);
+    if (again) again.focus(); else if (md.back && document.body.contains(md.back)) md.back.focus();
+    md.resolve(ok);
   }
 
   setSetting(key, el) {
@@ -244,40 +428,80 @@ export class UI {
     el.textContent = 'Press a key…';
     this.g.input.capture = (code) => {
       this.g.input.capture = null;
-      if (code !== 'Escape') { settings.keys[action] = code; save(); }
+      if (code !== 'Escape') {
+        // Keep bindings unique: an action already on this key takes this action's old key.
+        const prev = Object.keys(settings.keys).find((a) => a !== action && settings.keys[a] === code);
+        if (prev) settings.keys[prev] = settings.keys[action];
+        settings.keys[action] = code;
+        save();
+        if (prev) this.toast(`${ACTIONS[prev] || prev} moved to ${glyph('kb', prev)}.`, 'info');
+      }
       this.renderPanel();
     };
   }
 
+  // ---------- menu tabs ----------
   tab_pack() {
     const me = this.g.me;
-    const ids = Object.keys(me.inv).filter((i) => i !== 'coin').sort();
-    const cell = (id) => {
-      const it = this.item(id);
-      let act = '';
-      if (it.kind === 'weapon') act = me.eq === id ? '<small>Equipped</small>' : `<small>Ⓐ Equip</small>`;
-      else if (it.kind === 'food') act = `<small>Ⓐ Eat (+${it.heal} HP)</small>`;
-      else if (it.kind === 'missing') act = '<small>From a disabled mod — kept safe</small>';
-      else act = `<small>${esc(it.desc || it.kind)}</small>`;
-      const doAttr = it.kind === 'weapon' ? `data-do="equip" data-arg="${esc(id)}"` : it.kind === 'food' ? `data-do="eat" data-arg="${esc(id)}"` : '';
-      return `<button class="item ${me.eq === id ? 'eq' : ''}" data-fid="i-${esc(id)}" ${doAttr}>${this.icon(id)}<span><b>${esc(it.name)}</b> ×${me.inv[id]}${act}</span></button>`;
-    };
-    return `<div class="row"><b>🪙 ${me.inv.coin || 0} coins</b> · <span class="note">${me.slots}/${me.maxSlots} slots used</span>
-      <span style="flex:1"></span><button class="btn" data-do="hearth" data-fid="hearth">🏮 Hearth Lantern (return home)</button></div>
-      <div class="grid">${ids.map(cell).join('') || '<p class="note">Your pack is empty. Try chopping a tree in Mossmeadow!</p>'}</div>`;
+    const all = Object.keys(me.inv).filter((i) => i !== 'coin' && me.inv[i] > 0)
+      .sort((a, b) => (me.eq === b) - (me.eq === a) || this.item(a).kind.localeCompare(this.item(b).kind) || this.item(a).name.localeCompare(this.item(b).name));
+    const filters = PACK_FILTERS.filter((f) => f.id === 'all' || all.some((id) => f.test(this.item(id))));
+    if (!filters.some((f) => f.id === this.pack.filter)) this.pack.filter = 'all';
+    const filter = PACK_FILTERS.find((f) => f.id === this.pack.filter);
+    const ids = all.filter((id) => filter.test(this.item(id)));
+    if (!ids.includes(this.pack.sel)) this.pack.sel = ids[0] || null;
+    const used = me.slots, maxS = me.maxSlots;
+    const chips = filters.length > 2 ? `<div class="chips" role="radiogroup" aria-label="Show">${filters.map((f) =>
+      `<button class="chip" role="radio" aria-checked="${f.id === this.pack.filter}" data-do="filter" data-arg="${f.id}" data-fid="f-${f.id}">${f.label}</button>`).join('')}</div>` : '';
+    const tiles = ids.map((id) => {
+      const it = this.item(id), eq = me.eq === id;
+      return `<button class="tile ${id === this.pack.sel ? 'sel' : ''} ${eq ? 'eq' : ''}" data-do="select" data-dbl="primary" data-arg="${esc(id)}" data-fid="i-${esc(id)}"
+        aria-label="${esc(it.name)}, ${me.inv[id]}${eq ? ', equipped' : ''}" aria-pressed="${id === this.pack.sel}" title="${esc(it.name)}">${itemIcon(it)}${me.inv[id] > 1 ? `<span class="n">${me.inv[id]}</span>` : ''}${eq ? '<span class="eqmark" aria-hidden="true">E</span>' : ''}</button>`;
+    }).join('');
+    return `<div class="packhead">
+        <span class="coins">${this.icon('coin')}<b>${me.inv.coin || 0}</b> coins</span>
+        <span class="slots"><span class="meter" aria-hidden="true"><span class="${used >= maxS ? 'full' : ''}" style="width:${Math.min(100, used / maxS * 100)}%"></span></span>${used}/${maxS} slots${used >= maxS ? ' · <b class="warn">full</b>' : ''}</span>
+        <span class="grow"></span><button class="btn" data-do="hearth" data-fid="hearth">🏮 Hearth home</button></div>
+      ${chips}
+      ${all.length ? `<div class="pack"><div class="tiles" aria-label="Items">${tiles}</div>${this.itemDetails(this.pack.sel)}</div>`
+        : '<p class="note">Your pack is empty. Try chopping a tree in the Meadows!</p>'}`;
+  }
+
+  itemDetails(id) {
+    if (!id) return '<div class="details"></div>';
+    const it = this.item(id), c = this.itemCtx(id);
+    const facts = itemFacts(it);
+    const acts = this.itemActions(id);
+    return `<div class="details">
+      <div class="dhead">${itemIcon(it)}<div><h3>${esc(it.name)}${c.count > 1 ? ` <span class="note">×${c.count}</span>` : ''}</h3>
+        <span class="kind">${esc(KIND_LABEL[it.kind] || it.kind)}${c.equipped ? ' · <b class="good">Equipped</b>' : ''}</span></div></div>
+      ${it.desc ? `<p class="desc">${esc(it.desc)}</p>` : ''}
+      ${facts.length ? `<ul class="facts">${facts.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
+      ${acts.length ? `<div class="actions">${acts.map((a) => `<button class="btn ${a.primary ? 'primary' : ''}" data-do="item" data-arg="${a.id}|${esc(id)}" data-fid="a-${a.id}">${esc(a.label(it, c))}</button>`).join('')}</div>` : ''}
+      ${acts.some((a) => a.id === 'drop1') ? '<p class="note">Dropped items stay on the ground for 10 minutes. Walk over them to pick them back up.</p>' : ''}
+    </div>`;
   }
 
   tab_craft() {
     const me = this.g.me, lvl = me.skills.crafting.lvl;
-    return this.g.recipes.map((r) => {
+    const rows = this.g.recipes.map((r) => {
       const missing = Object.entries(r.inputs).some(([k, v]) => (me.inv[k] || 0) < v);
-      const lvOK = lvl >= r.level;
-      const req = Object.entries(r.inputs).map(([k, v]) => `<span class="${(me.inv[k] || 0) < v ? 'miss' : ''}">${v}× ${esc(this.item(k).name)} (${me.inv[k] || 0})</span>`).join(', ');
-      const st = r.station === 'anvil' ? ' · <span class="' + (this.g.nearAnvil() ? '' : 'miss') + '">at the Anvil</span>' : '';
-      return `<div class="recipe">${this.icon(r.output)}<div class="info"><b>${esc(this.item(r.output).name)}${r.count > 1 ? ' ×' + r.count : ''}</b>
-        <div class="req">${req}${st} · <span class="${lvOK ? '' : 'miss'}">Crafting ${r.level}</span> · +${r.xp} XP</div></div>
-        <button class="btn ${!missing && lvOK ? 'primary' : ''}" data-do="craft" data-arg="${esc(r.id)}" data-fid="c-${esc(r.id)}" ${missing || !lvOK ? 'aria-disabled="true"' : ''}>Craft</button></div>`;
+      const lvOK = lvl >= r.level, stOK = r.station !== 'anvil' || this.g.nearAnvil();
+      return { r, can: !missing && lvOK && stOK, lvOK, stOK };
+    }).sort((a, b) => b.can - a.can || a.r.level - b.r.level);
+    const shown = this.craftOnly ? rows.filter((x) => x.can) : rows;
+    const list = shown.map(({ r, can, lvOK, stOK }) => {
+      const out = this.item(r.output);
+      const req = Object.entries(r.inputs).map(([k, v]) => `<span class="${(me.inv[k] || 0) < v ? 'miss' : ''}">${this.icon(k)}${v}× ${esc(this.item(k).name)} <small>(have ${me.inv[k] || 0})</small></span>`).join('');
+      const st = r.station === 'anvil' ? `<span class="${stOK ? '' : 'miss'}">⚒ at the Anvil</span>` : '';
+      const fact = itemFacts(out)[0];
+      return `<div class="recipe ${can ? 'can' : ''}">${itemIcon(out)}<div class="info"><b>${esc(out.name)}${r.count > 1 ? ' ×' + r.count : ''}</b>${fact ? ` <span class="note">· ${esc(fact)}</span>` : ''}
+        <div class="req">${req}${st}<span class="${lvOK ? '' : 'miss'}">Crafting ${r.level}</span><span>+${r.xp} XP</span></div></div>
+        <button class="btn ${can ? 'primary' : ''}" data-do="craft" data-arg="${esc(r.id)}" data-fid="c-${esc(r.id)}" ${can ? '' : 'aria-disabled="true"'}>Craft</button></div>`;
     }).join('');
+    return `<div class="row"><span class="note">Crafting level ${lvl}</span><span class="grow"></span>
+      <label class="toggle"><input type="checkbox" ${this.craftOnly ? 'checked' : ''} data-do="craftOnly" data-fid="co"> Only what I can make now</label></div>
+      ${list || '<p class="note">Nothing you can make right now. Gather more materials, or untick the filter to see every recipe.</p>'}`;
   }
 
   tab_skills() {
@@ -291,7 +515,8 @@ export class UI {
 
   tab_quests() {
     const me = this.g.me;
-    const list = Object.values(this.g.quests).map((q) => {
+    const order = (q) => { const st = me.quests[q.id]; return !st ? 1 : st.status === 'done' ? 2 : 0; };
+    return Object.values(this.g.quests).sort((a, b) => order(a) - order(b)).map((q) => {
       const st = me.quests[q.id];
       const status = !st ? 'Not started' : st.status === 'done' ? '✓ Complete' : 'In progress';
       const steps = q.steps.map((s, i) => {
@@ -299,16 +524,14 @@ export class UI {
         return `<li class="${have >= s.count ? 'done' : ''}">${esc(s.text)} ${st ? `(${have}/${s.count})` : ''}</li>`;
       }).join('');
       const giver = this.g.npcs[q.giver];
-      return `<div class="quest" tabindex="0" data-fid="q-${esc(q.id)}"><h4>${esc(q.name)} <span class="note">— ${status}</span></h4>
-        <div class="note">From ${esc(giver ? giver.name : q.giver)}${q.requires ? ' · after ' + esc(this.g.quests[q.requires]?.name) : ''}</div><ul>${steps}</ul>
+      return `<div class="quest ${st ? st.status : 'new'}" tabindex="0" data-fid="q-${esc(q.id)}"><h4>${esc(q.name)} <span class="note">— ${status}</span></h4>
+        <div class="note">From ${esc(giver ? giver.name : q.giver)}${q.requires ? ' · after ' + esc(this.g.quests[q.requires]?.name) : ''}</div>${st && st.status === 'done' ? '' : `<ul>${steps}</ul>`}
         <div class="note">Reward: ${q.reward.coins} coins${Object.entries(q.reward.items || {}).map(([k, v]) => `, ${v}× ${esc(this.item(k).name)}`).join('')}${Object.entries(q.reward.xp || {}).map(([k, v]) => `, ${v} ${SKILL_LABEL[k] || k} XP`).join('')}</div></div>`;
-    });
-    return list.join('');
+    }).join('');
   }
 
   tab_settings() {
     const q = quality();
-    const opt = (k, v, label) => `<option value="${v}" ${settings[k] === v ? 'selected' : ''}>${label}</option>`;
     return `<div class="settings">
       <h4>Graphics</h4>
       <div class="row">${['auto', 'low', 'medium', 'high'].map((p) => `<button class="btn ${settings.quality === p && !settings.custom ? 'primary' : ''}" data-do="preset" data-arg="${p}" data-fid="p-${p}">${p === 'auto' ? 'Auto (' + q.name + ')' : PRESETS[p].label.split(' ')[0]}</button>`).join('')}</div>
@@ -340,8 +563,9 @@ export class UI {
     const rows = Object.entries(ACTIONS).map(([a, label]) =>
       `<label>${esc(label)} <button class="btn bind" data-do="rebind" data-arg="${a}" data-fid="k-${a}">${esc(glyph('kb', a))}</button></label>`).join('');
     return `<div class="settings"><h4>Controller</h4>
-      <p class="note">Left stick move · Right stick look · Ⓐ jump · RT attack/gather · LT use/place · Ⓧ talk/trade · Ⓨ menu · LB/RB hotbar · D-pad ↓ Hearth · L3 sprint · Start settings · Back chat</p>
-      <h4>Touch</h4><p class="note">Left stick to move, drag the right side to look. ⚔ attack/gather (auto-targets the nearest creature), ✋ use/place, 💬 talk/trade.</p>
+      <p class="note">Left stick move · Right stick look · Ⓐ jump · RT attack/gather · LT use/place · Ⓧ talk/trade · Ⓨ menu · LB/RB hotbar · D-pad ↓ Hearth · D-pad ← drop hotbar item · L3 sprint · Start settings · Back chat.
+        In menus: Ⓐ choose · Ⓑ back · Ⓧ drop one · LB/RB switch tabs.</p>
+      <h4>Touch</h4><p class="note">Left stick to move, drag the right side to look. ⚔ attack/gather (auto-targets the nearest creature), ✋ use/place, 💬 talk/trade. Drop items from the ☰ menu’s Pack.</p>
       <h4>Keyboard &amp; mouse (click to remap)</h4>${rows}<button class="btn" data-do="resetKeys" data-fid="rk">Reset to defaults</button></div>`;
   }
 
@@ -354,10 +578,7 @@ export class UI {
   showDialog(d) {
     this.dialog = d;
     if (!this.panel || this.panel.kind !== 'dialog') {
-      this.panel = { kind: 'dialog' };
-      $('#tabs').innerHTML = '';
-      $('#panel').hidden = false;
-      this.g.input.setUIMode(true);
+      this.openPanel('dialog');
       this.renderDialog();
       this.focusFirst();
     } else this.renderDialog();
@@ -378,24 +599,20 @@ export class UI {
     }
     if (!spoke) html += `<p>“${esc((d.lines || [])[0] || 'Hello!')}”</p>`;
     if (d.shop && d.shop.length) {
-      html += `<h4>Buy</h4><div class="grid">` + d.shop.map((s) => `<button class="item" data-do="buy" data-arg="${esc(s.item)}" data-fid="b-${esc(s.item)}">${this.icon(s.item)}<span><b>${esc(this.item(s.item).name)}</b><small>${s.price} coins · you have ${me.inv.coin || 0}</small></span></button>`).join('') + '</div>';
-      const sellable = Object.keys(me.inv).filter((id) => { const it = this.g.items[id]; return it && it.value > 0 && it.tradeable && id !== 'coin'; });
-      if (sellable.length) html += `<h4>Sell</h4><div class="grid">` + sellable.map((id) => `<button class="item" data-do="sell" data-arg="${esc(id)}" data-n="${me.inv[id]}" data-fid="s-${esc(id)}">${this.icon(id)}<span><b>${esc(this.item(id).name)} ×${me.inv[id]}</b><small>${this.item(id).value} coin each — sell all</small></span></button>`).join('') + '</div>';
+      html += `<h4>Buy <span class="note">· you have ${me.inv.coin || 0} coins</span></h4><div class="grid">` + d.shop.map((s) => {
+        const it = this.item(s.item), afford = (me.inv.coin || 0) >= s.price;
+        return `<button class="item" data-do="buy" data-arg="${esc(s.item)}" data-fid="b-${esc(s.item)}" ${afford ? '' : 'aria-disabled="true"'}>${itemIcon(it)}<span><b>${esc(it.name)}</b><small class="${afford ? '' : 'miss'}">${s.price} coins</small><small>${esc(itemFacts(it)[0] || it.desc || '')}</small></span></button>`;
+      }).join('') + '</div>';
+      const sellable = Object.keys(me.inv).filter((id) => { const it = this.g.items[id]; return it && it.value > 0 && it.tradeable && id !== 'coin'; }).sort();
+      if (sellable.length) html += `<h4>Sell</h4><div class="grid">` + sellable.map((id) => `<button class="item ${me.eq === id ? 'eq' : ''}" data-do="sell" data-arg="${esc(id)}" data-n="${me.inv[id]}" data-fid="s-${esc(id)}">${this.icon(id)}<span><b>${esc(this.item(id).name)} ×${me.inv[id]}</b><small>${this.item(id).value} coin each · sell all for ${this.item(id).value * me.inv[id]}</small></span></button>`).join('') + '</div>';
     }
     html += `</div>`;
-    const body = $('#panelbody');
-    const keep = document.activeElement && body.contains(document.activeElement) ? document.activeElement.dataset.fid : null;
-    body.innerHTML = html;
-    this.wire(body);
-    if (keep) { const el = body.querySelector(`[data-fid="${keep}"]`); if (el) el.focus(); else this.focusFirst(); }
+    this.setBody(html);
   }
 
   // ---------- trade ----------
   openTrade() {
-    this.panel = { kind: 'trade' };
-    $('#tabs').innerHTML = '';
-    $('#panel').hidden = false;
-    this.g.input.setUIMode(true);
+    this.openPanel('trade');
     this.renderTrade();
     this.focusFirst();
   }
@@ -422,24 +639,27 @@ export class UI {
               `<span class="note">${tr.myConfirm ? 'Waiting for ' + esc(tr.with) + ' to confirm…' : 'Waiting for ' + esc(tr.with) + ' to lock…'}</span>`}
           <button class="btn" data-do="tradeCancel" data-fid="tc">Cancel</button></div></div></div>`;
     }
-    const body = $('#panelbody');
-    const keep = document.activeElement && body.contains(document.activeElement) ? document.activeElement.dataset.fid : null;
-    body.innerHTML = html;
-    this.wire(body);
-    if (keep) { const el = body.querySelector(`[data-fid="${CSS.escape(keep)}"]`); if (el) el.focus(); else this.focusFirst(); }
+    this.setBody(html);
   }
 
   // ---------- gamepad / keyboard spatial navigation ----------
+  root() { return this.modal ? $('#modal') : $('#panel'); }
   focusables() {
-    return [...document.querySelectorAll('#panel button, #panel input, #panel select, #panel [tabindex="0"]')].filter((e) => e.offsetParent !== null);
+    return [...this.root().querySelectorAll('button, input, select, [tabindex="0"]')].filter((e) => e.offsetParent !== null && !e.disabled);
   }
   focusFirst() {
     const f = this.focusables().filter((e) => !e.classList.contains('close') && !e.classList.contains('tab'));
-    (f[0] || this.focusables()[0])?.focus();
+    const pref = f.find((e) => e.classList.contains('sel'));
+    (pref || f[0] || this.focusables()[0])?.focus();
   }
   nav(dir) {
-    if (!this.panel) return;
+    if (this.modal) {
+      if (dir === 'back') { this.closeModal(false); return; }
+      if (dir === 'tabPrev' || dir === 'tabNext' || dir === 'alt') return;
+    }
+    if (!this.panel && !this.modal) return;
     if (dir === 'back') { this.close(); return; }
+    if (dir === 'alt') { this.alt(); return; }
     if (dir === 'ok') { const a = document.activeElement; if (a && a.type === 'checkbox') { a.checked = !a.checked; a.dispatchEvent(new Event('change')); } else a?.click(); return; }
     if (dir === 'tabPrev' || dir === 'tabNext') {
       const tabs = [...document.querySelectorAll('#tabs .tab')];

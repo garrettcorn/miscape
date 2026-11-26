@@ -25,6 +25,10 @@ const (
 	KindCurrency = "currency"
 )
 
+// Models are the shapes the client knows how to draw for held and dropped
+// items. An empty model picks a default from the item kind.
+var Models = map[string]bool{"sword": true, "axe": true, "pickaxe": true, "club": true, "lantern": true, "gem": true, "food": true, "block": true, "bundle": true, "coin": true}
+
 type Item struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
@@ -39,6 +43,8 @@ type Item struct {
 	Value     int    `json:"value,omitempty"` // shop sell price
 	Color     string `json:"color"`           // UI icon tint
 	Light     bool   `json:"light,omitempty"` // lantern: widens Gloam vision
+	Model     string `json:"model,omitempty"` // how it looks when held or dropped (see Models)
+	Glow      bool   `json:"glow,omitempty"`  // drawn glowing
 }
 
 type Recipe struct {
@@ -293,6 +299,9 @@ func (c *Content) Validate() error {
 		}
 		if it.Damage < 0 || it.Damage > 100 || it.Heal < 0 || it.Heal > 100 {
 			return fmt.Errorf("item %s: stats out of range", id)
+		}
+		if it.Model != "" && !Models[it.Model] {
+			return fmt.Errorf("item %s: unknown model %q", id, it.Model)
 		}
 		if it.Kind == KindWeapon && (it.Cooldown < 200 || it.Cooldown > 5000) {
 			return fmt.Errorf("item %s: weapon cooldown out of range", id)

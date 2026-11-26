@@ -2,7 +2,7 @@ import { settings } from './settings.js';
 
 // Gamepad "standard" mapping indices.
 const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, L3: 10, R3: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
-const PAD_ACTIONS = { [PAD.A]: 'jump', [PAD.X]: 'interact', [PAD.Y]: 'menu', [PAD.LB]: 'hotPrev', [PAD.RB]: 'hotNext', [PAD.LT]: 'use', [PAD.RT]: 'primary', [PAD.START]: 'pause', [PAD.BACK]: 'chat', [PAD.L3]: 'sprint', [PAD.DOWN]: 'hearth', [PAD.B]: 'back' };
+const PAD_ACTIONS = { [PAD.A]: 'jump', [PAD.X]: 'interact', [PAD.Y]: 'menu', [PAD.LB]: 'hotPrev', [PAD.RB]: 'hotNext', [PAD.LT]: 'use', [PAD.RT]: 'primary', [PAD.START]: 'pause', [PAD.BACK]: 'chat', [PAD.L3]: 'sprint', [PAD.DOWN]: 'hearth', [PAD.LEFT]: 'drop', [PAD.B]: 'back' };
 const DEAD = 0.18;
 
 const dz = (v) => (Math.abs(v) < DEAD ? 0 : (v - Math.sign(v) * DEAD) / (1 - DEAD));
@@ -21,7 +21,7 @@ export class Input {
     this.capture = null; // key-remap capture callback
     this.sprintToggle = false;
     this.touch = { stickId: null, lookId: null, sx: 0, sy: 0, lx: 0, ly: 0, mx: 0, my: 0 };
-    this.onUI = null; // (kind) => void : 'up'|'down'|'left'|'right'|'ok'|'back'|'tabPrev'|'tabNext'
+    this.onUI = null; // (kind) => void : 'up'|'down'|'left'|'right'|'ok'|'alt'|'back'|'tabPrev'|'tabNext'
     this.bind();
   }
 
@@ -35,11 +35,13 @@ export class Input {
       if (this.capture) { e.preventDefault(); this.capture(e.code); return; }
       this.device = 'kb';
       const tag = document.activeElement && document.activeElement.tagName;
-      if (tag === 'INPUT' || tag === 'SELECT') { if (e.code === 'Escape') document.activeElement.blur(); return; }
+      const typing = tag === 'SELECT' || (tag === 'INPUT' && !['checkbox', 'range', 'radio'].includes(document.activeElement.type));
+      if (typing) { if (e.code === 'Escape') document.activeElement.blur(); return; }
       if (this.uiMode) {
         const m = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Escape: 'back', KeyQ: 'tabPrev', KeyR: 'tabNext' }[e.code];
         if (m) { e.preventDefault(); this.onUI && this.onUI(m); return; }
         if (e.code === settings.keys.menu) { e.preventDefault(); this.onUI && this.onUI('back'); return; }
+        if (e.code === settings.keys.drop) { e.preventDefault(); this.onUI && this.onUI('alt'); return; }
         return;
       }
       const a = this.codeAction(e.code);
@@ -151,6 +153,7 @@ export class Input {
         if (!stickDir) this.lastStick = 0;
         if (edge(PAD.UP)) this.onUI('up'); if (edge(PAD.DOWN)) this.onUI('down');
         if (edge(PAD.LEFT)) this.onUI('left'); if (edge(PAD.RIGHT)) this.onUI('right');
+        if (edge(PAD.X)) this.onUI('alt');
         if (edge(PAD.A)) this.onUI('ok'); if (edge(PAD.B) || edge(PAD.START) || edge(PAD.Y)) this.onUI('back');
         if (edge(PAD.LB)) this.onUI('tabPrev'); if (edge(PAD.RB)) this.onUI('tabNext');
       } else {
@@ -190,10 +193,10 @@ export class Input {
 }
 
 export function glyph(device, action) {
-  const pad = { primary: 'RT', use: 'LT', interact: 'Ⓧ', menu: 'Ⓨ', jump: 'Ⓐ', hearth: 'D-pad ↓', pause: 'Start', back: 'Ⓑ' };
+  const pad = { primary: 'RT', use: 'LT', interact: 'Ⓧ', menu: 'Ⓨ', jump: 'Ⓐ', hearth: 'D-pad ↓', drop: 'D-pad ←', pause: 'Start', back: 'Ⓑ', alt: 'Ⓧ', ok: 'Ⓐ' };
   const touch = { primary: '⚔', use: '✋', interact: '💬', menu: '☰', jump: '⤒', hearth: '🏮' };
   if (device === 'pad') return pad[action] || action;
   if (device === 'touch') return touch[action] || action;
-  const code = settings.keys[action] || '';
+  const code = settings.keys[action === 'alt' ? 'drop' : action] || '';
   return code.replace(/^Key/, '').replace(/^Digit/, '').replace('Mouse0', 'Left click').replace('Mouse2', 'Right click').replace('ShiftLeft', 'Shift');
 }

@@ -14,6 +14,11 @@ field and rejects anything it doesn't understand.
 | Add shop entries | Access files, network, or secrets |
 | Scale rule multipliers (XP, yield, regrow, mob HP/damage, quest rewards), clamped to safe bounds | Exceed the clamps |
 
+Items can pick how they look when held or dropped with `"model"`: one of
+`sword`, `axe`, `pickaxe`, `club`, `lantern`, `gem`, `food`, `block`, `bundle`, `coin`.
+Leave it out to get a default for the item kind. These are built-in shapes
+tinted with the item's `color`; mods still can't add new models.
+
 All IDs must be namespaced as `<modid>:<name>`, so mods can't collide with
 the base game or with each other.
 

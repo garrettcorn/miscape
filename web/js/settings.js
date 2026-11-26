@@ -9,13 +9,13 @@ export const PRESETS = {
 export const ACTIONS = {
   forward: 'Move forward', back: 'Move back', left: 'Strafe left', right: 'Strafe right', jump: 'Jump', sprint: 'Sprint',
   primary: 'Attack / gather', use: 'Use item / place block', interact: 'Talk / trade', menu: 'Open menu', hearth: 'Hearth Lantern',
-  chat: 'Chat', pause: 'Settings / close', hotPrev: 'Previous hotbar slot', hotNext: 'Next hotbar slot',
+  chat: 'Chat', pause: 'Settings / close', hotPrev: 'Previous hotbar slot', hotNext: 'Next hotbar slot', drop: 'Drop selected item',
 };
 
 export const DEFAULT_KEYS = {
   forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', sprint: 'ShiftLeft',
   primary: 'Mouse0', use: 'Mouse2', interact: 'KeyE', menu: 'Tab', hearth: 'KeyH', chat: 'Enter', pause: 'Escape',
-  hotPrev: 'KeyQ', hotNext: 'KeyR',
+  hotPrev: 'KeyQ', hotNext: 'KeyR', drop: 'KeyG',
 };
 
 const DEFAULTS = {

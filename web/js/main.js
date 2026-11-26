@@ -6,7 +6,7 @@ import { Input, glyph } from './input.js';
 import { Net, WorkerNet, PROTO, CLIENT } from './net.js';
 import { UI, esc, applyAccessibility } from './ui.js';
 import { settings, quality, save } from './settings.js';
-import { drawPerson, drawBramblet, drawWisp } from './models.js';
+import { drawPerson, drawBramblet, drawWisp, drawDropped } from './models.js';
 import { project } from './mat.js';
 import { B, BLOCKS } from './blocks.js';
 
@@ -46,6 +46,7 @@ class Game {
     this.me = null;
     this.others = new Map();
     this.mobs = new Map();
+    this.drops = new Map();
     this.yaw = 0; this.pitch = 0.25;
     this.time = 0;
     this.frameTimes = [];
@@ -228,7 +229,7 @@ class Game {
     this.yaw = w.pos[3] || 0;
     $('#screen-join').hidden = true;
     $('#hud').hidden = false;
-    $('#realmbadge').textContent = w.realm.kind === 'official' ? 'Official world' : `Private world · progress stays here${w.realm.modded ? ' · modded' : ''}`;
+    $('#realmbadge').textContent = { official: 'Official world', browser: 'Browser world · saved on this device' }[w.realm.kind] || `Private world · progress stays here${w.realm.modded ? ' · modded' : ''}`;
     $('#netstatus').hidden = true;
     this.input.setUIMode(false);
     this.input.onUI = (d) => this.ui.nav(d);
@@ -273,6 +274,7 @@ class Game {
     n.on('die', (m) => { const e = this.mobs.get(m.id); if (e) e.dead = true; });
     n.on('ko', (m) => { ui.toast(m.text, 'danger'); });
     n.on('toast', (m) => ui.toast(m.text, m.kind));
+    n.on('pickup', (m) => ui.toast(`+${m.count} ${ui.item(m.item).name}`, 'good'));
     n.on('chat', (m) => ui.chat(m));
     n.on('levelup', () => { });
     n.on('dialog', (m) => ui.showDialog(m));
@@ -316,6 +318,8 @@ class Game {
       Object.assign(e, { tx: q.x, ty: q.y, tz: q.z, tyaw: q.r, kind: q.k, hp: q.hp, mhp: q.mhp, aggro: q.a });
     }
     for (const id of this.mobs.keys()) if (!ms.has(id)) this.mobs.delete(id);
+    this.drops.clear();
+    for (const d of m.d || []) this.drops.set(d.id, { id: d.id, item: d.i, count: d.n, x: d.x, y: d.y, z: d.z, own: d.own });
   }
 
   entityPos(id) {
@@ -373,6 +377,7 @@ class Game {
       if (inp.pressed.has('hotPrev')) ui.cycleHot(-1);
       if (inp.pressed.has('hotNext')) ui.cycleHot(1);
       for (let i = 1; i <= 8; i++) if (inp.pressed.has('slot' + i)) { ui.hot = i - 1; ui.renderHotbar(this.me); }
+      if (inp.pressed.has('drop')) ui.dropHot();
       if (inp.pressed.has('hearth')) this.net.request({ t: 'hearth' }).then((r) => { if (!r.ok) ui.toast(r.err, 'warn'); });
     }
     // Movement relative to camera yaw. Forward = (sin yaw, cos yaw).
@@ -585,8 +590,9 @@ class Game {
     this.myFlash = Math.max(0, (this.myFlash || 0) - dt);
     const wpn = this.me && this.items[this.me.eq];
     const hasLantern = this.me && this.me.inv.lantern > 0;
-    if (boom > 0.9 && !this.bench) drawPerson(r, { x: b.x, y: b.y, z: b.z, yaw: this.bodyYaw || 0, color: this.me.color || '#4a90d9', walk: this.walk, moving: this.moving, swing: this.swing, weapon: wpn ? wpn.color : null, weaponGlow: this.me?.eq === 'glimmer_blade', lantern: hasLantern, flash: this.myFlash });
-    for (const p of this.others.values()) drawPerson(r, { ...p, weapon: p.weapon && this.items[p.weapon] ? this.items[p.weapon].color : null });
+    if (boom > 0.9 && !this.bench) drawPerson(r, { x: b.x, y: b.y, z: b.z, yaw: this.bodyYaw || 0, color: this.me.color || '#4a90d9', walk: this.walk, moving: this.moving, swing: this.swing, held: wpn || null, lantern: hasLantern, flash: this.myFlash });
+    for (const p of this.others.values()) drawPerson(r, { ...p, held: p.weapon ? this.items[p.weapon] : null });
+    for (const d of this.drops.values()) drawDropped(r, this.items[d.item] || { color: "#888888" }, d.x, d.y, d.z, this.time, d.id);
     for (const n of Object.values(this.npcs)) drawPerson(r, { x: n.x, y: n.y, z: n.z, yaw: n.yaw + Math.sin(this.time * 0.5 + n.x) * 0.2, color: n.color, hat: NPC_HATS[n.id] || 'cap', moving: false });
     for (const m of this.mobs.values()) {
       if (m.dead) continue;
@@ -623,6 +629,7 @@ class Game {
       }
       add('n' + n.id, n.x, n.y + 2.35, n.z, `${mark}${esc(n.name)}`, 'tag npc');
     }
+    for (const d of this.drops.values()) if (Math.hypot(d.x - b.x, d.z - b.z) < 7) add('d' + d.id, d.x, d.y + 0.95, d.z, `${esc(this.ui.item(d.item).name)}${d.count > 1 ? ' ×' + d.count : ''}`, 'tag drop');
     for (const [k, el] of this.tags) if (!want.has(k)) { el.remove(); this.tags.delete(k); }
     for (const [k, v] of want) {
       let el = this.tags.get(k);

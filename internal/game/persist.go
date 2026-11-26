@@ -21,6 +21,7 @@ type SaveData struct {
 	Regens     []regen               `json:"regens"`
 	Invites    map[string]*Invite    `json:"invites"`
 	Bans       map[string]*Ban       `json:"bans"`
+	Drops      []*Drop               `json:"drops,omitempty"`
 	SavedAt    time.Time             `json:"savedAt"`
 }
 
@@ -64,9 +65,14 @@ func (g *Game) Snapshot() *SaveData {
 		cp := *v
 		bans[k] = &cp
 	}
+	drops := make([]*Drop, 0, len(g.Drops))
+	for _, d := range g.Drops {
+		cp := *d
+		drops = append(drops, &cp)
+	}
 	return &SaveData{
 		Version: SaveVersion, Realm: g.Realm, Characters: chars, Blocks: diffs, Placed: placed,
-		Regens: append([]regen(nil), g.regens...), Invites: invites, Bans: bans, SavedAt: g.Now,
+		Regens: append([]regen(nil), g.regens...), Invites: invites, Bans: bans, Drops: drops, SavedAt: g.Now,
 	}
 }
 
@@ -112,6 +118,14 @@ func Load(c *content.Content, cfg config.World, d *SaveData, out Outbox) (*Game,
 	}
 	if d.Bans != nil {
 		g.Bans = d.Bans
+	}
+	for _, dr := range d.Drops {
+		if dr == nil || dr.Count < 1 || dr.Item == "" {
+			continue
+		}
+		cp := *dr
+		cp.ID = g.allocID()
+		g.Drops[cp.ID] = &cp
 	}
 	return g, nil
 }

@@ -290,6 +290,8 @@ func TestPlaceAndBreakOwnership(t *testing.T) {
 	f := newFixture(t)
 	a, b := f.join("Lua"), f.join("Moe")
 	a.Char.Inv["plank"] = 2
+	// Creatures spawn at random spots and could stand in the target cell.
+	clear(f.g.Mobs)
 	x, z := 30, 40
 	y := f.g.W.SurfaceY(x, z)
 	for f.g.W.Get(x, y, z) != world.Air || !wild(x, y, z) {

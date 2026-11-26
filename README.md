@@ -95,6 +95,13 @@ go build -o bin/lanternfall ./cmd/lanternfall
 | Menu (pack, craft, skills, quests, settings) | Ⓨ | Tab | ☰ |
 | Hearth Lantern (return home) | D-pad ↓ | H | 🏮 |
 | Hotbar | LB / RB | Q / R, 1–8, wheel | tap slot |
+| Drop the selected hotbar item | D-pad ← | G | from the Pack |
+| In menus: choose · back · drop one · switch tabs | Ⓐ · Ⓑ · Ⓧ · LB/RB | Enter · Esc · G · Q/R | tap |
+
+Open the **Pack** to see each item's stats and to equip, eat or drop it.
+Dropped items float on the ground for 10 minutes; walk over them to pick them
+back up. (Other players can take your drops after a minute, and only when the
+world allows trading.)
 
 Start with **Mabel the Lamplighter** by the plaza. Creatures are auto-targeted,
 so you only need to face them roughly.

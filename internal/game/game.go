@@ -91,6 +91,7 @@ type Player struct {
 	dead             bool
 	dirtyMe          bool
 	sentChunks       map[int]bool
+	fullWarned       time.Time
 }
 
 type Mob struct {
@@ -159,6 +160,7 @@ type Game struct {
 	nodeHits map[int]int
 	placed   map[int]string // block index -> placer char id
 	Trades   map[uint32]*Trade
+	Drops    map[uint32]*Drop
 	Invites  map[string]*Invite
 	Bans     map[string]*Ban
 
@@ -180,7 +182,7 @@ func New(c *content.Content, cfg config.World, kind string, out Outbox) *Game {
 		C: c, Cfg: cfg, Out: out,
 		Chars: map[string]*Character{}, tokens: map[string]string{}, names: map[string]string{},
 		Players: map[uint32]*Player{}, byChar: map[string]uint32{}, Mobs: map[uint32]*Mob{},
-		nodeHits: map[int]int{}, placed: map[int]string{}, Trades: map[uint32]*Trade{},
+		nodeHits: map[int]int{}, placed: map[int]string{}, Trades: map[uint32]*Trade{}, Drops: map[uint32]*Drop{},
 		Invites: map[string]*Invite{}, Bans: map[string]*Ban{}, rids: map[string]*ridCache{},
 		Now: time.Now(), rng: mrand.New(mrand.NewPCG(uint64(time.Now().UnixNano()), 7)),
 	}
@@ -518,6 +520,8 @@ func (g *Game) Handle(pid uint32, m *protocol.In) {
 		err = g.Eat(p, m.Item)
 	case "equip":
 		err = g.Equip(p, m.Item)
+	case "drop":
+		err = g.DropItem(p, m.Item, m.Count)
 	case "talk":
 		err = g.Talk(p, m.NPC)
 	case "quest_accept":
@@ -592,6 +596,7 @@ func (g *Game) Tick(now time.Time) {
 	g.tickMobs()
 	g.tickRegen()
 	g.tickPlayers()
+	g.tickDrops()
 	g.tickTrades()
 	if g.tick%SnapshotEvery == 0 {
 		g.sendSnapshots()
@@ -668,7 +673,7 @@ func (g *Game) sendSnapshots() {
 				ms = append(ms, M{"id": mid, "k": m.Def.ID, "x": r2(m.X), "y": r2(m.Y), "z": r2(m.Z), "r": r2(m.Yaw), "hp": m.HP, "mhp": m.MaxHP, "a": m.target == id})
 			}
 		}
-		g.Out.Send(id, M{"t": "snap", "p": ps, "m": ms})
+		g.Out.Send(id, M{"t": "snap", "p": ps, "m": ms, "d": g.dropView(p)})
 	}
 }
 

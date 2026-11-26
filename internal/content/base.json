@@ -4,14 +4,14 @@
     {"id": "log", "name": "Log", "desc": "Mossmeadow timber.", "kind": "material", "tradeable": true, "stack": 64, "value": 1, "color": "#9a6b3f"},
     {"id": "plank", "name": "Plank", "desc": "Smooth and placeable.", "kind": "block", "block": 8, "tradeable": true, "stack": 64, "color": "#d9a066"},
     {"id": "stone", "name": "Stone", "desc": "A sturdy building block.", "kind": "block", "block": 9, "tradeable": true, "stack": 64, "value": 1, "color": "#9aa3ad"},
-    {"id": "copper_ore", "name": "Copper Ore", "desc": "Green-flecked and promising.", "kind": "material", "tradeable": true, "stack": 64, "value": 3, "color": "#d9824b"},
-    {"id": "glimmer_shard", "name": "Glimmer Shard", "desc": "Hums softly in the dark.", "kind": "material", "tradeable": true, "stack": 64, "value": 8, "color": "#b48cff"},
+    {"id": "copper_ore", "name": "Copper Ore", "desc": "Green-flecked and promising.", "kind": "material", "model": "gem", "tradeable": true, "stack": 64, "value": 3, "color": "#d9824b"},
+    {"id": "glimmer_shard", "glow": true, "name": "Glimmer Shard", "desc": "Hums softly in the dark.", "kind": "material", "model": "gem", "tradeable": true, "stack": 64, "value": 8, "color": "#b48cff"},
     {"id": "berry", "name": "Berry", "desc": "Restores 4 health.", "kind": "food", "heal": 4, "tradeable": true, "stack": 32, "value": 1, "color": "#e0457b"},
-    {"id": "wooden_sword", "name": "Wooden Sword", "desc": "Better than a stick. Slightly.", "kind": "weapon", "damage": 3, "cooldownMs": 650, "tradeable": true, "stack": 1, "value": 2, "color": "#c08a4a"},
-    {"id": "copper_sword", "name": "Copper Sword", "desc": "Bright and dependable.", "kind": "weapon", "damage": 5, "cooldownMs": 600, "tradeable": true, "stack": 1, "value": 10, "color": "#e09060"},
-    {"id": "glimmer_blade", "name": "Glimmer Blade", "desc": "Forged with light from below.", "kind": "weapon", "damage": 9, "cooldownMs": 550, "tradeable": true, "stack": 1, "value": 40, "color": "#c9a8ff"},
-    {"id": "lantern", "name": "Lantern", "desc": "Carried lanterns push back the Gloam's dark.", "kind": "tool", "light": true, "tradeable": true, "stack": 1, "value": 6, "color": "#ffd27a"},
-    {"id": "warden_token", "name": "Warden's Token", "desc": "Proof Ott trusts you. Not tradeable.", "kind": "material", "tradeable": false, "stack": 1, "color": "#7fd1c7"}
+    {"id": "wooden_sword", "name": "Wooden Sword", "desc": "Better than a stick. Slightly.", "kind": "weapon", "model": "sword", "damage": 3, "cooldownMs": 650, "tradeable": true, "stack": 1, "value": 2, "color": "#c08a4a"},
+    {"id": "copper_sword", "name": "Copper Sword", "desc": "Bright and dependable.", "kind": "weapon", "model": "sword", "damage": 5, "cooldownMs": 600, "tradeable": true, "stack": 1, "value": 10, "color": "#e09060"},
+    {"id": "glimmer_blade", "glow": true, "name": "Glimmer Blade", "desc": "Forged with light from below.", "kind": "weapon", "model": "sword", "damage": 9, "cooldownMs": 550, "tradeable": true, "stack": 1, "value": 40, "color": "#c9a8ff"},
+    {"id": "lantern", "glow": true, "name": "Lantern", "desc": "Carried lanterns push back the Gloam's dark.", "kind": "tool", "model": "lantern", "light": true, "tradeable": true, "stack": 1, "value": 6, "color": "#ffd27a"},
+    {"id": "warden_token", "name": "Warden's Token", "desc": "Proof Ott trusts you. Not tradeable.", "kind": "material", "model": "gem", "tradeable": false, "stack": 1, "color": "#7fd1c7"}
   ],
   "recipes": [
     {"id": "planks", "output": "plank", "count": 4, "inputs": {"log": 1}, "level": 1, "xp": 4},
