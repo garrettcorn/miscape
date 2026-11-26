@@ -217,6 +217,7 @@ func TestCountrysideQuestsHandOverGear(t *testing.T) {
 	f := newFixture(t)
 	p := f.join("Helper")
 	f.atNPC(p, "abel")
+	p.Char.AP = 2 // Abel wants a little experience first
 	f.mustOK(p, protocol.In{T: "quest_accept", Quest: "squires_hares"})
 	f.atNPC(p, "jonas")
 	f.mustOK(p, protocol.In{T: "quest_accept", Quest: "poorhouse_potatoes"})

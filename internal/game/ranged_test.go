@@ -174,6 +174,7 @@ func TestCunningWomanTeachesCharms(t *testing.T) {
 	f := newFixture(t)
 	p := f.join("Apprentice")
 	f.atNPC(p, "nance")
+	p.Char.AP = 2 // Nance wants a little experience first
 	f.mustOK(p, protocol.In{T: "quest_accept", Quest: "salt_and_rowan"})
 	if p.Char.Inv["rowan_wand"] != 1 || p.Char.Inv["salt"] != 24 {
 		t.Fatalf("quest gear: %v", p.Char.Inv)

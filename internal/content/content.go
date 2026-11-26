@@ -198,6 +198,7 @@ type Step struct {
 
 type Reward struct {
 	Coins int            `json:"coins"`
+	AP    int            `json:"ap"` // adventure points
 	Items map[string]int `json:"items,omitempty"`
 	XP    map[string]int `json:"xp,omitempty"`
 }
@@ -213,6 +214,7 @@ type Quest struct {
 	Requires string         `json:"requires,omitempty"` // prerequisite quest id
 	Needs    map[string]int `json:"needs,omitempty"`    // skill levels needed to start it
 	Start    map[string]int `json:"start,omitempty"`    // items handed over when you accept it
+	NeedsAP  int            `json:"needsAP,omitempty"`  // adventure points needed to start it
 }
 
 type ShopEntry struct {
@@ -446,6 +448,10 @@ func (c *Content) merge(p *Pack, ns string) error {
 			q.Reward.XP["melee"] += xp
 			delete(q.Reward.XP, "combat")
 		}
+		// Every quest gives adventure points: 1 unless it says otherwise.
+		if q.Reward.AP == 0 {
+			q.Reward.AP = 1
+		}
 		c.Quests[q.ID] = &q
 	}
 	c.Shop = append(c.Shop, p.Shop...)
@@ -665,6 +671,9 @@ func (c *Content) Validate() error {
 			default:
 				return fmt.Errorf("quest %s: bad step kind %q", id, s.Kind)
 			}
+		}
+		if q.Reward.AP < 1 || q.Reward.AP > 100 || q.NeedsAP < 0 || q.NeedsAP > 10000 {
+			return fmt.Errorf("quest %s: every quest gives 1-100 adventure points (ap), and needsAP must be 0-10000", id)
 		}
 		for it, n := range q.Start {
 			if c.Items[it] == nil || n < 1 || n > 64 {

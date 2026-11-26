@@ -180,7 +180,7 @@ export class UI {
     }
     if (!html) {
       // No active quest: point at whoever offers the next one you can take.
-      const next = Object.values(g.quests).find((q) => !me.quests[q.id] && (!q.requires || me.quests[q.requires]?.status === 'done'));
+      const next = Object.values(g.quests).find((q) => !me.quests[q.id] && (!q.requires || me.quests[q.requires]?.status === 'done') && (me.ap || 0) >= (q.needsAP || 0));
       const giver = next && g.npcs[next.giver];
       if (giver) html = `<h4>${Object.keys(me.quests).length ? 'New quest' : 'Welcome!'}</h4>Find <b>${esc(giver.name)}</b> and press ${esc(glyph(g.input.device, 'interact'))} to talk.`;
     }
@@ -588,7 +588,7 @@ export class UI {
     const me = this.g.me, cap = me.cap || 10;
     const groups = { combat: '⚔ Combat', gathering: '🌿 Gathering', production: '🔨 Production', support: '🧭 Support' };
     const total = Object.values(me.skills).reduce((a, v) => a + v.lvl, 0);
-    let html = `<div class="row"><b>Combat level ${me.combat || 1}</b><span class="note">· total level ${total} · skills go up to <b>${cap}</b> in this world; the next world raises the cap</span></div>`;
+    let html = `<div class="row"><b>Combat level ${me.combat || 1}</b><span class="note">· 🧭 ${me.ap || 0} adventure points</span><span class="note">· total level ${total} · skills go up to <b>${cap}</b> in this world; the next world raises the cap</span></div>`;
     for (const [gid, gname] of Object.entries(groups)) {
       const list = (this.g.skills || []).filter((s) => s.group === gid);
       if (!list.length) continue;
@@ -601,7 +601,7 @@ export class UI {
         html += `<div class="skill ${atCap ? 'capped' : ''}" tabindex="0" data-fid="s-${esc(s.id)}" title="${esc(s.desc)}">
           <div class="srow"><span class="sicon">${esc(s.icon)}</span><b>${esc(s.name)}</b><span class="grow"></span><span class="slvl">${v.lvl}<small>/${cap}</small></span></div>
           <div class="xp"><div style="width:${pct}%"></div></div>
-          <div class="note">${atCap ? 'At this world’s cap' : `${v.next - v.xp} XP to level ${v.lvl + 1}`}${unlock ? ` · next: ${esc(unlock)}` : ''}</div></div>`;
+          <div class="note">${atCap ? `At this world’s cap · ${v.xp - v.cur} XP banked for the next world (half rate)` : `${v.next - v.xp} XP to level ${v.lvl + 1}`}${unlock ? ` · next: ${esc(unlock)}` : ''}</div></div>`;
       }
       html += '</div>';
     }
@@ -631,8 +631,8 @@ export class UI {
       }).join('');
       const giver = this.g.npcs[q.giver];
       return `<div class="quest ${st ? st.status : 'new'}" tabindex="0" data-fid="q-${esc(q.id)}"><h4>${esc(q.name)} <span class="note">— ${status}</span></h4>
-        <div class="note">From ${esc(giver ? giver.name : q.giver)}${q.requires ? ' · after ' + esc(this.g.quests[q.requires]?.name) : ''}</div>${st && st.status === 'done' ? '' : `<ul>${steps}</ul>`}
-        <div class="note">Reward: ${q.reward.coins} coins${Object.entries(q.reward.items || {}).map(([k, v]) => `, ${v}× ${esc(this.item(k).name)}`).join('')}${Object.entries(q.reward.xp || {}).map(([k, v]) => `, ${v} ${esc(this.skillName(k))} XP`).join('')}</div></div>`;
+        <div class="note">From ${esc(giver ? giver.name : q.giver)}${q.requires ? ' · after ' + esc(this.g.quests[q.requires]?.name) : ''}${q.needsAP ? ` · <span class="${(me.ap || 0) >= q.needsAP ? '' : 'miss'}">needs ${q.needsAP} adventure points</span>` : ''}</div>${st && st.status === 'done' ? '' : `<ul>${steps}</ul>`}
+        <div class="note">Reward: 🧭 ${q.reward.ap} adventure points, ${q.reward.coins} coins${Object.entries(q.reward.items || {}).map(([k, v]) => `, ${v}× ${esc(this.item(k).name)}`).join('')}${Object.entries(q.reward.xp || {}).map(([k, v]) => `, ${v} ${esc(this.skillName(k))} XP`).join('')}</div></div>`;
     }).join('');
   }
 
@@ -707,7 +707,7 @@ export class UI {
       if (qs.status === 'available') { html += `<p>“${esc(q.intro)}”</p><button class="btn primary" data-do="accept" data-arg="${esc(q.id)}" data-fid="qa">Accept: ${esc(q.name)}</button>`; spoke = true; }
       else if (qs.status === 'ready') { html += `<p>“Oh! Is that everything?”</p><button class="btn primary" data-do="turnin" data-arg="${esc(q.id)}" data-fid="qt">Complete: ${esc(q.name)}</button>`; spoke = true; }
       else if (qs.status === 'active') { html += `<p>“How's it going with <b>${esc(q.name)}</b>? Check your quest tracker.”</p>`; spoke = true; }
-      else if (qs.status === 'locked') { html += `<p class="note">${esc(q.name)} unlocks after “${esc(this.g.quests[q.requires]?.name)}”.</p>`; }
+      else if (qs.status === 'locked') { html += `<p class="note">${esc(q.name)} unlocks ${q.requires && me.quests[q.requires]?.status !== 'done' ? `after “${esc(this.g.quests[q.requires]?.name)}”` : `with ${q.needsAP} adventure points (you have ${me.ap || 0})`}.</p>`; }
     }
     if (!spoke) html += `<p>“${esc(d.line || 'Hello!')}”</p>`;
     if (d.bounties) {

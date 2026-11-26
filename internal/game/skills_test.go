@@ -35,14 +35,27 @@ func TestLevelCapFollowsWorldLevel(t *testing.T) {
 		t.Fatalf("level 1 world cap %d", f.g.LevelCap())
 	}
 	p := f.join("Capper")
-	f.g.addXP(p, "mining", 1_000_000)
-	if p.Char.XP["mining"] != XPForLevel(10) || p.Char.Level("mining") != 10 {
-		t.Fatalf("XP should stop at the cap: %d xp, level %d", p.Char.XP["mining"], p.Char.Level("mining"))
+	capAt := XPForLevel(10)
+	// Reaching the cap: full XP up to it, half of the rest.
+	f.g.addXP(p, "mining", capAt+100)
+	if p.Char.XP["mining"] != capAt+50 || p.Char.Level("mining") != 10 {
+		t.Fatalf("past the cap: %d xp (want %d), level %d", p.Char.XP["mining"], capAt+50, p.Char.Level("mining"))
 	}
-	before := len(f.out.msgs[p.ID])
-	f.g.addXP(p, "mining", 100)
-	if len(f.out.msgs[p.ID]) != before {
-		t.Fatal("no XP messages once at the cap")
+	// At the cap, XP keeps coming at half rate, with a popup, and the level stays.
+	f.g.addXP(p, "mining", 40)
+	if p.Char.XP["mining"] != capAt+70 || p.Char.Level("mining") != 10 {
+		t.Fatalf("at the cap: %d xp, level %d", p.Char.XP["mining"], p.Char.Level("mining"))
+	}
+	if m := f.out.last(p.ID, "xp"); m == nil || m["amount"] != 20 {
+		t.Fatalf("xp popup at the cap: %v", m)
+	}
+	if lu := f.out.last(p.ID, "levelup"); lu != nil && lu["level"] != 10 {
+		t.Fatalf("no level past the cap: %v", lu)
+	}
+	// Small awards still count (half, rounded up).
+	f.g.addXP(p, "mining", 1)
+	if p.Char.XP["mining"] != capAt+71 {
+		t.Fatalf("1 xp at the cap: %d", p.Char.XP["mining"])
 	}
 	if m := f.g.meMsg(p); m["cap"] != 10 {
 		t.Fatalf("me cap %v", m["cap"])
@@ -54,6 +67,58 @@ func TestLevelCapFollowsWorldLevel(t *testing.T) {
 	c2.levelCap = f.g.LevelCap()
 	if f.g.LevelCap() != 20 || c2.Level("mining") != 20 {
 		t.Fatalf("level 2 cap %d, level %d", f.g.LevelCap(), c2.Level("mining"))
+	}
+	// XP banked past the level 1 cap turns into levels in a level 2 world.
+	p.Char.XP["mining"] = XPForLevel(12)
+	p.Char.levelCap = f.g.LevelCap()
+	if p.Char.Level("mining") != 12 {
+		t.Fatalf("banked xp in a level 2 world: level %d", p.Char.Level("mining"))
+	}
+}
+
+func TestQuestsGiveAdventurePoints(t *testing.T) {
+	c := content.MustBase()
+	for id, q := range c.Quests {
+		if q.Reward.AP < 1 {
+			t.Errorf("quest %s gives no adventure points", id)
+		}
+	}
+	// Some quests need points, and there are enough points from quests that
+	// need none to unlock them, so nobody is ever stuck.
+	free, gated := 0, 0
+	for _, q := range c.Quests {
+		if q.NeedsAP == 0 {
+			free += q.Reward.AP
+		} else {
+			gated++
+		}
+	}
+	if gated == 0 {
+		t.Fatal("no quest needs adventure points")
+	}
+	for id, q := range c.Quests {
+		if q.NeedsAP > free {
+			t.Errorf("quest %s needs %d points but the free quests give %d", id, q.NeedsAP, free)
+		}
+	}
+}
+
+// Characters from before adventure points existed get them for the quests
+// they had already finished.
+func TestOldSavesGetAdventurePoints(t *testing.T) {
+	f := newFixture(t)
+	p := f.join("Veteran")
+	p.Char.Quests["lights_for_wickhollow"] = &QuestState{Status: "done", Progress: []int{4, 1, 3}}
+	p.Char.Quests["salt_and_rowan"] = &QuestState{Status: "active", Progress: []int{0, 0}}
+	snap := f.g.Snapshot()
+	snap.Version = 3
+	snap.Characters[p.Char.ID].AP = 0
+	g2, err := Load(content.MustBase(), config.DefaultWorld(config.ModePrivate), snap, newRec())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ap := g2.Chars[p.Char.ID].AP; ap != 2 {
+		t.Fatalf("migrated adventure points: %d, want 2", ap)
 	}
 }
 

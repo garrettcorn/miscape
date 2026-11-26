@@ -13,8 +13,9 @@ import (
 //
 // Skills are content (base.json "skills"). Levels follow one XP curve, and
 // the highest level reachable depends on the world: 10 x the world level
-// (level 1 world: 10, level 2: 20, ... level 7: 70). XP stops at the cap, so
-// higher levels are earned in the bigger, harder worlds.
+// (level 1 world: 10, level 2: 20, ... level 7: 70). Past the cap XP still
+// counts, at half rate, but the level stays put: the banked XP turns into
+// levels in the bigger, harder worlds.
 
 // XPForLevel is the total XP needed to reach level L (L>=1).
 func XPForLevel(l int) int { return 25 * (l - 1) * l }
@@ -81,11 +82,10 @@ func (g *Game) addXP(p *Player, skill string, amount int) {
 		return
 	}
 	amt := int(math.Round(float64(amount) * g.C.Rules.XPMultiplier))
-	capXP := XPForLevel(g.LevelCap())
 	before := p.Char.Level(skill)
-	got := min(amt, max(0, capXP-p.Char.XP[skill]))
+	got := capXP(p.Char.XP[skill], amt, XPForLevel(g.LevelCap()))
 	if got <= 0 {
-		return // at the cap: the next world raises it
+		return
 	}
 	p.Char.XP[skill] += got
 	after := p.Char.Level(skill)
@@ -100,10 +100,22 @@ func (g *Game) addXP(p *Player, skill string, amount int) {
 			msg += " Unlocked: " + strings.Join(unlocks, ", ") + "."
 		}
 		if after == g.LevelCap() {
-			msg += " That's the most this world allows."
+			msg += " That's the most this world allows, but your XP still counts (at half rate) toward the next world."
 		}
 		g.toast(p, msg, "good")
 	}
+}
+
+// capXP is how much of amt XP a skill at xp gains when the world's cap is at
+// capAt XP: full XP up to the cap, half beyond it. The level stays at the
+// cap, but the XP banks toward the next world's higher cap.
+func capXP(xp, amt, capAt int) int {
+	if amt <= 0 {
+		return 0
+	}
+	under := min(amt, max(0, capAt-xp))
+	over := amt - under
+	return under + (over+1)/2 // half, rounding up so small awards still count
 }
 
 // unlocksAt lists what reaching a level in a skill opens up, from content:

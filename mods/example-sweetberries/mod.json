@@ -16,7 +16,7 @@
        "intro": "My cousin swears by berry jam. Could you make me two jars?",
        "outro": "Perfect! These will sell like… well, jam.",
        "steps": [{"kind": "deliver", "target": "sweetberries:jam", "count": 2, "text": "Bring Bertram 2 Berry Jam"}],
-       "reward": {"coins": 12, "xp": {"crafting": 25}}}
+       "reward": {"ap": 1, "coins": 12, "xp": {"crafting": 25}}}
     ],
     "shop": []
   },

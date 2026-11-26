@@ -39,8 +39,10 @@ func (g *Game) Talk(p *Player, npc string) error {
 			}
 		case q.Requires != "" && (p.Char.Quests[q.Requires] == nil || p.Char.Quests[q.Requires].Status != "done"):
 			status = "locked"
+		case p.Char.AP < q.NeedsAP:
+			status = "locked"
 		}
-		quests = append(quests, M{"id": id, "status": status})
+		quests = append(quests, M{"id": id, "status": status, "needsAP": q.NeedsAP})
 	}
 	var shop []content.ShopEntry
 	for _, s := range g.C.Shop {
@@ -74,6 +76,9 @@ func (g *Game) AcceptQuest(p *Player, id string) error {
 	}
 	if err := g.meets(p.Char, q.Needs); err != nil {
 		return err
+	}
+	if p.Char.AP < q.NeedsAP {
+		return fail("You need %d adventure points for that (you have %d). Finish other quests first.", q.NeedsAP, p.Char.AP)
 	}
 	if q.Requires != "" {
 		if pre := p.Char.Quests[q.Requires]; pre == nil || pre.Status != "done" {
@@ -167,6 +172,8 @@ func (g *Game) TurnIn(p *Player, id string) error {
 		}
 	}
 	st.Status = "done"
+	p.Char.AP += q.Reward.AP
+	g.toast(p, fmt.Sprintf("+%d adventure points (%d in all)", q.Reward.AP, p.Char.AP), "quest")
 	for sk, xp := range q.Reward.XP {
 		g.addXP(p, sk, int(math.Round(float64(xp)*mult)))
 	}

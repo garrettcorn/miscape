@@ -32,6 +32,7 @@ type Character struct {
 	Created   time.Time              `json:"created"`
 	LastSeen  time.Time              `json:"lastSeen"`
 	Bounty    *BountyState           `json:"bounty,omitempty"` // an open slaying warrant
+	AP        int                    `json:"ap"`               // adventure points, earned from quests
 
 	levelCap int // the world's skill level cap (set when added to a game)
 }

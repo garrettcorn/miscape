@@ -192,14 +192,14 @@
        {"kind": "craft", "target": "wooden_sword", "count": 1, "text": "Craft a Wooden Sword"},
        {"kind": "kill", "target": "bramblet", "count": 3, "text": "See off 3 boggarts"}
      ],
-     "reward": {"coins": 25, "items": {"copper_ore": 2, "berry": 3}, "xp": {"melee": 40, "crafting": 30}}},
-    {"id": "what_glimmers_below", "name": "Lights on the Moors", "giver": "ott", "requires": "lights_for_wickhollow",
+     "reward": {"ap": 2, "coins": 25, "items": {"copper_ore": 2, "berry": 3}, "xp": {"melee": 40, "crafting": 30}}},
+    {"id": "what_glimmers_below", "name": "Lights on the Moors", "giver": "ott", "needsAP": 4, "requires": "lights_for_wickhollow",
      "intro": "North of here the road runs up to the Highland moors. Lights dance there at night: will-o'-the-wisps, leading travellers into the bogs. Bring me 3 wisp-light shards and I'll know you can look after yourself. Carry a lantern, and if it goes badly, your Hearth Lantern will bring you home.",
      "outro": "Back in one piece, and with your pockets glowing. Take this token, and my thanks.",
      "steps": [
        {"kind": "deliver", "target": "glimmer_shard", "count": 3, "text": "Bring 3 wisp-light shards to Ottiwell"}
      ],
-     "reward": {"coins": 80, "items": {"warden_token": 1}, "xp": {"mining": 60, "melee": 60}}},
+     "reward": {"ap": 5, "coins": 80, "items": {"warden_token": 1}, "xp": {"mining": 60, "melee": 60}}},
     {"id": "supper_for_the_mill", "name": "Supper for the Mill Hands", "giver": "hannah",
      "intro": "The mill hands work fourteen hours and come out starving, and I've nothing on the griddle. Take this rod and tinderbox. There's herring rising off the coast west of town: catch some, get a fire going, and cook them up. My range by the market will do if the wind's against you.",
      "outro": "Lovely, and hardly burnt at all. Here's a few coppers for your trouble.",
@@ -209,8 +209,8 @@
        {"kind": "craft", "target": "herring", "count": 3, "text": "Cook 3 herring"}
      ],
      "start": {"fishing_rod": 1, "tinderbox": 1},
-     "reward": {"coins": 20, "items": {"herring": 3}, "xp": {"fishing": 40, "cooking": 40, "firemaking": 30}}},
-    {"id": "salt_and_rowan", "name": "Salt and Rowan", "giver": "nance",
+     "reward": {"ap": 2, "coins": 20, "items": {"herring": 3}, "xp": {"fishing": 40, "cooking": 40, "firemaking": 30}}},
+    {"id": "salt_and_rowan", "name": "Salt and Rowan", "giver": "nance", "needsAP": 2,
      "intro": "Boggarts, wisps, worse besides. The mill-owners laugh at charms, but they still hang rowan over their doors. Take this wand and a pouch of salt: equip the wand and it'll throw will-light at anything that troubles you. See off a few boggarts with it, then show me you can work a Hearth Charm.",
      "outro": "There. You've the knack for it. Keep your salt dry, and come back when you want more.",
      "steps": [
@@ -218,8 +218,8 @@
        {"kind": "cast", "target": "hearth_charm", "count": 1, "text": "Work a Hearth Charm (it's on your hotbar)"}
      ],
      "start": {"rowan_wand": 1, "salt": 24, "berry": 2},
-     "reward": {"coins": 20, "items": {"salt": 10}, "xp": {"magic": 60}}},
-    {"id": "squires_hares", "name": "The Squire's Hares", "giver": "abel",
+     "reward": {"ap": 3, "coins": 20, "items": {"salt": 10}, "xp": {"magic": 60}}},
+    {"id": "squires_hares", "name": "The Squire's Hares", "giver": "abel", "needsAP": 2,
      "intro": "Hares in the squire's turnips again. The game laws say only gentlemen may take them, but the squire says I may deputise. Take these snares: set them on open ground out in the fields and come back for them. Or chase the beasts down yourself, if you're quick.",
      "outro": "Four hares and the hides besides. The squire will be pleased, and I'll not ask where you learned to snare like that.",
      "steps": [
@@ -227,7 +227,7 @@
        {"kind": "deliver", "target": "hide", "count": 2, "text": "Bring Abel 2 hides"}
      ],
      "start": {"snare": 3},
-     "reward": {"coins": 30, "items": {"snare": 1}, "xp": {"hunting": 60}}},
+     "reward": {"ap": 3, "coins": 30, "items": {"snare": 1}, "xp": {"hunting": 60}}},
     {"id": "poorhouse_potatoes", "name": "Potatoes for the Poorhouse", "giver": "jonas",
      "intro": "The poorhouse on Cumberland Street feeds three hundred souls, and the parish pays a pittance. Here's seed potatoes: plant them in the allotment soil behind me, wait for them to come up, and bake a few for the poor folk.",
      "outro": "Good, honest work. Keep the spare seed, and come back when you want oats or cabbages.",
@@ -236,14 +236,14 @@
        {"kind": "craft", "target": "baked_potato", "count": 3, "text": "Bake 3 potatoes"}
      ],
      "start": {"seed_potato": 4},
-     "reward": {"coins": 25, "items": {"oat_seed": 3}, "xp": {"farming": 50, "cooking": 20}}},
-    {"id": "first_warrant", "name": "The Magistrate's Warrant", "giver": "rawcliffe",
+     "reward": {"ap": 2, "coins": 25, "items": {"oat_seed": 3}, "xp": {"farming": 50, "cooking": 20}}},
+    {"id": "first_warrant", "name": "The Magistrate's Warrant", "giver": "rawcliffe", "needsAP": 4,
      "intro": "Josiah Rawcliffe, Justice of the Peace. The county pays for every creature that troubles honest folk, and I sign the warrants. Prove yourself on the boggarts outside town, and I'll have regular work for you. There's an old one in Boggart Hole Clough that nobody has managed to shift; maybe one day.",
      "outro": "Good. From now on, ask me for a warrant whenever you want one. And keep your hands out of other people's pockets; I do hear about it.",
      "steps": [
        {"kind": "kill", "target": "bramblet", "count": 5, "text": "See off 5 boggarts"}
      ],
-     "reward": {"coins": 25, "xp": {"slaying": 60}}}
+     "reward": {"ap": 3, "coins": 25, "xp": {"slaying": 60}}}
   ],
   "shop": [
     {"npc": "bertram", "item": "berry", "price": 2},

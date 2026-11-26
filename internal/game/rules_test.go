@@ -245,8 +245,16 @@ func TestQuestFlow(t *testing.T) {
 		t.Fatalf("rewards: %v %v", p.Char.Quests["lights_for_wickhollow"], p.Char.Inv)
 	}
 	f.mustFail(p, protocol.In{T: "quest_turnin", Quest: "lights_for_wickhollow"}) // no double reward
-	// Second quest: deliver shards to Ott.
+	// The first quest paid 2 adventure points; Ott wants 4.
+	if p.Char.AP != 2 {
+		t.Fatalf("adventure points after the first quest: %d", p.Char.AP)
+	}
+	// Second quest: deliver shards to Ott, once you have 4 adventure points.
 	f.atNPC(p, "ott")
+	if e := f.mustFail(p, protocol.In{T: "quest_accept", Quest: "what_glimmers_below"}); !strings.Contains(e, "4 adventure points") {
+		t.Fatalf("Ott with 2 points: %s", e)
+	}
+	p.Char.AP = 4
 	f.mustOK(p, protocol.In{T: "quest_accept", Quest: "what_glimmers_below"})
 	p.Char.Inv["glimmer_shard"] = 2
 	f.mustFail(p, protocol.In{T: "quest_turnin", Quest: "what_glimmers_below"})

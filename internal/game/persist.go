@@ -10,11 +10,12 @@ import (
 	"lanternfall/internal/world"
 )
 
-// SaveVersion 3 splits the old combat skill into melee, range and magic
+// SaveVersion 4 adds adventure points (characters from older saves get the
+// points for the quests they had already finished). Version 3 splits the old combat skill into melee, range and magic
 // (combat XP becomes melee XP). Version 2 stored block edits by position on a
 // world level; version 1 (the original 128x128 map) is migrated on load: see
 // migrateV1.
-const SaveVersion = 3
+const SaveVersion = 4
 
 // SaveData is the full persistent state of one world (one realm).
 type SaveData struct {
@@ -123,6 +124,15 @@ func Load(c *content.Content, cfg config.World, d *SaveData, out Outbox) (*Game,
 		}
 		if ch.Quests == nil {
 			ch.Quests = map[string]*QuestState{}
+		}
+		// Version 4: adventure points for quests finished before they existed.
+		if d.Version < 4 {
+			ch.AP = 0
+			for qid, st := range ch.Quests {
+				if q := c.Quests[qid]; q != nil && st != nil && st.Status == "done" {
+					ch.AP += q.Reward.AP
+				}
+			}
 		}
 		// Version 3: "combat" split into melee, range and magic.
 		if xp, ok := ch.XP["combat"]; ok {

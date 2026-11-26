@@ -15,7 +15,7 @@ Mods can add the same kinds of entries (see [MODS.md](MODS.md)).
 |---|---|---|
 | Item | `items` | Pick a `kind` (material, weapon, food, tool, block). Use `model` to choose how it looks held, dropped and as an icon, `glow` to make it shine, and `light` to make it light dark places while carried. `burn` makes it campfire fuel (firemaking level, XP, seconds); `kindle` makes it a fire starter. `trap` makes it a snare (Hunting level, seconds, and `catches` by level, each with optional `extra` items); `crop` makes it a seed (Farming level, XP, seconds, the `ripe` block, and `min`..`max` of `yield`). Weapons take a `style` (`melee`, `range` or `magic`), which picks the skill they train and draw their damage bonus from. Range and magic weapons also need a `reach` (how far they shoot, with the server checking line of sight) and an `ammoKind`; any item with `"ammo": {"kind", "damage"}` of that kind is used up one per shot, strongest first. `needs` gates equipping. |
 | Recipe | `recipes` | `skill` (default `crafting`) and `level` say which skill makes it and how good you must be. `station: "anvil"` requires standing at one (stations are listed in `content.Stations`). Cooking recipes can set `burnt` and `safeAt`: below `safeAt` there's a chance of getting the burnt item instead. |
-| Quest | `quests` | Steps are `gather`, `kill`, `craft`, `deliver`, `burn` (light a campfire of an item) or `cast` (work a charm). `requires` chains quests; `needs` asks for skill levels; `start` hands the player items when they accept. The HUD hint points players at the next available giver automatically. |
+| Quest | `quests` | Steps are `gather`, `kill`, `craft`, `deliver`, `burn` (light a campfire of an item) or `cast` (work a charm). `requires` chains quests; `needs` asks for skill levels; `start` hands the player items when they accept. Every quest gives adventure points (`reward.ap`, 1 if left out), and `needsAP` makes a quest wait until the player has that many. Make sure the quests that need none give enough points to unlock the rest (`TestQuestsGiveAdventurePoints` checks). The HUD hint points players at the next available giver automatically. |
 | Shop entry | `shop` | Buying is served by the listed NPC. |
 | NPC | `npcs` | `hat` is one of `content.NPCHats`. A `pocket` (Thieving level, XP, coin range, `loot`, `fine`) lets players pick it; getting caught stuns and fines them. Players can never be robbed. |
 | Creature | `mobs` + `spawns` | `model` is one of `content.MobModels`. `flees` makes it a game animal that runs from players instead of fighting; `skill` sends kill XP to that skill (e.g. hunting) instead of the weapon's; `needs` gates attacking it. |
@@ -28,8 +28,9 @@ Mods can add the same kinds of entries (see [MODS.md](MODS.md)).
 ### Skills, needs and levels
 
 Every skill uses one XP curve (`game.XPForLevel`). The highest level is
-10 × the world level (level 1 world: 10, level 2: 20, ... level 7: 70); XP stops
-at the cap, so the next world is where you keep growing.
+10 × the world level (level 1 world: 10, level 2: 20, ... level 7: 70). At the cap
+XP keeps coming at half rate but the level stays put; the banked XP becomes
+levels in a bigger world.
 
 Any recipe, node, item or quest can carry `"needs": {"<skill>": level}`.
 The server checks it (`g.meets`) and the player is told what's missing
