@@ -553,6 +553,7 @@ export class UI {
     }).sort((a, b) => b.can - a.can || a.r.level - b.r.level);
     const shown = this.craftOnly ? rows.filter((x) => x.can) : rows;
     const list = shown.map(({ r, can, lvOK, stOK }) => {
+      const sk = r.skill || 'crafting';
       const out = this.item(r.output);
       const req = Object.entries(r.inputs).map(([k, v]) => `<span class="${(me.inv[k] || 0) < v ? 'miss' : ''}">${this.icon(k)}${v}× ${esc(this.item(k).name)} <small>(have ${me.inv[k] || 0})</small></span>`).join('');
       const st = r.station ? `<span class="${stOK ? '' : 'miss'}">${STATION_LABEL[r.station] || esc(r.station)}</span>` : '';
