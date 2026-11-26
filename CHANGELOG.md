@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.8.1] - 2026-11-26
+
+### Fixed
+
+- Fix the Craft tab not opening (broken since 0.5.0) ([`b542fc0`](https://github.com/garrettcorn/miscape/commit/b542fc0))
+
 ## [0.8.0] - 2026-11-26
 
 _If you are upgrading: saves carry over unchanged. Update servers, join companions and browsers together (protocol 5)._
@@ -142,6 +148,8 @@ _If you are upgrading: browsers remember characters per address, so to keep play
 ## [0.1.0] - 2026-11-25
 
 _Initial release._
+
+[0.8.1]: https://github.com/garrettcorn/miscape/releases/tag/v0.8.1
 
 [0.8.0]: https://github.com/garrettcorn/miscape/releases/tag/v0.8.0
 
