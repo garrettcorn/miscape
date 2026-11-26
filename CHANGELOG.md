@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.3.0] - 2026-11-26
+
+_If you are upgrading: characters from 0.2.0 worlds keep their items, skills and quests and start in Manchester; blocks placed on the old map are not carried over. Update servers, join companions and browsers together (protocol 2)._
+
+### Changed
+
+- **Breaking:** replace the 128×128 map with Earth (3072×1536 blocks) generated from a map image, wrapping east to west ([`bfde315`](https://github.com/garrettcorn/miscape/commit/bfde315))
+- **Breaking:** bump the protocol to version 2 and the save format to version 2, migrating version 1 saves on load ([`bfde315`](https://github.com/garrettcorn/miscape/commit/bfde315))
+- Start in Manchester around 1807, with period townsfolk, boggarts and will-o'-the-wisps on the Highland moors ([`aa03b58`](https://github.com/garrettcorn/miscape/commit/aa03b58))
+- Rework the pack, crafting and shop menus with item details, filters and icons ([`7d0013d`](https://github.com/garrettcorn/miscape/commit/7d0013d))
+- Hold weapons in the hand with proper sword models ([`7d0013d`](https://github.com/garrettcorn/miscape/commit/7d0013d))
+- Speed up the game loop 4–6× with many players by sharing snapshot entries ([`3a5bff1`](https://github.com/garrettcorn/miscape/commit/3a5bff1))
+- Send block changes only to nearby players ([`bfde315`](https://github.com/garrettcorn/miscape/commit/bfde315))
+
+### Added
+
+- Add world levels defined by map files; level 2 inherits level 1 at twice the scale ([`bfde315`](https://github.com/garrettcorn/miscape/commit/bfde315))
+- Add `tools/mkmap` to make terrain images from a world map ([`bfde315`](https://github.com/garrettcorn/miscape/commit/bfde315))
+- Add snow and ice blocks ([`bfde315`](https://github.com/garrettcorn/miscape/commit/bfde315))
+- Add dropping items, which stay on the ground for 10 minutes and are picked up by walking over them ([`7d0013d`](https://github.com/garrettcorn/miscape/commit/7d0013d))
+- Add an in-game confirm dialog and a drop key (G, or D-pad left) ([`7d0013d`](https://github.com/garrettcorn/miscape/commit/7d0013d))
+- Add a guide to extending the game, `docs/EXTENDING.md` ([`3a5bff1`](https://github.com/garrettcorn/miscape/commit/3a5bff1), [`e8f27da`](https://github.com/garrettcorn/miscape/commit/e8f27da))
+
+### Fixed
+
+- Fix the view shaking while standing still at high frame rates ([`efde0d9`](https://github.com/garrettcorn/miscape/commit/efde0d9))
+- Fix the HUD calling browser worlds "Private world" ([`7d0013d`](https://github.com/garrettcorn/miscape/commit/7d0013d))
+
 ## [0.2.0] - 2026-11-25
 
 ### Changed
@@ -31,6 +59,8 @@ _If you are upgrading: browsers remember characters per address, so to keep play
 ## [0.1.0] - 2026-11-25
 
 _Initial release._
+
+[0.3.0]: https://github.com/garrettcorn/miscape/releases/tag/v0.3.0
 
 [0.2.0]: https://github.com/garrettcorn/miscape/releases/tag/v0.2.0
 
