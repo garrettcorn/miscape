@@ -64,11 +64,11 @@
     {"npc": "bertram", "item": "lantern", "price": 30}
   ],
   "npcs": [
-    {"id": "mabel", "name": "Mabel the Lamplighter", "x": 60.5, "y": 13, "z": 61.5, "yaw": 0.6, "color": "#e8a33d",
+    {"id": "mabel", "name": "Mabel the Lamplighter", "x": 60.5, "y": 13, "z": 61.5, "yaw": 0.6, "color": "#e8a33d", "hat": "tall",
      "lines": ["Every lamp in Wickhollow has a name. That one's Gus."]},
-    {"id": "bertram", "name": "Bertram's Stall", "x": 69.5, "y": 13, "z": 67.5, "yaw": 3.8, "color": "#6aa84f",
+    {"id": "bertram", "name": "Bertram's Stall", "x": 69.5, "y": 13, "z": 67.5, "yaw": 3.8, "color": "#6aa84f", "hat": "cap",
      "lines": ["Berries! Planks! Lanterns for the bold! I buy logs and ore too."]},
-    {"id": "ott", "name": "Ott the Gate Warden", "x": 95.5, "y": 13, "z": 61.5, "yaw": 1.57, "color": "#5b8fb9",
+    {"id": "ott", "name": "Ott the Gate Warden", "x": 95.5, "y": 13, "z": 61.5, "yaw": 1.57, "color": "#5b8fb9", "hat": "helm",
      "lines": ["The Gloam is optional, friend. Nobody will think less of you for staying in the sun."]}
   ]
 }

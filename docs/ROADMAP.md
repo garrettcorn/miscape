@@ -6,8 +6,12 @@
    and Safari.
 2. **Real accounts** for official worlds (OAuth / passkeys). Replace bearer
    character tokens there, and add rate-limited login and session revocation.
-3. **Load test** an official shard (64 bots). Move snapshots to a compact
-   binary encoding if bandwidth exceeds budget.
+3. **Load test** an official shard (64 bots). The simulation has headroom:
+   about 2 ms per tick at 64 players, measured by `BenchmarkTick`. The next
+   limits are bandwidth (about 70 KB/s per player at 64 in the benchmark
+   scene, before compression) and JSON encoding. Encode each entity once per
+   snapshot, send deltas, and move to a compact binary format before raising
+   the 64-player cap.
 4. **Authenticated ops API** for official worlds (moderation, bans, broadcast).
 5. **Gzip/brotli static assets** and cache-busting filenames.
 6. **Graceful shutdown on Windows service stop** (Ctrl-C works; service-manager

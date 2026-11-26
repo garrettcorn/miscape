@@ -137,6 +137,7 @@ git push origin v0.1.0
 - [First-release scope](docs/SCOPE.md)
 - [Hosting a private world](docs/HOSTING.md) (backups, recovery, troubleshooting)
 - [Configuration](docs/CONFIG.md) and [deployment](docs/DEPLOY.md)
+- [Extending the game](docs/EXTENDING.md): where new items, blocks, actions and screens go
 - [Mods](docs/MODS.md)
 - [Performance budgets & measurements](docs/PERFORMANCE.md)
 - [Roadmap](docs/ROADMAP.md)

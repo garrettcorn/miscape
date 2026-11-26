@@ -6,15 +6,14 @@ import { Input, glyph } from './input.js';
 import { Net, WorkerNet, PROTO, CLIENT } from './net.js';
 import { UI, esc, applyAccessibility } from './ui.js';
 import { settings, quality, save } from './settings.js';
-import { drawPerson, drawBramblet, drawWisp, drawDropped } from './models.js';
+import { drawPerson, drawDropped, MOB_MODELS } from './models.js';
 import { project } from './mat.js';
+import { showJoin } from './join.js';
 import { B, BLOCKS } from './blocks.js';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
 const BROWSER_WORLD = document.querySelector('meta[name="lanternfall-mode"]')?.content === 'browser';
-const NPC_HATS = { mabel: 'tall', bertram: 'cap', ott: 'helm' };
-const COLORS = ['#4a90d9', '#e26d5a', '#5cb85c', '#f0ad4e', '#9b59b6', '#1abc9c', '#e84393', '#f5f0e1'];
 
 function fatal(msg) {
   const f = $('#fatal');
@@ -72,6 +71,18 @@ class Game {
     if (this.world) for (const key of [...this.r.chunks.keys()]) { const [cx, cz, lod] = key.split(',').map(Number); if (!lod) this.dirty.add(`${cx},${cz},0`); }
   }
 
+  // Any item with the content flag "light" lights your way (not just lanterns).
+  carriesLight(inv) {
+    for (const id in inv) if (inv[id] > 0 && this.items[id] && this.items[id].light) return true;
+    return false;
+  }
+
+  // The drawing for a creature, from its content "model" (falls back to a Bramblet).
+  mobModel(m) {
+    const def = this.mobDefs && this.mobDefs[m.kind];
+    return MOB_MODELS[def && def.model] || MOB_MODELS.bramblet;
+  }
+
   realmText() {
     const r = this.realm;
     if (!r) return '';
@@ -82,126 +93,7 @@ class Game {
   }
 
   // ---------- join screen ----------
-  async showJoin(err) {
-    $('#screen-join').hidden = false;
-    const wi = $('#worldinfo');
-    let info;
-    if (this.browserWorld) {
-      wi.innerHTML = '<p class="note">Starting your world in this browser…</p>';
-      try {
-        info = await this.net.start();
-      } catch (e) {
-        wi.innerHTML = `<b>Your saved world couldn't be opened.</b><p class="note">${esc(e.text || e)}</p>`;
-        $('#joinform').innerHTML = `<div class="form"><button class="btn primary" id="fresh">Start a new world</button>
-          <span class="note">Your old world data is kept aside in this browser, not deleted.</span></div>`;
-        $('#fresh').onclick = () => this.net.startFresh();
-        return;
-      }
-    }
-    try {
-      if (!info) info = await (await fetch('/api/info', { cache: 'no-store' })).json();
-    } catch {
-      wi.innerHTML = `<b>Can't reach the world server.</b><p class="note">If you're joining a friend, make sure <code>lanternfall join</code> is still running.</p>`;
-      $('#joinform').innerHTML = `<button class="btn primary" id="retry">Try again</button>`;
-      $('#retry').onclick = () => this.showJoin();
-      return;
-    }
-    this.info = info;
-    if (/^https?:\/\//.test(info.source || '')) {
-      $('#sourcelink').innerHTML = `Free software under ${esc(info.license || 'AGPL-3.0')} · <a href="${esc(info.source)}" target="_blank" rel="noopener">Source code</a>`;
-    }
-    const kind = info.kind === 'official' ? '<span class="badge official">Official world</span>'
-      : info.kind === 'browser' ? '<span class="badge private">Browser world</span>' : '<span class="badge private">Private world</span>';
-    wi.innerHTML = `<h3>${esc(info.name)}</h3>${kind}${info.modded ? '<span class="badge modded">Modded</span>' : ''}
-      <span class="note">${info.kind === 'browser' ? 'Single-player · nothing to install' : `${info.players}/${info.max} players · PvP ${info.pvp ? 'on' : 'off'} · trading ${info.trading ? 'on' : 'off'}`}</span>
-      ${info.desc ? `<p>${esc(info.desc)}</p>` : ''}
-      <p class="sep">${info.kind === 'official'
-        ? 'Your character here is an official-world character.'
-        : info.kind === 'browser'
-          ? 'This world runs and is <b>saved in this browser</b> on this device. Use <b>Settings → Export world</b> to keep a backup. Progress here stays in this world.'
-          : 'Characters you make here are <b>saved by the host</b> and <b>stay in this world</b>. They are separate from official-world characters, and nothing from this world can be moved into an official one.'}</p>
-      ${info.recovered ? '<p class="err">Your latest save was damaged, so the world was restored from an earlier backup.</p>' : ''}`;
-    // Companion diagnostics (only present when joining through `lanternfall join`).
-    let companion = null;
-    if (!this.browserWorld) {
-      try {
-        const r = await fetch('/companion/status', { cache: 'no-store' });
-        if (r.ok && (r.headers.get('content-type') || '').includes('json')) companion = await r.json();
-      } catch { /* direct connection */ }
-    }
-    const dg = $('#diag');
-    if (companion) {
-      dg.hidden = false;
-      dg.className = 'diag' + (companion.stage === 'failed' ? ' bad' : '');
-      const path = companion.path === 'direct' ? '✓ Direct peer-to-peer connection' : companion.path === 'relay' ? '↔ Connected through a relay (a little extra lag)' : 'Checking connection…';
-      dg.innerHTML = `<b>Tunnel to your friend's world:</b> ${path}${companion.latencyMs ? ` · ${Math.round(companion.latencyMs)} ms` : ''}${companion.problem ? `<br>${esc(companion.problem)}` : ''}`;
-      try {
-        if (!sessionStorage.getItem('lf.invite')) {
-          const r = await fetch('/companion/invite', { method: 'POST', headers: { 'X-Lanternfall': '1' } });
-          const j = await r.json();
-          if (j.code) sessionStorage.setItem('lf.invite', j.code);
-        }
-      } catch { /* ignore */ }
-    }
-    // In a browser world the player owns the whole save, so characters found in it can be resumed by name.
-    const saved = this.savedChar(info.realm) || (this.browserWorld && info.characters && info.characters.length ? { name: info.characters[0], resume: true } : null);
-    const invite = sessionStorage.getItem('lf.invite') || '';
-    const form = $('#joinform');
-    const showNew = !saved || this.forceNew;
-    form.innerHTML = `<div class="form">
-      ${saved && !this.forceNew ? `<button class="btn primary" id="continue">Continue as ${esc(saved.name)}</button>
-        <button class="btn" id="newchar">Make a new character</button>` : ''}
-      ${showNew ? `<label>Character name<input id="name" maxlength="16" autocomplete="off" placeholder="3–16 letters or digits" value=""></label>
-        <label>Color<div class="colors">${COLORS.map((c, i) => `<button class="swatch" style="background:${c}" data-c="${c}" aria-pressed="${i === 0}" aria-label="Color ${i + 1}"></button>`).join('')}</div></label>
-        ${info.access === 'invite' ? `<label>Invite code <input id="invite" maxlength="24" autocomplete="off" placeholder="e.g. MOSS-ABCD234" value="${esc(invite)}"></label>
-          <span class="note">This world is invite-only. The host can create codes on their admin screen. (Not needed if you're the host on this computer.)</span>` : ''}
-        <button class="btn primary" id="join">Enter ${esc(info.name)}</button>` : ''}
-      <div class="err" id="joinerr" role="alert">${esc(err || '')}</div></div>`;
-    let color = COLORS[0];
-    for (const s of form.querySelectorAll('.swatch')) s.onclick = () => { color = s.dataset.c; for (const o of form.querySelectorAll('.swatch')) o.setAttribute('aria-pressed', o === s); };
-    const go = async (hello) => {
-      $('#joinerr').textContent = 'Connecting…';
-      try {
-        const w = await this.net.connect(hello);
-        this.start(w);
-      } catch (e) {
-        $('#joinerr').textContent = e.text || 'Could not connect.';
-        if (e.code === 'bad_token') { this.forgetChar(info.realm); this.forceNew = true; setTimeout(() => this.showJoin(e.text + ' Make a new character to play here.'), 1200); }
-      }
-    };
-    if ($('#continue')) $('#continue').onclick = () => go(saved.resume ? { t: 'hello', proto: PROTO, client: CLIENT, name: saved.name } : { t: 'hello', proto: PROTO, client: CLIENT, token: saved.token });
-    if ($('#newchar')) $('#newchar').onclick = () => { this.forceNew = true; this.showJoin(); };
-    if ($('#join')) {
-      $('#join').onclick = () => {
-        const name = $('#name').value.trim();
-        if (!/^[A-Za-z][A-Za-z0-9_]{2,15}$/.test(name)) { $('#joinerr').textContent = 'Names are 3–16 letters, digits or _, starting with a letter.'; return; }
-        const inv = $('#invite') ? $('#invite').value.trim().toUpperCase() : '';
-        go({ t: 'hello', proto: PROTO, client: CLIENT, name, color, ...(inv ? { invite: inv } : {}) });
-      };
-      $('#name').onkeydown = (e) => { if (e.key === 'Enter') $('#join').click(); };
-    }
-    (form.querySelector('#continue') || form.querySelector('#name'))?.focus();
-    // Gamepad navigation on the join screen.
-    this.input.setUIMode(true);
-    this.input.onUI = (d) => {
-      if (!this.me) {
-        const els = [...form.querySelectorAll('button, input')];
-        const i = els.indexOf(document.activeElement);
-        if (d === 'down' || d === 'right') els[(i + 1) % els.length]?.focus();
-        if (d === 'up' || d === 'left') els[(i - 1 + els.length) % els.length]?.focus();
-        if (d === 'ok') document.activeElement?.click();
-      } else this.ui.nav(d);
-    };
-    if (!this.joinLoop) { this.joinLoop = true; const pl = () => { if (!this.me) { this.input.poll(0.016); requestAnimationFrame(pl); } }; pl(); }
-    if (params.get('autojoin')) {
-      // Test/automation convenience: ?autojoin=Name joins immediately (never used for secrets).
-      if (saved) go(saved.resume ? { t: 'hello', proto: PROTO, client: CLIENT, name: saved.name } : { t: 'hello', proto: PROTO, client: CLIENT, token: saved.token });
-      else go({ t: 'hello', proto: PROTO, client: CLIENT, name: params.get('autojoin'), color: COLORS[(Math.random() * COLORS.length) | 0] });
-    }
-  }
-
-  savedChar(realm) { try { return JSON.parse(localStorage.getItem('lf.char.' + realm) || 'null'); } catch { return null; } }
-  forgetChar(realm) { try { localStorage.removeItem('lf.char.' + realm); } catch { } }
+  showJoin(err) { return showJoin(this, err); }
 
   // ---------- game start ----------
   start(w) {
@@ -589,14 +481,14 @@ class Game {
     this.swing = Math.max(0, this.swing - dt * 3.5);
     this.myFlash = Math.max(0, (this.myFlash || 0) - dt);
     const wpn = this.me && this.items[this.me.eq];
-    const hasLantern = this.me && this.me.inv.lantern > 0;
+    const hasLantern = this.me && this.carriesLight(this.me.inv);
     if (boom > 0.9 && !this.bench) drawPerson(r, { x: b.x, y: b.y, z: b.z, yaw: this.bodyYaw || 0, color: this.me.color || '#4a90d9', walk: this.walk, moving: this.moving, swing: this.swing, held: wpn || null, lantern: hasLantern, flash: this.myFlash });
     for (const p of this.others.values()) drawPerson(r, { ...p, held: p.weapon ? this.items[p.weapon] : null });
     for (const d of this.drops.values()) drawDropped(r, this.items[d.item] || { color: "#888888" }, d.x, d.y, d.z, this.time, d.id);
-    for (const n of Object.values(this.npcs)) drawPerson(r, { x: n.x, y: n.y, z: n.z, yaw: n.yaw + Math.sin(this.time * 0.5 + n.x) * 0.2, color: n.color, hat: NPC_HATS[n.id] || 'cap', moving: false });
+    for (const n of Object.values(this.npcs)) drawPerson(r, { x: n.x, y: n.y, z: n.z, yaw: n.yaw + Math.sin(this.time * 0.5 + n.x) * 0.2, color: n.color, hat: n.hat, moving: false });
     for (const m of this.mobs.values()) {
       if (m.dead) continue;
-      if (m.kind === 'gloamwisp') drawWisp(r, m, this.time); else drawBramblet(r, m, this.time);
+      this.mobModel(m).draw(r, m, this.time);
     }
     const inGloam = b.x > this.gloamX - 2;
     const playerLight = hasLantern ? [b.x, b.y + 1.2, b.z, inGloam ? 11 : 6] : (inGloam ? [b.x, b.y + 1.2, b.z, 3.5] : [0, 0, 0, 0]);
@@ -619,7 +511,7 @@ class Game {
       want.set(key, { s, html, cls });
     };
     for (const p of this.others.values()) add('p' + p.id, p.x, p.y + 2.15, p.z, `${esc(p.name)}<div class="bar"><div style="width:${p.hp / p.mhp * 100}%"></div></div>`, 'tag');
-    for (const m of this.mobs.values()) if (!m.dead && (m.hp < m.mhp || m === this.targetMob || m.aggro)) add('m' + m.id, m.x, m.y + (m.kind === 'gloamwisp' ? 1.7 : 1.15), m.z, `<div class="bar"><div style="width:${m.hp / m.mhp * 100}%"></div></div>`, 'tag');
+    for (const m of this.mobs.values()) if (!m.dead && (m.hp < m.mhp || m === this.targetMob || m.aggro)) add('m' + m.id, m.x, m.y + this.mobModel(m).tag, m.z, `<div class="bar"><div style="width:${m.hp / m.mhp * 100}%"></div></div>`, 'tag');
     for (const n of Object.values(this.npcs)) {
       let mark = '';
       for (const q of Object.values(this.quests)) if (q.giver === n.id) {

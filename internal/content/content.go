@@ -29,6 +29,13 @@ const (
 // items. An empty model picks a default from the item kind.
 var Models = map[string]bool{"sword": true, "axe": true, "pickaxe": true, "club": true, "lantern": true, "gem": true, "food": true, "block": true, "bundle": true, "coin": true}
 
+// MobModels and NPCHats are the creature models and NPC hats the client can
+// draw (web/js/models.js). Add a drawing there before adding a name here.
+var (
+	MobModels = map[string]bool{"bramblet": true, "wisp": true}
+	NPCHats   = map[string]bool{"": true, "tall": true, "cap": true, "helm": true}
+)
+
 type Item struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
@@ -142,6 +149,7 @@ type NPC struct {
 	Z     float64  `json:"z"`
 	Yaw   float64  `json:"yaw"`
 	Color string   `json:"color"`
+	Hat   string   `json:"hat,omitempty"` // tall | cap | helm | "" (hair)
 	Lines []string `json:"lines"`
 }
 
@@ -327,10 +335,18 @@ func (c *Content) Validate() error {
 		if m.HP < 1 || m.Damage < 0 || m.Speed <= 0 || m.CooldownMs < 200 {
 			return fmt.Errorf("mob %s: bad stats", id)
 		}
+		if !MobModels[m.Model] {
+			return fmt.Errorf("mob %s: unknown model %q", id, m.Model)
+		}
 		for _, d := range m.Drops {
 			if c.Items[d.Item] == nil || d.Min < 0 || d.Max < d.Min || d.Chance < 0 || d.Chance > 1 {
 				return fmt.Errorf("mob %s: bad drop %q", id, d.Item)
 			}
+		}
+	}
+	for id, n := range c.NPCs {
+		if !NPCHats[n.Hat] {
+			return fmt.Errorf("npc %s: unknown hat %q", id, n.Hat)
 		}
 	}
 	for _, s := range c.Spawns {

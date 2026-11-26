@@ -107,3 +107,14 @@ func (g *Game) TotalItems() map[string]int {
 	}
 	return t
 }
+
+// carriesLight reports whether c holds any item that lights the way (the
+// content flag "light"), so mods can add their own light sources.
+func (g *Game) carriesLight(c *Character) bool {
+	for id, n := range c.Inv {
+		if it := g.C.Items[id]; n > 0 && it != nil && it.Light {
+			return true
+		}
+	}
+	return false
+}

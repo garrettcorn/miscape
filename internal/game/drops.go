@@ -149,14 +149,3 @@ func (g *Game) tickDrops() {
 		}
 	}
 }
-
-// dropView lists drops near p for snapshots.
-func (g *Game) dropView(p *Player) []M {
-	var out []M
-	for id, d := range g.Drops {
-		if dist2(d.X, d.Z, p.Char.X, p.Char.Z) < InterestRadius*InterestRadius {
-			out = append(out, M{"id": id, "i": d.Item, "n": d.Count, "x": r2(d.X), "y": r2(d.Y), "z": r2(d.Z), "own": d.Owner == p.Char.ID})
-		}
-	}
-	return out
-}

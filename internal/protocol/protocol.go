@@ -98,6 +98,15 @@ var types = map[string]bool{
 // NeedsRid reports whether a message type must carry a request id.
 func NeedsRid(t string) bool { return types[t] }
 
+// Types lists every client message type and whether it needs a request id.
+func Types() map[string]bool {
+	out := make(map[string]bool, len(types))
+	for k, v := range types {
+		out[k] = v
+	}
+	return out
+}
+
 var (
 	nameRe  = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]{2,15}$`)
 	idRe    = regexp.MustCompile(`^[a-z][a-z0-9_]*(:[a-z][a-z0-9_]*)?$`)

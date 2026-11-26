@@ -161,3 +161,10 @@ export function drawDropped(r, it, x, y, z, t, seed) {
     r.addBox((m, o) => trs(m, o, x, by, z, yaw, part.s[0] * k, part.s[1] * k, part.s[2] * k, part.p[0] * k, part.p[1] * k - cy, part.p[2] * k, 0.35), c[0], c[1], c[2], a);
   }
 }
+
+// Creature models by content "model" name (content.MobModels must match).
+// tag: height of the health bar above the creature's feet.
+export const MOB_MODELS = {
+  bramblet: { draw: drawBramblet, tag: 1.15 },
+  wisp: { draw: drawWisp, tag: 1.7 },
+};

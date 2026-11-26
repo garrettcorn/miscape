@@ -151,7 +151,12 @@ export class UI {
         }).join('') + '</ul>';
       break;
     }
-    if (!html && !(me.quests && me.quests.lights_for_wickhollow)) html = `<h4>Welcome!</h4>Find <b>Mabel the Lamplighter</b> near the plaza and press ${esc(glyph(g.input.device, 'interact'))} to talk.`;
+    if (!html) {
+      // No active quest: point at whoever offers the next one you can take.
+      const next = Object.values(g.quests).find((q) => !me.quests[q.id] && (!q.requires || me.quests[q.requires]?.status === 'done'));
+      const giver = next && g.npcs[next.giver];
+      if (giver) html = `<h4>${Object.keys(me.quests).length ? 'New quest' : 'Welcome!'}</h4>Find <b>${esc(giver.name)}</b> and press ${esc(glyph(g.input.device, 'interact'))} to talk.`;
+    }
     tr.innerHTML = html;
     // Hearth progress.
     const hb = $('#hearthbar');
