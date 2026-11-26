@@ -32,7 +32,7 @@ func TestDecodeRejects(t *testing.T) {
 		"bad name":           `{"t":"hello","proto":1,"name":"<script>"}`,
 		"short name":         `{"t":"hello","proto":1,"name":"ab"}`,
 		"bad token":          `{"t":"hello","proto":1,"token":"short"}`,
-		"negative block":     `{"t":"gather","rid":1,"bx":-1,"by":2,"bz":3}`,
+		"negative block":     `{"t":"gather","rid":1,"bx":1,"by":2,"bz":-3}`,
 		"bad item id":        `{"t":"place","rid":1,"bx":1,"by":2,"bz":3,"item":"../../etc"}`,
 		"huge count":         `{"t":"buy","rid":1,"item":"berry","count":100000}`,
 		"zero count":         `{"t":"buy","rid":1,"item":"berry","count":0}`,
@@ -81,8 +81,16 @@ func TestRidRequiredForStateChanges(t *testing.T) {
 }
 
 func TestChunkFrame(t *testing.T) {
-	f := ChunkFrame(3, 5, []byte{9, 1})
-	if f[0] != BinChunk || f[1] != 3 || f[2] != 5 || len(f) != 5 {
+	// Chunk coordinates beyond 255 (level 1 is 192x96 chunks; later levels are larger).
+	f := ChunkFrame(300, 1000, []byte{9, 1})
+	cx, cz := int(f[1])|int(f[2])<<8, int(f[3])|int(f[4])<<8
+	if f[0] != BinChunk || cx != 300 || cz != 1000 || len(f) != 7 || f[5] != 9 {
 		t.Fatal(f)
+	}
+	if _, err := Decode([]byte(`{"t":"chunks","chunks":[[191,95],[12000,6000]]}`)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Decode([]byte(`{"t":"gather","rid":1,"bx":-1,"by":13,"bz":700}`)); err != nil {
+		t.Fatal("a block just west of the date line should be accepted:", err)
 	}
 }

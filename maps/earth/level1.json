@@ -1,0 +1,18 @@
+{
+  "name": "Earth",
+  "level": 1,
+  "map": "terrain.png",
+  "legend": "legend.json",
+  "scale": 1,
+  "groundY": 12,
+  "seed": 20261125,
+  "spawn": "manchester",
+  "places": [
+    {"id": "manchester", "name": "Manchester", "lat": 53.48, "lon": -2.24,
+     "structure": "town", "zone": "town", "radius": 18}
+  ],
+  "zones": [
+    {"id": "highland_moors", "name": "The Highland Moors", "kind": "danger",
+     "lat": 57.4, "lon": -4.2, "radius": 12}
+  ]
+}

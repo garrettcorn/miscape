@@ -2,7 +2,6 @@ package game
 
 import (
 	"fmt"
-	"math"
 	"time"
 )
 
@@ -98,7 +97,7 @@ func (g *Game) TradeRequest(p *Player, target uint32) error {
 	if o.trade != nil {
 		return fail("%s is busy trading.", o.Char.Name)
 	}
-	if math.Hypot(o.Char.X-p.Char.X, o.Char.Z-p.Char.Z) > TradeRange {
+	if g.W.Dist(o.Char.X, o.Char.Z, p.Char.X, p.Char.Z) > TradeRange {
 		return fail("Get closer to %s to trade.", o.Char.Name)
 	}
 	t := &Trade{ID: g.allocID(), P: [2]uint32{p.ID, o.ID}, Offer: [2]map[string]int{{}, {}}, Created: g.Now}

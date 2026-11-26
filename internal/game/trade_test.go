@@ -12,8 +12,8 @@ import (
 func tradePair(t *testing.T) (*fixture, *Player, *Player, uint32) {
 	f := newFixture(t)
 	a, b := f.join("Ann"), f.join("Ben")
-	f.at(a, 30, 13, 30)
-	f.at(b, 31, 13, 30)
+	f.atWild(a, 0, 0)
+	f.atWild(b, 1, 0)
 	a.Char.Inv = map[string]int{"log": 10, "coin": 50, "copper_sword": 1, "warden_token": 1}
 	b.Char.Inv = map[string]int{"copper_ore": 6, "coin": 5}
 	f.mustOK(a, protocol.In{T: "trade_request", Target: b.ID})
@@ -146,11 +146,11 @@ func TestTradeDuplicateConfirmAppliesOnce(t *testing.T) {
 func TestTradeRequestRules(t *testing.T) {
 	f := newFixture(t)
 	a, b, c := f.join("Cal"), f.join("Dot"), f.join("Eli")
-	f.at(a, 30, 13, 30)
-	f.at(b, 80, 13, 30)
+	f.atWild(a, 0, 0)
+	f.atWild(b, 50, 0)
 	f.mustFail(a, protocol.In{T: "trade_request", Target: b.ID}) // too far
-	f.at(b, 31, 13, 30)
-	f.at(c, 30, 13, 31)
+	f.atWild(b, 1, 0)
+	f.atWild(c, 0, 1)
 	f.mustOK(a, protocol.In{T: "trade_request", Target: b.ID})
 	f.mustFail(c, protocol.In{T: "trade_request", Target: a.ID})                                      // busy
 	f.mustFail(c, protocol.In{T: "trade_offer", Trade: a.trade.ID, Offer: map[string]int{"coin": 1}}) // not a party

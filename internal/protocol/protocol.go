@@ -14,10 +14,16 @@ import (
 
 const (
 	// ProtoMin..ProtoMax is the range of client protocol versions accepted.
-	ProtoMin = 1
-	ProtoMax = 1
+	// Version 2: the wrapping Earth world (16-bit chunk coordinates, world
+	// shape sent in welcome).
+	ProtoMin = 2
+	ProtoMax = 2
 	// Current is what this server speaks natively.
-	Current = 1
+	Current = 2
+
+	// MaxCoord bounds block and chunk coordinates; the game checks them
+	// against the actual world size.
+	MaxCoord = 1 << 20
 
 	MaxMessageBytes = 4096
 	MaxChatLen      = 200
@@ -181,7 +187,7 @@ func Validate(m *In) error {
 			return bad("color")
 		}
 	case "gather", "place", "break":
-		if m.BX < 0 || m.BY < 0 || m.BZ < 0 || m.BX > 1024 || m.BY > 1024 || m.BZ > 1024 {
+		if m.BX < -MaxCoord || m.BX > MaxCoord || m.BY < 0 || m.BY > 255 || m.BZ < 0 || m.BZ > MaxCoord {
 			return bad("block")
 		}
 		if m.T == "place" && !validID(m.Item) {
@@ -246,7 +252,7 @@ func Validate(m *In) error {
 			return bad("chunks")
 		}
 		for _, c := range m.Chunks {
-			if c[0] < 0 || c[1] < 0 || c[0] > 64 || c[1] > 64 {
+			if c[0] < 0 || c[1] < 0 || c[0] > 0xffff || c[1] > 0xffff {
 				return bad("chunk coords")
 			}
 		}
@@ -257,9 +263,10 @@ func Validate(m *In) error {
 // Compatible reports whether a client protocol version is accepted.
 func Compatible(v int) bool { return v >= ProtoMin && v <= ProtoMax }
 
-// ChunkFrame builds a binary chunk frame.
+// ChunkFrame builds a binary chunk frame: type, chunk x and z as
+// little-endian uint16, then the run-length encoded blocks.
 func ChunkFrame(cx, cz int, rle []byte) []byte {
-	b := make([]byte, 0, 3+len(rle))
-	b = append(b, BinChunk, byte(cx), byte(cz))
+	b := make([]byte, 0, 5+len(rle))
+	b = append(b, BinChunk, byte(cx), byte(cx>>8), byte(cz), byte(cz>>8))
 	return append(b, rle...)
 }

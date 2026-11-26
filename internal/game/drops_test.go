@@ -9,13 +9,12 @@ import (
 	"lanternfall/internal/config"
 	"lanternfall/internal/content"
 	"lanternfall/internal/protocol"
-	"lanternfall/internal/world"
 )
 
 func TestDropAndPickupConservesItems(t *testing.T) {
 	f := newFixture(t)
 	a := f.join("Dropper")
-	f.at(a, world.SpawnX, world.SpawnY, world.SpawnZ)
+	f.atSpawn(a)
 	a.Char.Inv = map[string]int{"log": 5, "copper_sword": 1}
 	before := f.g.TotalItems()
 
@@ -78,7 +77,7 @@ func (f *fixture) stepAwayAndBack(p *Player) {
 func TestDropRules(t *testing.T) {
 	f := newFixture(t)
 	a := f.join("Rules")
-	f.at(a, world.SpawnX, world.SpawnY, world.SpawnZ)
+	f.atSpawn(a)
 	a.Char.Inv = map[string]int{"log": 2, "warden_token": 1}
 	if e := f.mustFail(a, protocol.In{T: "drop", Item: "warden_token", Count: 1}); !strings.Contains(e, "can't be dropped") {
 		t.Fatalf("non-tradeable: %s", e)
@@ -90,7 +89,7 @@ func TestDropRules(t *testing.T) {
 	}
 	// Drops expire.
 	f.mustOK(a, protocol.In{T: "drop", Item: "log", Count: 1})
-	f.at(a, world.SpawnX+20, world.SpawnY, world.SpawnZ)
+	f.atWild(a, 0, 0)
 	f.advance(DropLifetime)
 	f.g.Tick(f.g.Now)
 	if len(f.g.Drops) != 0 {
@@ -104,14 +103,14 @@ func TestOthersCanOnlyTakeDropsWhenAllowed(t *testing.T) {
 			f := newFixture(t)
 			f.g.Cfg.Trading = trading
 			a, b := f.join("Giver"), f.join("Taker")
-			f.at(a, world.SpawnX, world.SpawnY, world.SpawnZ)
+			f.atSpawn(a)
 			a.Char.Inv = map[string]int{"berry": 4}
 			f.mustOK(a, protocol.In{T: "drop", Item: "berry", Count: 4})
 			var d *Drop
 			for _, x := range f.g.Drops {
 				d = x
 			}
-			f.at(a, world.SpawnX+20, world.SpawnY, world.SpawnZ)
+			f.atWild(a, 0, 0)
 			f.at(b, d.X, d.Y, d.Z)
 			f.advance(5 * time.Second)
 			f.g.Tick(f.g.Now)
@@ -131,7 +130,7 @@ func TestOthersCanOnlyTakeDropsWhenAllowed(t *testing.T) {
 func TestPickupOnlyWhatFits(t *testing.T) {
 	f := newFixture(t)
 	a := f.join("Packrat")
-	f.at(a, world.SpawnX, world.SpawnY, world.SpawnZ)
+	f.atSpawn(a)
 	a.Char.Inv = map[string]int{"berry": 10}
 	f.mustOK(a, protocol.In{T: "drop", Item: "berry", Count: 10})
 	// Fill every slot except a partial berry stack of 30 (stack size 32).
@@ -158,7 +157,7 @@ func TestPickupOnlyWhatFits(t *testing.T) {
 func TestDropsSurviveSaveAndLoad(t *testing.T) {
 	f := newFixture(t)
 	a := f.join("Saver")
-	f.at(a, world.SpawnX, world.SpawnY, world.SpawnZ)
+	f.atSpawn(a)
 	a.Char.Inv = map[string]int{"plank": 7}
 	f.mustOK(a, protocol.In{T: "drop", Item: "plank", Count: 7})
 	g2, err := Load(content.MustBase(), config.DefaultWorld(config.ModePrivate), f.g.Snapshot(), newRec())

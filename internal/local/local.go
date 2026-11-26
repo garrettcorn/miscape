@@ -79,7 +79,7 @@ func Validate(snapshot []byte) error {
 	if d.Realm.Kind != config.ModeBrowser {
 		return fmt.Errorf("this save belongs to a %q world; only browser-world saves can be imported here, so progress stays separate between worlds", d.Realm.Kind)
 	}
-	if d.Version != game.SaveVersion {
+	if d.Version != game.SaveVersion && d.Version != 1 { // version 1 saves are migrated on load
 		return fmt.Errorf("this save uses version %d, which this game can't read", d.Version)
 	}
 	return nil

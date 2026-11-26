@@ -104,19 +104,94 @@ func (f *fixture) mustFail(p *Player, m protocol.In) string {
 	return a["err"].(string)
 }
 
-// findBlock returns the first block of type b satisfying pred.
+// The tests run on the real level-1 map. These helpers find reference spots
+// there (relative to the spawn town), so tests don't hard-code coordinates.
+
+// town returns the spawn town's center, offset by (dx,dz).
+func (f *fixture) town(dx, dz float64) (x, z float64) {
+	x, _, z, _ = f.g.W.Locate(f.g.W.Def.Spawn)
+	return f.g.W.WrapX(x + dx), z + dz
+}
+
+// wildSpot is the center of a clear, dry, flat patch of countryside near
+// town (at least 3x3 open ground), plus (dx, dz).
+func (f *fixture) wildSpot(dx, dz float64) (x, y, z float64) {
+	w := f.g.W
+	cx, cz := f.town(0, 0)
+	stand := w.Def.GroundY + 1
+	clear := func(x, z int) bool {
+		return w.ZoneAt(float64(x)+0.5, float64(z)+0.5) == world.ZoneWild && !f.g.wet(x, z) &&
+			w.GroundY(x, z) == stand && w.SurfaceY(x, z) == stand && w.Get(x, stand, z) == world.Air
+	}
+	for r := 22; r < 90; r++ {
+		for _, d := range [][2]int{{0, r}, {r, 0}, {-r, 0}, {0, -r}, {r, r}, {-r, r}} {
+			x, z := int(cx)+d[0], int(cz)+d[1]
+			ok := true
+			for ox := -1; ox <= 1 && ok; ox++ {
+				for oz := -1; oz <= 1 && ok; oz++ {
+					ok = clear(x+ox, z+oz)
+				}
+			}
+			if ok {
+				return w.WrapX(float64(x) + 0.5 + dx), float64(stand), float64(z) + 0.5 + dz
+			}
+		}
+	}
+	f.t.Fatal("no clear wild spot near town")
+	return
+}
+
+// atWild puts p on the clear wild patch, offset by (dx, dz).
+func (f *fixture) atWild(p *Player, dx, dz float64) {
+	x, y, z := f.wildSpot(dx, dz)
+	f.at(p, x, y, z)
+}
+
+// atNPC puts p next to an NPC.
+func (f *fixture) atNPC(p *Player, id string) {
+	n := f.g.C.NPCs[id]
+	f.at(p, n.X, n.Y, n.Z+1)
+}
+
+// danger returns the center of the first danger zone.
+func (f *fixture) danger() (x, y, z float64) {
+	for _, zd := range f.g.W.Def.Zones {
+		if zd.Kind == world.ZoneDanger {
+			return zd.X, float64(f.g.W.Def.GroundY + 1), zd.Z
+		}
+	}
+	f.t.Fatal("no danger zone")
+	return
+}
+
+// findBlock returns the nearest block of type b to town satisfying pred,
+// searching up to 120 blocks out.
 func (f *fixture) findBlock(b uint8, pred func(x, y, z int) bool) (int, int, int) {
-	for y := 1; y < world.SizeY; y++ {
-		for z := 0; z < world.SizeZ; z++ {
-			for x := 0; x < world.SizeX; x++ {
-				if f.g.W.Get(x, y, z) == b && (pred == nil || pred(x, y, z)) {
-					return x, y, z
+	cx, cz := f.town(0, 0)
+	for r := 0; r < 120; r++ {
+		for dz := -r; dz <= r; dz++ {
+			for dx := -r; dx <= r; dx++ {
+				if max(abs(dx), abs(dz)) != r {
+					continue
+				}
+				x, z := int(cx)+dx, int(cz)+dz
+				for y := 1; y < world.SizeY; y++ {
+					if f.g.W.Get(x, y, z) == b && (pred == nil || pred(x, y, z)) {
+						return int(f.g.W.WrapX(float64(x))), y, z
+					}
 				}
 			}
 		}
 	}
-	f.t.Fatalf("no block %d found", b)
+	f.t.Fatalf("no block %d found near town", b)
 	return 0, 0, 0
+}
+
+func abs(v int) int {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 // standNear puts the player on the ground next to block (x,y,z).
@@ -134,6 +209,13 @@ func (f *fixture) standNear(p *Player, x, y, z int) {
 	f.at(p, float64(x)+1.5, float64(y), float64(z)+0.5)
 }
 
-func wild(x, _, z int) bool {
-	return world.ZoneAt(float64(x)+0.5, float64(z)+0.5) == world.ZoneWild
+// wild reports whether block (x,y,z) is in the countryside (not a town or danger zone).
+func (f *fixture) wild(x, _, z int) bool {
+	return f.g.W.ZoneAt(float64(x)+0.5, float64(z)+0.5) == world.ZoneWild
+}
+
+// atSpawn puts p at the spawn point in town.
+func (f *fixture) atSpawn(p *Player) {
+	sp := f.g.W.Spawn()
+	f.at(p, sp.X, sp.Y, sp.Z)
 }

@@ -54,7 +54,7 @@ func TestFreshWorldJoinPlayAndReload(t *testing.T) {
 	if info["kind"] != config.ModeBrowser {
 		t.Fatalf("kind: %v", info["kind"])
 	}
-	h.Hello([]byte(`{"t":"hello","proto":1,"name":"Solo","color":"#4a90d9"}`))
+	h.Hello([]byte(`{"t":"hello","proto":2,"name":"Solo","color":"#4a90d9"}`))
 	w := s.last("welcome")
 	if w == nil || w["token"] == "" {
 		t.Fatalf("no welcome: %v", s.texts)
@@ -83,7 +83,7 @@ func TestFreshWorldJoinPlayAndReload(t *testing.T) {
 
 	// "Reload the page": a new host from the saved snapshot, same token.
 	h2, s2 := open(t, snap)
-	h2.Hello([]byte(`{"t":"hello","proto":1,"token":"` + token + `"}`))
+	h2.Hello([]byte(`{"t":"hello","proto":2,"token":"` + token + `"}`))
 	if s2.last("welcome") == nil {
 		t.Fatalf("rejoin failed: %v", s2.texts)
 	}
@@ -95,7 +95,7 @@ func TestFreshWorldJoinPlayAndReload(t *testing.T) {
 
 func TestCorruptNewestFallsBackToBackup(t *testing.T) {
 	h, s := open(t)
-	h.Hello([]byte(`{"t":"hello","proto":1,"name":"Backup"}`))
+	h.Hello([]byte(`{"t":"hello","proto":2,"name":"Backup"}`))
 	good := s.saves[len(s.saves)-1]
 	h2, _ := open(t, []byte(`{"format":1,"sha256":"00","payload":{}}`), good)
 	if !h2.Recovered || len(h2.g.Chars) != 1 {
@@ -124,7 +124,7 @@ func TestOnlyBrowserSavesCanBeImported(t *testing.T) {
 
 func TestRulesStillEnforced(t *testing.T) {
 	h, s := open(t)
-	h.Hello([]byte(`{"t":"hello","proto":1,"name":"Cheater"}`))
+	h.Hello([]byte(`{"t":"hello","proto":2,"name":"Cheater"}`))
 	h.Message([]byte(`{"t":"craft","rid":1,"recipe":"glimmer_blade"}`))
 	if a := s.last("ack"); a["ok"] != false {
 		t.Fatal("craft without materials accepted")
@@ -142,7 +142,7 @@ func TestRulesStillEnforced(t *testing.T) {
 func TestImportedWorldResumesByName(t *testing.T) {
 	// Device A creates a character and exports the world.
 	h, s := open(t)
-	h.Hello([]byte(`{"t":"hello","proto":1,"name":"Traveler"}`))
+	h.Hello([]byte(`{"t":"hello","proto":2,"name":"Traveler"}`))
 	export := h.Export()
 	// Device B imports it: no stored token, so it continues by name.
 	h2, s2 := open(t, export)
@@ -151,7 +151,7 @@ func TestImportedWorldResumesByName(t *testing.T) {
 	if names := info["characters"].([]any); len(names) != 1 || names[0] != "Traveler" {
 		t.Fatalf("characters: %v", info["characters"])
 	}
-	h2.Hello([]byte(`{"t":"hello","proto":1,"name":"Traveler"}`))
+	h2.Hello([]byte(`{"t":"hello","proto":2,"name":"Traveler"}`))
 	w := s2.last("welcome")
 	if w == nil || w["token"] == "" {
 		t.Fatalf("resume by name failed: %v", s2.texts)

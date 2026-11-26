@@ -84,10 +84,16 @@ type Mob struct {
 	Drops      []Drop  `json:"drops"`
 }
 
+// Spawn is a group of creatures wandering around a point. Positions are
+// offsets from a named place, zone or point of the world ("at"), so the same
+// content works on every level; X and Z are filled in by Resolve.
 type Spawn struct {
 	Mob   string  `json:"mob"`
-	X     float64 `json:"x"`
-	Z     float64 `json:"z"`
+	At    string  `json:"at"`
+	DX    float64 `json:"dx,omitempty"`
+	DZ    float64 `json:"dz,omitempty"`
+	X     float64 `json:"-"`
+	Z     float64 `json:"-"`
 	R     float64 `json:"r"` // wander radius
 	Count int     `json:"count"`
 }
@@ -141,9 +147,14 @@ type ShopEntry struct {
 	Price int    `json:"price"` // buy price in coins
 }
 
+// NPC is a townsperson. Like spawns, it stands at an offset from a named
+// place or point ("at"); X, Y and Z are filled in by Resolve.
 type NPC struct {
 	ID    string   `json:"id"`
 	Name  string   `json:"name"`
+	At    string   `json:"at"`
+	DX    float64  `json:"dx,omitempty"`
+	DZ    float64  `json:"dz,omitempty"`
 	X     float64  `json:"x"`
 	Y     float64  `json:"y"`
 	Z     float64  `json:"z"`
@@ -493,4 +504,34 @@ func sortedKeys[V any](m map[string]V) []string {
 	}
 	sort.Strings(ks)
 	return ks
+}
+
+// Locator finds a named place, zone or point in the world: its x, z and the
+// y someone standing there would have.
+type Locator func(name string) (x, y, z float64, ok bool)
+
+// Resolve returns a copy of the content with NPC and creature-spawn positions
+// worked out for one world level. Unknown "at" names are an error.
+func (c *Content) Resolve(at Locator, wrapX func(float64) float64) (*Content, error) {
+	cp := *c
+	cp.NPCs = make(map[string]*NPC, len(c.NPCs))
+	for id, n := range c.NPCs {
+		x, y, z, ok := at(n.At)
+		if !ok {
+			return nil, fmt.Errorf("npc %s: unknown place %q", id, n.At)
+		}
+		nn := *n
+		nn.X, nn.Y, nn.Z = wrapX(x+n.DX), y, z+n.DZ
+		cp.NPCs[id] = &nn
+	}
+	cp.Spawns = make([]Spawn, len(c.Spawns))
+	for i, s := range c.Spawns {
+		x, _, z, ok := at(s.At)
+		if !ok {
+			return nil, fmt.Errorf("spawn %s: unknown place %q", s.Mob, s.At)
+		}
+		s.X, s.Z = wrapX(x+s.DX), z+s.DZ
+		cp.Spawns[i] = s
+	}
+	return &cp, nil
 }

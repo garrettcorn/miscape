@@ -31,7 +31,7 @@ func (g *Game) PlayerDamage(c *Character) int {
 
 func (g *Game) broadcastNear(x, z float64, msg M) {
 	for id, p := range g.Players {
-		if dist2(p.Char.X, p.Char.Z, x, z) < InterestRadius*InterestRadius {
+		if g.W.Dist2(p.Char.X, p.Char.Z, x, z) < InterestRadius*InterestRadius {
 			g.Out.Send(id, msg)
 		}
 	}
@@ -52,7 +52,7 @@ func (g *Game) Attack(p *Player, target uint32) error {
 		if m.HP <= 0 {
 			return fail("It's already gone.")
 		}
-		if math.Hypot(m.X-c.X, m.Z-c.Z) > MeleeRange || math.Abs(m.Y-c.Y) > 2.5 {
+		if g.W.Dist(m.X, m.Z, c.X, c.Z) > MeleeRange || math.Abs(m.Y-c.Y) > 2.5 {
 			return fail("Out of reach.")
 		}
 		p.nextAttack = g.Now.Add(cd)
@@ -74,13 +74,13 @@ func (g *Game) Attack(p *Player, target uint32) error {
 	if !g.Cfg.PvP {
 		return fail("PvP is off in this world.")
 	}
-	if world.ZoneAt(c.X, c.Z) == world.ZoneVillage || world.ZoneAt(o.Char.X, o.Char.Z) == world.ZoneVillage {
-		return fail("Wickhollow is a safe zone.")
+	if g.W.ZoneAt(c.X, c.Z) == world.ZoneTown || g.W.ZoneAt(o.Char.X, o.Char.Z) == world.ZoneTown {
+		return fail("Towns are safe: no fighting here.")
 	}
 	if o.dead || o.Char.HP <= 0 {
 		return fail("They're already down.")
 	}
-	if math.Hypot(o.Char.X-c.X, o.Char.Z-c.Z) > MeleeRange || math.Abs(o.Char.Y-c.Y) > 2.5 {
+	if g.W.Dist(o.Char.X, o.Char.Z, c.X, c.Z) > MeleeRange || math.Abs(o.Char.Y-c.Y) > 2.5 {
 		return fail("Out of reach.")
 	}
 	p.nextAttack = g.Now.Add(cd)
@@ -134,9 +134,9 @@ func (g *Game) damagePlayer(p *Player, dmg int, src uint32) {
 
 func (g *Game) playerDied(p *Player) {
 	c := p.Char
-	zone := world.ZoneAt(c.X, c.Z)
+	zone, zoneName := g.W.ZoneAt(c.X, c.Z), g.W.ZoneName(c.X, c.Z)
 	lost := 0
-	if zone == world.ZoneGloam {
+	if zone == world.ZoneDanger {
 		lost = int(math.Floor(float64(c.Inv["coin"]) * g.C.Rules.GloamDeathCoinLoss))
 		if lost > 0 {
 			c.Inv["coin"] -= lost
@@ -153,10 +153,11 @@ func (g *Game) playerDied(p *Player) {
 	c.HP = c.MaxHP()
 	p.hearthStart = time.Time{}
 	g.broadcastNear(c.X, c.Z, M{"t": "die", "id": p.ID})
-	g.teleport(p, world.SpawnX, world.SpawnY, world.SpawnZ)
-	msg := "You were knocked out and woke up in Wickhollow."
+	sp := g.W.Spawn()
+	g.teleport(p, sp.X, sp.Y, sp.Z)
+	msg := fmt.Sprintf("You were knocked out and woke up in %s.", g.W.ZoneName(sp.X, sp.Z))
 	if lost > 0 {
-		msg += fmt.Sprintf(" You dropped %d coins in the Gloam.", lost)
+		msg += fmt.Sprintf(" You dropped %d coins on %s.", lost, zoneName)
 	}
 	g.Out.Send(p.ID, M{"t": "ko", "text": msg, "lost": lost})
 	g.SaveSoon = true
@@ -178,18 +179,18 @@ func (g *Game) tickMobs() {
 		var tp *Player
 		if m.target != 0 {
 			tp = g.Players[m.target]
-			if tp == nil || tp.dead || world.ZoneAt(tp.Char.X, tp.Char.Z) == world.ZoneVillage ||
-				math.Hypot(tp.Char.X-m.Spawn.X, tp.Char.Z-m.Spawn.Z) > MobLeash+m.Spawn.R {
+			if tp == nil || tp.dead || g.W.ZoneAt(tp.Char.X, tp.Char.Z) == world.ZoneTown ||
+				g.W.Dist(tp.Char.X, tp.Char.Z, m.Spawn.X, m.Spawn.Z) > MobLeash+m.Spawn.R {
 				m.target, tp = 0, nil
 			}
 		}
 		if tp == nil {
 			best := m.Def.Aggro
 			for id, p := range g.Players {
-				if p.dead || world.ZoneAt(p.Char.X, p.Char.Z) == world.ZoneVillage {
+				if p.dead || g.W.ZoneAt(p.Char.X, p.Char.Z) == world.ZoneTown {
 					continue
 				}
-				if d := math.Hypot(p.Char.X-m.X, p.Char.Z-m.Z); d < best && math.Abs(p.Char.Y-m.Y) < 4 {
+				if d := g.W.Dist(m.X, m.Z, p.Char.X, p.Char.Z); d < best && math.Abs(p.Char.Y-m.Y) < 4 {
 					best, tp, m.target = d, p, id
 				}
 			}
@@ -198,7 +199,7 @@ func (g *Game) tickMobs() {
 		speed := m.Def.Speed
 		if tp != nil {
 			gx, gz = tp.Char.X, tp.Char.Z
-			d := math.Hypot(gx-m.X, gz-m.Z)
+			d := g.W.Dist(m.X, m.Z, gx, gz)
 			if d <= MobMeleeRange && math.Abs(tp.Char.Y-m.Y) < 2 {
 				speed = 0
 				if g.Now.After(m.nextAtk) {
@@ -219,25 +220,32 @@ func (g *Game) tickMobs() {
 			gx, gz = m.wanderTo[0], m.wanderTo[1]
 			speed *= 0.4
 		}
-		dx, dz := gx-m.X, gz-m.Z
+		dx, dz := g.W.DX(m.X, gx), gz-m.Z
 		d := math.Hypot(dx, dz)
 		if d > 0.2 && speed > 0 {
 			step := math.Min(d, speed*dt)
 			nx, nz := m.X+dx/d*step, m.Z+dz/d*step
 			m.Yaw = math.Atan2(dx, dz)
-			if world.ZoneAt(nx, nz) == world.ZoneVillage {
-				continue // creatures never enter the village
+			nx = g.W.WrapX(nx)
+			if g.W.ZoneAt(nx, nz) == world.ZoneTown {
+				continue // creatures never enter towns
 			}
-			// Gloam creatures stay in the Gloam and vice versa.
-			if (world.ZoneAt(nx, nz) == world.ZoneGloam) != (world.ZoneAt(m.Spawn.X, m.Spawn.Z) == world.ZoneGloam) {
+			// Creatures of a danger zone stay in it, and others stay out.
+			if (g.W.ZoneAt(nx, nz) == world.ZoneDanger) != (g.W.ZoneAt(m.Spawn.X, m.Spawn.Z) == world.ZoneDanger) {
 				continue
 			}
-			ny := float64(g.W.GroundY(int(math.Floor(nx)), int(math.Floor(nz))))
-			if ny >= 0 && ny-m.Y <= 1.01 && ny-m.Y >= -3 {
+			ix, iz := int(math.Floor(nx)), int(math.Floor(nz))
+			ny := float64(g.W.GroundY(ix, iz))
+			if ny >= 0 && ny-m.Y <= 1.01 && ny-m.Y >= -3 && !g.wet(ix, iz) {
 				m.X, m.Z, m.Y = nx, nz, ny
 			} else if tp == nil {
 				m.nextThink = g.Now // pick another wander target
 			}
 		}
 	}
+}
+
+// wet reports whether column (x,z) is open water (creatures don't swim).
+func (g *Game) wet(x, z int) bool {
+	return g.W.Get(x, g.W.Def.GroundY, z) == world.Water
 }

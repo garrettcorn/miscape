@@ -36,7 +36,7 @@ func (g *Game) tickRegen() {
 			keep = append(keep, r)
 			continue
 		}
-		x, y, z := r.Idx%world.SizeX, r.Idx/(world.SizeX*world.SizeZ), (r.Idx/world.SizeX)%world.SizeZ
+		x, y, z := int(r.P.X), int(r.P.Y), int(r.P.Z)
 		if g.W.Get(x, y, z) != world.Air || g.entityInCell(x, y, z) {
 			r.At = g.Now.Add(5 * time.Second)
 			keep = append(keep, r)
@@ -56,13 +56,14 @@ func (g *Game) tickPlayers() {
 			p.dirtyMe = true
 		}
 		if !p.hearthStart.IsZero() {
-			if math.Hypot(c.X-p.hearthX, c.Z-p.hearthZ) > 0.8 {
+			if g.W.Dist(c.X, c.Z, p.hearthX, p.hearthZ) > 0.8 {
 				p.hearthStart = time.Time{}
 				g.toast(p, "Hearth Lantern interrupted — you moved.", "warn")
 				p.dirtyMe = true
 			} else if g.Now.Sub(p.hearthStart).Seconds() >= HearthSeconds {
 				p.hearthStart = time.Time{}
-				g.teleport(p, world.SpawnX, world.SpawnY, world.SpawnZ)
+				sp := g.W.Spawn()
+				g.teleport(p, sp.X, sp.Y, sp.Z)
 				g.toast(p, "The lantern's glow carries you home.", "good")
 			}
 		}
@@ -153,18 +154,18 @@ func (g *Game) sendSnapshots() {
 		px, pz := p.Char.X, p.Char.Z
 		msg := snapMsg{T: "snap"}
 		for _, o := range players {
-			if o.ID != id && dist2(o.X, o.Z, px, pz) < r2max {
+			if o.ID != id && g.W.Dist2(o.X, o.Z, px, pz) < r2max {
 				msg.Players = append(msg.Players, o)
 			}
 		}
 		for _, m := range mobs {
-			if dist2(m.X, m.Z, px, pz) < r2max {
+			if g.W.Dist2(m.X, m.Z, px, pz) < r2max {
 				m.Aggro = m.target == id
 				msg.Mobs = append(msg.Mobs, m)
 			}
 		}
 		for _, d := range drops {
-			if dist2(d.X, d.Z, px, pz) < r2max {
+			if g.W.Dist2(d.X, d.Z, px, pz) < r2max {
 				d.Own = d.owner == p.Char.ID
 				msg.Drops = append(msg.Drops, d)
 			}
@@ -172,5 +173,3 @@ func (g *Game) sendSnapshots() {
 		g.Out.Send(id, msg)
 	}
 }
-
-func dist2(ax, az, bx, bz float64) float64 { return (ax-bx)*(ax-bx) + (az-bz)*(az-bz) }

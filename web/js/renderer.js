@@ -6,9 +6,10 @@ const MAX_LIGHTS = 16;
 const MAX_INSTANCES = 4096;
 
 const COMMON = `
-uniform vec3 uCam; uniform vec3 uFogDay; uniform vec3 uFogGloam; uniform float uFogNear; uniform float uFogFar; uniform float uGloamX;
+uniform vec3 uCam; uniform vec3 uFogDay; uniform vec3 uFogGloam; uniform float uFogNear; uniform float uFogFar; uniform vec3 uDanger;
 uniform vec4 uLights[${MAX_LIGHTS}]; uniform vec3 uLightCol[${MAX_LIGHTS}]; uniform int uNumLights; uniform vec4 uPlayerLight;
-float gloamF(float x) { return smoothstep(uGloamX - 3.0, uGloamX + 4.0, x); }
+// How deep into the nearest danger zone (center xz, radius) a point is: 0 outside, 1 inside.
+float gloamF(vec3 p) { if (uDanger.z <= 0.0) return 0.0; return 1.0 - smoothstep(uDanger.z - 3.0, uDanger.z + 4.0, length(p.xz - uDanger.xy)); }
 vec3 pointLights(vec3 p) {
   vec3 add = vec3(0.0);
   for (int i = 0; i < ${MAX_LIGHTS}; i++) {
@@ -52,7 +53,7 @@ out vec4 o;
 void main() {
   vec4 t = texture(uTex, vec3(vUV, vLayer));
   if ((vFlags & 4) != 0 && t.a < 0.5) discard;
-  float g = max(gloamF(vWorld.x), gloamF(uCam.x) * 0.85);
+  float g = max(gloamF(vWorld), gloamF(uCam) * 0.85);
   vec3 ambient = mix(vec3(1.0, 0.97, 0.9), vec3(0.24, 0.21, 0.38), g);
   vec3 col;
   if ((vFlags & 1) != 0) col = t.rgb * mix(1.05, 1.35, g);
@@ -80,7 +81,7 @@ ${COMMON}
 in vec3 vWorld; in vec3 vN; in vec4 vCol;
 out vec4 o;
 void main() {
-  float g = max(gloamF(vWorld.x), gloamF(uCam.x) * 0.85);
+  float g = max(gloamF(vWorld), gloamF(uCam) * 0.85);
   vec3 col;
   if (vCol.a > 1.5) col = vCol.rgb * mix(1.1, 1.5, g);           // emissive
   else {
@@ -307,42 +308,67 @@ export class Renderer {
     gl.uniform3fv(u.uFogGloam, this.fogGloam);
     gl.uniform1f(u.uFogNear, opts.fogNear);
     gl.uniform1f(u.uFogFar, opts.fogFar);
-    gl.uniform1f(u.uGloamX, opts.gloamX);
+    gl.uniform3fv(u.uDanger, this.dangerRel);
     gl.uniform4fv(u.uLights, this.lightsBuf);
     gl.uniform3fv(u.uLightCol, this.lightCols);
     gl.uniform1i(u.uNumLights, lights);
     gl.uniform4fv(u.uPlayerLight, playerLight);
   }
 
+  // Everything is drawn relative to an origin near the camera (the corner of
+  // the camera's chunk), so float32 stays precise however big the world is.
+  // The world wraps east–west, so each thing is drawn at its copy nearest the
+  // camera: rel() converts a world point to these camera-relative coordinates.
+  rel(x, y, z) {
+    const w = this.world;
+    return [this.eyeX + w.dx(this.eyeX, x) - this.origin[0], y, z - this.origin[2]];
+  }
+
   pickLights(world, cam, max) {
     const ccx = Math.floor(cam[0] / world.cs), ccz = Math.floor(cam[2] / world.cs);
     const cand = [];
     for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
-      const list = world.lights.get((ccz + dz) * world.cx + (ccx + dx));
-      if (!list || ccx + dx < 0 || ccz + dz < 0 || ccx + dx >= world.cx || ccz + dz >= world.cz) continue;
-      for (const l of list) cand.push([l, (l[0] - cam[0]) ** 2 + (l[1] - cam[1]) ** 2 + (l[2] - cam[2]) ** 2]);
+      if (ccz + dz < 0 || ccz + dz >= world.cz) continue;
+      const list = world.lights.get(world.key(ccx + dx, ccz + dz));
+      if (!list) continue;
+      for (const l of list) cand.push([l, world.dx(cam[0], l[0]) ** 2 + (l[1] - cam[1]) ** 2 + (l[2] - cam[2]) ** 2]);
     }
     cand.sort((a, b) => a[1] - b[1]);
     const n = Math.min(max, cand.length, MAX_LIGHTS);
     for (let i = 0; i < n; i++) {
       const l = cand[i][0], col = LIGHT_COLORS[l[3]];
-      this.lightsBuf.set([l[0], l[1], l[2], l[3] === 13 ? 7.5 : 5.0], i * 4);
+      const p = this.rel(l[0], l[1], l[2]);
+      this.lightsBuf.set([p[0], p[1], p[2], l[3] === 13 ? 7.5 : 5.0], i * 4);
       this.lightCols.set(col, i * 3);
     }
     return n;
   }
 
-  // view: {eye, target, fov, near, far}; opts: quality-driven settings.
+  // view: {eye, target, fov, near, far} in world coordinates; opts:
+  // quality-driven settings, plus danger: [x, z, radius] of the nearest danger zone.
   render(world, view, opts) {
     const gl = this.gl, st = this.stats;
     st.draws = 0; st.tris = 0; st.chunks = 0;
+    this.world = world;
+    const cs = world.cs, sy = world.sy;
+    this.eyeX = view.eye[0];
+    this.origin = [Math.floor(view.eye[0] / cs) * cs, 0, Math.floor(view.eye[2] / cs) * cs];
+    const eye = this.rel(view.eye[0], view.eye[1], view.eye[2]);
+    const tgt = [eye[0] + (view.target[0] - view.eye[0]), view.target[1], eye[2] + (view.target[2] - view.eye[2])];
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     const proj = perspective(view.fov, this.canvas.width / this.canvas.height, 0.1, view.far);
-    const viewM = lookAt(view.eye, view.target, [0, 1, 0]);
+    const viewM = lookAt(eye, tgt, [0, 1, 0]);
     const vp = mul(proj, viewM);
     this.vp = vp;
     const planes = frustumPlanes(vp);
-    const g = Math.min(1, Math.max(0, (view.eye[0] - (opts.gloamX - 3)) / 7));
+    // Danger zone darkness (sky, fog, lights) around the camera.
+    const dz = opts.danger;
+    this.dangerRel = dz ? [...this.rel(dz[0], 0, dz[1]).filter((_, i) => i !== 1), dz[2]] : [0, 0, 0];
+    let g = 0;
+    if (dz) {
+      const d = world.dist(view.eye[0], view.eye[2], dz[0], dz[1]), t = Math.min(1, Math.max(0, (d - (dz[2] - 3)) / 7));
+      g = 1 - t * t * (3 - 2 * t);
+    }
 
     gl.clear(gl.DEPTH_BUFFER_BIT);
     // Sky.
@@ -358,16 +384,17 @@ export class Renderer {
     gl.enable(gl.DEPTH_TEST);
 
     const nLights = this.pickLights(world, view.eye, opts.maxLights);
-    const playerLight = opts.playerLight || [0, 0, 0, 0];
+    const pl = opts.playerLight;
+    const playerLight = pl && pl[3] > 0 ? [...this.rel(pl[0], pl[1], pl[2]), pl[3]] : [0, 0, 0, 0];
 
     // Terrain: choose full or LOD mesh per chunk by distance; frustum cull.
     const visible = [];
-    const cs = world.cs, sy = world.sy;
     for (const ch of this.chunks.values()) {
-      const x0 = ch.cx * cs, z0 = ch.cz * cs;
-      const dx = Math.max(x0 - view.eye[0], 0, view.eye[0] - (x0 + cs));
-      const dz = Math.max(z0 - view.eye[2], 0, view.eye[2] - (z0 + cs));
-      const d = Math.hypot(dx, dz) / cs;
+      const o = this.rel(ch.cx * cs + cs / 2, 0, ch.cz * cs);
+      const x0 = o[0] - cs / 2, z0 = o[2];
+      const dx = Math.max(x0 - eye[0], 0, eye[0] - (x0 + cs));
+      const dzz = Math.max(z0 - eye[2], 0, eye[2] - (z0 + cs));
+      const d = Math.hypot(dx, dzz) / cs;
       if (d > opts.renderDist) continue;
       const wantLod = d > opts.lodDist ? 1 : 0;
       if (ch.lod !== wantLod) {
@@ -375,7 +402,7 @@ export class Renderer {
         if (this.chunks.has(`${ch.cx},${ch.cz},${wantLod}`)) continue;
       }
       if (!aabbVisible(planes, x0, 0, z0, x0 + cs, sy, z0 + cs)) continue;
-      visible.push([ch, d]);
+      visible.push([ch, d, x0, z0]);
     }
     visible.sort((a, b) => a[1] - b[1]); // front-to-back for early-z
     gl.useProgram(this.terrain.p);
@@ -386,21 +413,28 @@ export class Renderer {
     gl.uniform1i(tu.uTex, 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.tex);
-    this.setCommon(this.terrain, view.eye, nLights, playerLight, opts);
-    for (const [ch] of visible) {
+    this.setCommon(this.terrain, eye, nLights, playerLight, opts);
+    for (const [ch, , x0, z0] of visible) {
       if (!ch.o) continue;
-      gl.uniform3f(tu.uOrigin, ch.cx * cs, 0, ch.cz * cs);
+      gl.uniform3f(tu.uOrigin, x0, 0, z0);
       gl.uniform1f(tu.uScale, ch.lod ? 2 : 1);
       gl.bindVertexArray(ch.o.vao);
       gl.drawElements(gl.TRIANGLES, ch.o.quads * 6, gl.UNSIGNED_INT, 0);
       st.draws++; st.tris += ch.o.quads * 2; st.chunks++;
     }
 
+    // Entity boxes were built in world coordinates: move each to its copy
+    // nearest the camera, relative to the origin.
+    for (let i = 0, o = 12; i < this.nInst; i++, o += 20) {
+      const p = this.rel(this.instances[o], 0, this.instances[o + 2]);
+      this.instances[o] = p[0]; this.instances[o + 2] = p[2];
+    }
+
     // Entities (one instanced draw call).
     if (this.nInst > 0) {
       gl.useProgram(this.box.p);
       gl.uniformMatrix4fv(this.box.u.uVP, false, vp);
-      this.setCommon(this.box, view.eye, nLights, playerLight, opts);
+      this.setCommon(this.box, eye, nLights, playerLight, opts);
       gl.bindVertexArray(this.boxVao);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.instBuf);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.instances, 0, this.nInst * 20);
@@ -412,7 +446,7 @@ export class Renderer {
     if (opts.highlight) {
       gl.useProgram(this.line.p);
       gl.uniformMatrix4fv(this.line.u.uVP, false, vp);
-      gl.uniform3fv(this.line.u.uOff, opts.highlight);
+      gl.uniform3fv(this.line.u.uOff, this.rel(...opts.highlight));
       gl.uniform4f(this.line.u.uColor, 1, 0.95, 0.6, 1);
       gl.bindVertexArray(this.lineVao);
       gl.drawArrays(gl.LINES, 0, 24);
@@ -427,7 +461,7 @@ export class Renderer {
     for (let i = visible.length - 1; i >= 0; i--) {
       const ch = visible[i][0];
       if (!ch.w) continue;
-      gl.uniform3f(tu.uOrigin, ch.cx * cs, 0, ch.cz * cs);
+      gl.uniform3f(tu.uOrigin, visible[i][2], 0, visible[i][3]);
       gl.uniform1f(tu.uScale, ch.lod ? 2 : 1);
       gl.bindVertexArray(ch.w.vao);
       gl.drawElements(gl.TRIANGLES, ch.w.quads * 6, gl.UNSIGNED_INT, 0);

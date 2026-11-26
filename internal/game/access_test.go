@@ -130,21 +130,21 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	p := f.join("Sol")
 	p.Char.Inv["log"] = 7
 	p.Char.XP["mining"] = 123
-	f.at(p, 30, 14, 30)
+	wx, wy, wz := f.wildSpot(0, 0)
+	f.at(p, wx, wy, wz)
 	f.g.Join(Session{Local: true}, &protocol.In{T: "hello", Proto: 1, Name: "Tam"})
 	p.Char.Inv["plank"] = 1
-	x, z := 20, 30
-	y := f.g.W.SurfaceY(x, z)
-	f.g.placed[world.Index(x, y, z)] = p.Char.ID
+	x, y, z := int(wx)+1, int(wy), int(wz)
+	f.g.placed[f.g.W.PosAt(x, y, z)] = p.Char.ID
 	f.g.W.Set(x, y, z, world.Plank)
 	inv := f.g.CreateInvite("x", 3, 0)
 	f.g.Bans["someone"] = &Ban{CharID: "someone", Name: "Bad"}
 	g2 := saveLoad(t, f.g)
 	c := g2.Chars[p.Char.ID]
-	if c == nil || c.Inv["log"] != 7 || c.XP["mining"] != 123 || c.X != 30 {
+	if c == nil || c.Inv["log"] != 7 || c.XP["mining"] != 123 || c.X != wx {
 		t.Fatalf("character not restored: %+v", c)
 	}
-	if g2.W.Get(x, y, z) != world.Plank || g2.placed[world.Index(x, y, z)] != p.Char.ID {
+	if g2.W.Get(x, y, z) != world.Plank || g2.placed[g2.W.PosAt(x, y, z)] != p.Char.ID {
 		t.Fatal("world edits not restored")
 	}
 	if g2.Invites[inv.Code] == nil || g2.Bans["someone"] == nil || g2.Realm.ID != f.g.Realm.ID {

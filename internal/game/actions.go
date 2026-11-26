@@ -15,7 +15,7 @@ const (
 
 func (g *Game) eyeDist(p *Player, bx, by, bz int) float64 {
 	c := p.Char
-	return math.Sqrt(sq(c.X-(float64(bx)+0.5)) + sq(c.Y+1.5-(float64(by)+0.5)) + sq(c.Z-(float64(bz)+0.5)))
+	return math.Sqrt(sq(g.W.DX(c.X, float64(bx)+0.5)) + sq(c.Y+1.5-(float64(by)+0.5)) + sq(c.Z-(float64(bz)+0.5)))
 }
 
 func sq(v float64) float64 { return v * v }
@@ -33,7 +33,7 @@ func (g *Game) Gather(p *Player, bx, by, bz int) error {
 	if err := g.alive(p); err != nil {
 		return err
 	}
-	if !world.In(bx, by, bz) {
+	if !g.W.In(by, bz) {
 		return fail("Nothing there.")
 	}
 	if g.eyeDist(p, bx, by, bz) > ReachBlocks {
@@ -41,12 +41,12 @@ func (g *Game) Gather(p *Player, bx, by, bz int) error {
 	}
 	b := g.W.Get(bx, by, bz)
 	node := g.C.Nodes[b]
-	idx := world.Index(bx, by, bz)
+	idx := g.W.PosAt(bx, by, bz)
 	if node == nil || g.placed[idx] != "" {
 		return fail("You can't gather that.")
 	}
-	if world.ZoneAt(float64(bx)+0.5, float64(bz)+0.5) == world.ZoneVillage {
-		return fail("Wickhollow's folk would rather you didn't chop up the village.")
+	if g.W.ZoneAt(float64(bx)+0.5, float64(bz)+0.5) == world.ZoneTown {
+		return fail("The folk of %s would rather you didn't chop up the town.", g.W.ZoneName(float64(bx)+0.5, float64(bz)+0.5))
 	}
 	if lvl := p.Char.Level(node.Skill); lvl < node.Level {
 		return fail("You need %s level %d for %s (you have %d).", title(node.Skill), node.Level, node.Name, lvl)
@@ -80,7 +80,7 @@ func (g *Game) Gather(p *Player, bx, by, bz int) error {
 	g.progress(p, "gather", node.Item, n)
 	g.setBlock(bx, by, bz, world.Air)
 	regrow := time.Duration(float64(node.RegrowSec)*g.C.Rules.RegrowMultiplier) * time.Second
-	g.regens = append(g.regens, regen{Idx: idx, Block: b, At: g.Now.Add(regrow)})
+	g.regens = append(g.regens, regen{P: idx, Block: b, At: g.Now.Add(regrow)})
 	g.toast(p, fmt.Sprintf("+%d %s", n, g.itemName(node.Item)), "item")
 	return nil
 }
@@ -113,11 +113,11 @@ func (g *Game) Place(p *Player, bx, by, bz int, item string) error {
 	if p.Char.Inv[item] < 1 {
 		return fail("You don't have any %s.", it.Name)
 	}
-	if !world.In(bx, by, bz) || by < 1 || by >= world.SizeY-1 {
+	if !g.W.In(by, bz) || by < 1 || by >= world.SizeY-1 {
 		return fail("You can't build there.")
 	}
-	if world.ZoneAt(float64(bx)+0.5, float64(bz)+0.5) == world.ZoneVillage {
-		return fail("No building inside Wickhollow — try the meadows!")
+	if g.W.ZoneAt(float64(bx)+0.5, float64(bz)+0.5) == world.ZoneTown {
+		return fail("No building inside %s — try the countryside!", g.W.ZoneName(float64(bx)+0.5, float64(bz)+0.5))
 	}
 	if g.eyeDist(p, bx, by, bz) > ReachBlocks {
 		return fail("That's too far away.")
@@ -138,7 +138,7 @@ func (g *Game) Place(p *Player, bx, by, bz int, item string) error {
 	}
 	p.Char.Placed++
 	p.dirtyMe = true
-	g.placed[world.Index(bx, by, bz)] = p.Char.ID
+	g.placed[g.W.PosAt(bx, by, bz)] = p.Char.ID
 	g.setBlock(bx, by, bz, it.Block)
 	return nil
 }
@@ -148,10 +148,10 @@ func (g *Game) Break(p *Player, bx, by, bz int) error {
 	if err := g.alive(p); err != nil {
 		return err
 	}
-	if !world.In(bx, by, bz) {
+	if !g.W.In(by, bz) {
 		return fail("Nothing there.")
 	}
-	idx := world.Index(bx, by, bz)
+	idx := g.W.PosAt(bx, by, bz)
 	owner := g.placed[idx]
 	if owner == "" {
 		return fail("You can only remove blocks you placed.")
@@ -180,7 +180,8 @@ func (g *Game) Break(p *Player, bx, by, bz int) error {
 
 func (g *Game) nearAnvil(p *Player) bool {
 	c := p.Char
-	return math.Sqrt(sq(c.X-float64(world.AnvilX)-0.5)+sq(c.Z-float64(world.AnvilZ)-0.5)) <= AnvilRange
+	a, err := g.W.Point("anvil")
+	return err == nil && g.W.Dist(c.X, c.Z, a.X+0.5, a.Z+0.5) <= AnvilRange
 }
 
 // Craft turns inputs into an output if the player meets the requirements.
@@ -196,7 +197,7 @@ func (g *Game) Craft(p *Player, recipe string) error {
 		return fail("You need Crafting level %d (you have %d).", r.Level, lvl)
 	}
 	if r.Station == "anvil" && !g.nearAnvil(p) {
-		return fail("You need to be at the anvil in Wickhollow.")
+		return fail("You need to be at the anvil in %s.", g.W.ZoneName(g.W.Spawn().X, g.W.Spawn().Z))
 	}
 	if !has(p.Char.Inv, r.Inputs) {
 		return fail("You're missing materials.")
@@ -271,7 +272,7 @@ func (g *Game) nearNPC(p *Player, id string) bool {
 		return false
 	}
 	c := p.Char
-	return math.Sqrt(sq(c.X-n.X)+sq(c.Z-n.Z)) <= NPCRange && math.Abs(c.Y-n.Y) < 3
+	return g.W.Dist(c.X, c.Z, n.X, n.Z) <= NPCRange && math.Abs(c.Y-n.Y) < 3
 }
 
 func (g *Game) Buy(p *Player, item string, count int) error {

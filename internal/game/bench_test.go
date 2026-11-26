@@ -9,7 +9,6 @@ import (
 	"lanternfall/internal/config"
 	"lanternfall/internal/content"
 	"lanternfall/internal/protocol"
-	"lanternfall/internal/world"
 )
 
 // nullOut discards messages but still forces them to be built.
@@ -61,11 +60,13 @@ func benchTick(b *testing.B, n int, encode bool) {
 				b.Fatal(err)
 			}
 			c := g.Players[pid].Char
-			c.X, c.Z = 16+float64(i%96), 16+float64((i*7)%96)
+			sp := g.W.Spawn() // spread players over a 96x96 area around town
+			c.X, c.Z = g.W.WrapX(sp.X-48+float64(i%96)), sp.Z-48+float64((i*7)%96)
 			c.Y = float64(max(1, g.W.SurfaceY(int(c.X), int(c.Z))))
 		}
 		for i := 0; i < 40; i++ {
-			g.Drops[g.allocID()] = &Drop{Item: "log", Count: 1, X: float64(10 + i*2), Y: world.SpawnY, Z: 60, Expires: g.Now.Add(time.Hour)}
+			sp := g.W.Spawn()
+			g.Drops[g.allocID()] = &Drop{Item: "log", Count: 1, X: sp.X - 40 + float64(i*2), Y: sp.Y, Z: sp.Z, Expires: g.Now.Add(time.Hour)}
 		}
 		if jo, ok := out.(*jsonOut); ok {
 			jo.bytes = 0 // ignore the join messages

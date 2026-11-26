@@ -3,7 +3,7 @@
 export const TILE = 16;
 export const TILE_NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'sand', 'water', 'log_side', 'log_top', 'leaves', 'plank',
   'cobble', 'copper', 'gloamstone', 'glimmer', 'lantern', 'roof', 'flowers', 'anvil_top', 'anvil_side', 'bedrock', 'sign',
-  'berry', 'dead_side', 'dead_top', 'moss_top', 'moss_side'];
+  'berry', 'dead_side', 'dead_top', 'moss_top', 'moss_side', 'snow_top', 'snow_side', 'ice'];
 
 function rng(seed) {
   let s = seed >>> 0;
@@ -49,6 +49,9 @@ const painters = {
   dead_top: (t) => { t.noise('#857b8c', 0.06); for (let r = 6; r > 0; r -= 2) for (let a = 0; a < 48; a++) t.px(Math.round(7.5 + Math.cos(a / 48 * 6.283) * r), Math.round(7.5 + Math.sin(a / 48 * 6.283) * r), hex('#5e5566')); return t; },
   moss_top: (t) => t.noise('#2f4f55', 0.14).speck('#3f6b6b', 0.12).speck('#7ff2d0', 0.015),
   moss_side: (t) => { painters.gloamstone(t); for (let x = 0; x < 16; x++) t.rect(x, 0, 1, 2 + Math.floor(t.r() * 2), t.shade(hex('#2f4f55'), 0.9 + t.r() * 0.2)); return t; },
+  snow_top: (t) => t.noise('#f3f6fb', 0.04).speck('#dfe8f3', 0.12).speck('#ffffff', 0.08),
+  snow_side: (t) => { painters.dirt(t); for (let x = 0; x < 16; x++) t.rect(x, 0, 1, 3 + Math.floor(t.r() * 3), t.shade(hex('#f3f6fb'), 0.94 + t.r() * 0.06)); return t; },
+  ice: (t) => { t.noise('#a9d8f2', 0.05); for (let i = 0; i < 5; i++) { const x = Math.floor(t.r() * 12), y = Math.floor(t.r() * 16); t.rect(x, y, 4, 1, '#e3f4fc'); } return t.speck('#7fbde0', 0.05); },
 };
 
 // Returns RGBA bytes for all layers stacked: TILE x TILE x N.

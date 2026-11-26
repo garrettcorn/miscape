@@ -2,14 +2,14 @@
 export const B = {
   AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, WATER: 5, LOG: 6, LEAVES: 7, PLANK: 8, COBBLE: 9,
   COPPER: 10, GLOAMSTONE: 11, GLIMMER: 12, LANTERN: 13, ROOF: 14, FLOWERS: 15, ANVIL: 16, BEDROCK: 17,
-  SIGN: 18, BERRY: 19, DEADWOOD: 20, MOSS: 21,
+  SIGN: 18, BERRY: 19, DEADWOOD: 20, MOSS: 21, SNOW: 22, ICE: 23,
 };
 
 // Texture layer indices (see atlas.js TILE_NAMES order).
 export const T = {
   grass_top: 0, grass_side: 1, dirt: 2, stone: 3, sand: 4, water: 5, log_side: 6, log_top: 7, leaves: 8, plank: 9,
   cobble: 10, copper: 11, gloamstone: 12, glimmer: 13, lantern: 14, roof: 15, flowers: 16, anvil_top: 17, anvil_side: 18,
-  bedrock: 19, sign: 20, berry: 21, dead_side: 22, dead_top: 23, moss_top: 24, moss_side: 25,
+  bedrock: 19, sign: 20, berry: 21, dead_side: 22, dead_top: 23, moss_top: 24, moss_side: 25, snow_top: 26, snow_side: 27, ice: 28,
 };
 
 // kind: 'cube' | 'water' | 'cross'. tiles: [top, side, bottom].
@@ -40,6 +40,8 @@ def(B.SIGN, 'Warning Sign', [T.plank, T.sign, T.plank]);
 def(B.BERRY, 'Berry Bush', T.berry);
 def(B.DEADWOOD, 'Gloam Deadwood', [T.dead_top, T.dead_side, T.dead_top]);
 def(B.MOSS, 'Gloam Moss', [T.moss_top, T.moss_side, T.gloamstone]);
+def(B.SNOW, 'Snow', [T.snow_top, T.snow_side, T.dirt]);
+def(B.ICE, 'Ice', T.ice);
 export const BLOCKS = defs;
 
 export const isSolid = (b) => defs[b] ? defs[b].solid : false;

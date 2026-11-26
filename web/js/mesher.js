@@ -49,9 +49,11 @@ export function meshChunk(world, cx, cz, { ao = true } = {}) {
   opaqueBuf.reset(); waterBuf.reset();
   const cs = world.cs, ox = cx * cs, oz = cz * cs, sy = world.sy;
   const get = (x, y, z) => world.get(x, y, z);
+  const data = world.chunkData(cx, cz);
+  if (!data) return { opaque: opaqueBuf.take(), water: waterBuf.take() };
   for (let y = 0; y < sy; y++) for (let lz = 0; lz < cs; lz++) for (let lx = 0; lx < cs; lx++) {
     const x = ox + lx, z = oz + lz;
-    const b = world.blocks[world.idx(x, y, z)];
+    const b = data[(y * cs + lz) * cs + lx];
     if (b === B.AIR) continue;
     const d = BLOCKS[b];
     if (!d) continue;

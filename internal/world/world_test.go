@@ -1,87 +1,255 @@
-package world
+package world_test
 
 import (
 	"bytes"
+	"math"
 	"testing"
+
+	"lanternfall/internal/world"
+	"lanternfall/maps"
 )
 
-func TestBuildDeterministic(t *testing.T) {
-	a, b := Build(1), Build(1)
-	if !bytes.Equal(a.Blocks, b.Blocks) {
-		t.Fatal("world build must be deterministic")
+func level(t testing.TB, name string) *world.World {
+	t.Helper()
+	d, err := world.LoadDef(maps.FS, "earth", name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return world.New(d)
+}
+
+func TestLevel1IsEarthSized(t *testing.T) {
+	w := level(t, "level1")
+	if w.W != 3072 || w.H != 1536 || w.CX != 192 || w.CZ != 96 {
+		t.Fatalf("size %dx%d (%dx%d chunks)", w.W, w.H, w.CX, w.CZ)
+	}
+	m := w.Def.Place("manchester")
+	// 53.48N 2.24W on a 3072x1536 equirectangular grid.
+	if math.Abs(m.X-1517) > 1 || math.Abs(m.Z-312) > 1 {
+		t.Fatalf("Manchester at %.1f,%.1f", m.X, m.Z)
+	}
+	if w.ZoneAt(m.X, m.Z) != world.ZoneTown || w.ZoneName(m.X, m.Z) != "Manchester" {
+		t.Fatal("Manchester isn't a town zone")
+	}
+	moors := w.Def.Zones[0]
+	if w.ZoneAt(moors.X, moors.Z) != world.ZoneDanger {
+		t.Fatal("the moors aren't dangerous")
+	}
+	if w.ZoneAt(100, 700) != world.ZoneWild {
+		t.Fatal("the Pacific should be wild")
+	}
+	// Spot-check the map: the middle of the Pacific is ocean, Greenland is ice,
+	// the Sahara is desert.
+	for _, c := range []struct {
+		lat, lon float64
+		want     world.Terrain
+	}{{0, -150, world.TOcean}, {75, -40, world.TIce}, {24, 15, world.TDesert}} {
+		x, z := w.Def.LatLon(c.lat, c.lon)
+		if got := w.Terrain(int(x), int(z)); got != c.want {
+			t.Errorf("%v,%v: %s, want %s", c.lat, c.lon, got, c.want)
+		}
 	}
 }
 
-func TestChunkRoundTrip(t *testing.T) {
-	w := Build(1)
-	total := 0
-	for cz := 0; cz < ChunksZ; cz++ {
-		for cx := 0; cx < ChunksX; cx++ {
-			enc := w.EncodeChunk(cx, cz)
-			total += len(enc)
-			dec, ok := DecodeChunk(enc)
-			if !ok {
-				t.Fatalf("chunk %d,%d decode failed", cx, cz)
+func TestTownStructure(t *testing.T) {
+	w := level(t, "level1")
+	sp := w.Spawn()
+	if sp.Y != 13 || w.ZoneAt(sp.X, sp.Z) != world.ZoneTown {
+		t.Fatalf("spawn %+v", sp)
+	}
+	if w.SolidAt(sp.X, sp.Y, sp.Z) || !w.SolidAt(sp.X, sp.Y-0.5, sp.Z) {
+		t.Fatal("spawn should be standing room on solid ground")
+	}
+	a, err := w.Point("anvil")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.Get(int(a.X), int(a.Y), int(a.Z)) != world.Anvil {
+		t.Fatal("no anvil at the anvil point")
+	}
+	// The gate faces the moors, which are north of Manchester.
+	g, _ := w.Point("town:manchester:gate")
+	m := w.Def.Place("manchester")
+	if !(g.Z < m.Z-15 && math.Abs(w.DX(m.X, g.X)) < 2) {
+		t.Fatalf("gate at %+v, town at %.1f,%.1f", g, m.X, m.Z)
+	}
+	if w.ZoneAt(g.X, g.Z) == world.ZoneDanger {
+		t.Fatal("the gate is inside the danger zone")
+	}
+}
+
+func TestWrapsEastWest(t *testing.T) {
+	w := level(t, "level1")
+	if d := w.DX(3070, 2); d != 4 {
+		t.Fatalf("DX across the date line = %v", d)
+	}
+	if d := w.DX(2, 3070); d != -4 {
+		t.Fatalf("DX back = %v", d)
+	}
+	if a, b := w.Dist2(3071.5, 500, 0.5, 503), w.Dist2(0.5, 503, 3071.5, 500); a != b || a != 1+9 {
+		t.Fatalf("Dist2 %v %v", a, b)
+	}
+	if x := w.WrapX(-0.25); x != 3071.75 {
+		t.Fatalf("WrapX = %v", x)
+	}
+	for y := 0; y < world.SizeY; y++ {
+		for z := 400; z < 420; z++ {
+			if w.Get(-1, y, z) != w.Get(w.W-1, y, z) || w.Get(w.W, y, z) != w.Get(0, y, z) {
+				t.Fatalf("x doesn't wrap at y=%d z=%d", y, z)
 			}
-			i := 0
-			for y := 0; y < SizeY; y++ {
-				for z := 0; z < Chunk; z++ {
-					for x := 0; x < Chunk; x++ {
-						if dec[i] != w.Get(cx*Chunk+x, y, cz*Chunk+z) {
-							t.Fatalf("mismatch at chunk %d,%d", cx, cz)
-						}
-						i++
-					}
+		}
+	}
+	// Chunk -1 is the last chunk.
+	if !bytes.Equal(w.EncodeChunk(-1, 30), w.EncodeChunk(w.CX-1, 30)) {
+		t.Fatal("chunk x doesn't wrap")
+	}
+}
+
+func TestPolesAreWalls(t *testing.T) {
+	w := level(t, "level1")
+	if !w.SolidAt(100, 20, -0.5) || !w.SolidAt(100, 20, float64(w.H)+0.5) {
+		t.Fatal("past the poles must be solid")
+	}
+	if w.Get(100, 20, 1) != world.Ice {
+		t.Fatal("expected an ice cliff at the north pole")
+	}
+}
+
+func TestGenerationIsDeterministicAcrossChunkSeams(t *testing.T) {
+	a, b := level(t, "level1"), level(t, "level1")
+	m := a.Def.Place("manchester")
+	cx, cz := int(m.X)/world.Chunk, int(m.Z)/world.Chunk
+	for dz := -3; dz <= 3; dz++ {
+		for dx := -3; dx <= 3; dx++ {
+			if !bytes.Equal(a.EncodeChunk(cx+dx, cz+dz), b.EncodeChunk(cx+dx, cz+dz)) {
+				t.Fatalf("chunk %d,%d differs between builds", cx+dx, cz+dz)
+			}
+		}
+	}
+	// A block reads the same whether its chunk was generated first or a
+	// neighbor was (features straddle chunk edges).
+	c := level(t, "level1")
+	for z := int(m.Z) - 40; z < int(m.Z)+40; z += 3 {
+		for x := int(m.X) - 60; x < int(m.X)+60; x += 3 {
+			for y := 12; y < 20; y++ {
+				if a.Get(x, y, z) != c.Get(x, y, z) {
+					t.Fatalf("block %d,%d,%d depends on generation order", x, y, z)
 				}
 			}
 		}
 	}
-	t.Logf("whole world encodes to %d KB in RLE (raw %d KB)", total/1024, len(w.Blocks)/1024)
-	if total > 300*1024 {
-		t.Errorf("world encoding unexpectedly large: %d bytes", total)
-	}
-}
-
-func clear(w *World, x, y, z float64) bool {
-	return !w.SolidAt(x, y+0.1, z) && !w.SolidAt(x, y+1.5, z) && w.SolidAt(x, y-0.1, z)
-}
-
-func TestKeyLocationsArePlayable(t *testing.T) {
-	w := Build(20261125)
-	if !clear(w, SpawnX, SpawnY, SpawnZ) {
-		t.Fatal("spawn point is blocked or floating")
-	}
-	// NPC standing spots (must match base.json).
-	for _, p := range [][3]float64{{60.5, 13, 61.5}, {69.5, 13, 67.5}, {95.5, 13, 61.5}} {
-		if !clear(w, p[0], p[1], p[2]) {
-			t.Errorf("NPC spot %v blocked", p)
+	// Somewhere in the forests there are trees.
+	x, z := a.Def.LatLon(-3, -60) // Amazon
+	logs := 0
+	for dz := 0; dz < 40; dz++ {
+		for dx := 0; dx < 40; dx++ {
+			if a.Get(int(x)+dx, 13, int(z)+dz) == world.Log {
+				logs++
+			}
 		}
 	}
-	// The Gloam gate is passable.
-	for x := 96.5; x < 103; x++ {
-		if w.SolidAt(x, 13.1, 63.5) || w.SolidAt(x, 14.5, 63.5) {
-			t.Fatalf("gate blocked at x=%.1f", x)
+	if logs < 20 {
+		t.Fatalf("only %d tree trunks in a patch of rainforest", logs)
+	}
+}
+
+func TestEditsAreSparseAndReapply(t *testing.T) {
+	w := level(t, "level1")
+	sp := w.Spawn()
+	x, z := int(sp.X)+3, int(sp.Z)+3
+	before := w.Get(x, 13, z)
+	w.Set(x, 13, z, world.Plank)
+	w.Set(-5, 13, 700, world.Cobble) // across the date line: stored canonically
+	if w.NumEdits() != 2 || w.Get(x, 13, z) != world.Plank || w.Get(w.W-5, 13, 700) != world.Cobble {
+		t.Fatal("edit not applied")
+	}
+	edits := w.Edits()
+	// A fresh world plus the saved edits is identical.
+	w2 := level(t, "level1")
+	for _, e := range edits {
+		w2.Set(e[0], e[1], e[2], uint8(e[3]))
+	}
+	cx, cz := x/world.Chunk, z/world.Chunk
+	if !bytes.Equal(w.EncodeChunk(cx, cz), w2.EncodeChunk(cx, cz)) {
+		t.Fatal("edits don't reproduce the chunk")
+	}
+	// Restoring the generated block removes the edit.
+	w.Set(x, 13, z, before)
+	if w.NumEdits() != 1 {
+		t.Fatalf("edits = %d", w.NumEdits())
+	}
+}
+
+func TestChunkCacheIsBounded(t *testing.T) {
+	w := level(t, "level1")
+	w.Set(5, 13, 700, world.Plank)
+	for i := 0; i < world.MaxCachedChunks+500; i++ {
+		w.EncodeChunk(i%w.CX, 20+i/w.CX)
+	}
+	if n := w.CachedChunks(); n > world.MaxCachedChunks {
+		t.Fatalf("%d chunks cached", n)
+	}
+	if w.Get(5, 13, 700) != world.Plank {
+		t.Fatal("an edit was lost when its chunk was evicted")
+	}
+}
+
+func TestLevel2InheritsAndDoubles(t *testing.T) {
+	l1, l2 := level(t, "level1"), level(t, "level2")
+	if l2.W != 2*l1.W || l2.H != 2*l1.H || l2.Def.Level != 2 {
+		t.Fatalf("level 2 is %dx%d", l2.W, l2.H)
+	}
+	m1, m2 := l1.Def.Place("manchester"), l2.Def.Place("manchester")
+	if m2 == nil || math.Abs(m2.X-2*m1.X) > 2 || math.Abs(m2.Z-2*m1.Z) > 2 {
+		t.Fatalf("Manchester at level 2: %+v", m2)
+	}
+	if a, err := l2.Point("anvil"); err != nil || l2.Get(int(a.X), int(a.Y), int(a.Z)) != world.Anvil {
+		t.Fatal("level 2 should have Manchester's town too")
+	}
+	// The same Earth, twice as detailed: terrain mostly agrees at 2x.
+	same, n := 0, 0
+	for z := 100; z < l1.H-100; z += 37 {
+		for x := 0; x < l1.W; x += 41 {
+			n++
+			if l1.Terrain(x, z) == l2.Terrain(2*x+1, 2*z+1) {
+				same++
+			}
 		}
 	}
-	if Get := w.Get(AnvilX, AnvilY, AnvilZ); Get != Anvil {
-		t.Fatal("anvil missing")
+	if float64(same)/float64(n) < 0.9 {
+		t.Fatalf("only %d/%d samples agree between levels", same, n)
 	}
 }
 
-func TestZones(t *testing.T) {
-	if ZoneAt(64, 64) != ZoneVillage || ZoneAt(110, 64) != ZoneGloam || ZoneAt(30, 30) != ZoneWild {
-		t.Fatal("zones wrong")
+func TestChunkRoundTrip(t *testing.T) {
+	w := level(t, "level1")
+	m := w.Def.Place("manchester")
+	data := w.EncodeChunk(int(m.X)/world.Chunk, int(m.Z)/world.Chunk)
+	blocks, ok := world.DecodeChunk(data)
+	if !ok {
+		t.Fatal("decode failed")
+	}
+	x0, z0 := int(m.X)/world.Chunk*world.Chunk, int(m.Z)/world.Chunk*world.Chunk
+	for y := 0; y < world.SizeY; y++ {
+		for z := 0; z < world.Chunk; z++ {
+			for x := 0; x < world.Chunk; x++ {
+				if blocks[(y*world.Chunk+z)*world.Chunk+x] != w.Get(x0+x, y, z0+z) {
+					t.Fatal("round trip mismatch")
+				}
+			}
+		}
+	}
+	if len(data) > 1500 {
+		t.Fatalf("town chunk encodes to %d bytes", len(data))
 	}
 }
 
-func TestResourceCounts(t *testing.T) {
-	w := Build(20261125)
-	count := map[uint8]int{}
-	for _, b := range w.Blocks {
-		count[b]++
-	}
-	t.Logf("logs=%d copper=%d glimmer=%d berries=%d deadwood=%d", count[Log], count[CopperOre], count[Glimmer], count[BerryBush], count[Deadwood])
-	if count[Log] < 100 || count[CopperOre] < 20 || count[Glimmer] < 20 || count[BerryBush] < 5 {
-		t.Fatal("not enough resources for the progression loop")
+func BenchmarkGenChunk(b *testing.B) {
+	w := level(b, "level1")
+	m := w.Def.Place("manchester")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// Distinct chunks so the cache doesn't help.
+		w.EncodeChunk(int(m.X)/world.Chunk+i%150, (int(m.Z)/world.Chunk+i/150)%(w.CZ-2)+1)
 	}
 }

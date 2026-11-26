@@ -133,10 +133,11 @@ export class UI {
     $('#hpfill').style.width = `${Math.max(0, me.hp / me.mhp * 100)}%`;
     $('#hptext').textContent = `${me.hp}/${me.mhp}`;
     const z = $('#zone');
-    const zn = { village: '🏡 Wickhollow — safe', wild: '🌿 The Meadows', gloam: '⚠ DANGER · The Gloam' }[me.zone] || me.zone;
+    // Zone kinds come from the server; names come from the world's map files.
+    const zn = me.zone === 'town' ? `🏙 ${me.zoneName} — safe` : me.zone === 'danger' ? `⚠ DANGER · ${me.zoneName}` : '🌿 The countryside';
     z.textContent = zn;
-    z.className = me.zone === 'gloam' ? 'gloam' : '';
-    $('#vignette').classList.toggle('on', me.zone === 'gloam' && !settings.reduceMotion);
+    z.className = me.zone === 'danger' ? 'gloam' : '';
+    $('#vignette').classList.toggle('on', me.zone === 'danger' && !settings.reduceMotion);
     // Quest tracker: first active quest.
     const tr = $('#tracker');
     let html = '';
@@ -469,7 +470,7 @@ export class UI {
         <span class="grow"></span><button class="btn" data-do="hearth" data-fid="hearth">🏮 Hearth home</button></div>
       ${chips}
       ${all.length ? `<div class="pack"><div class="tiles" aria-label="Items">${tiles}</div>${this.itemDetails(this.pack.sel)}</div>`
-        : '<p class="note">Your pack is empty. Try chopping a tree in the Meadows!</p>'}`;
+        : '<p class="note">Your pack is empty. Try chopping a tree out in the countryside!</p>'}`;
   }
 
   itemDetails(id) {

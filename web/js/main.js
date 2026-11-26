@@ -104,12 +104,14 @@ class Game {
     }
     this.myId = w.you;
     const W = w.world;
-    if (!this.world) {
+    if (!this.world || this.world.sx !== W.sx || this.world.sz !== W.sz) {
       this.world = new World(W.sx, W.sy, W.sz, W.chunk);
-      this.gloamX = W.gloamX;
-      this.anvil = W.anvil;
-      this.spawn = W.spawn;
+      for (const k of [...this.r.chunks.keys()]) { const [cx, cz, lod] = k.split(',').map(Number); this.r.dropChunk(cx, cz, lod); }
     }
+    this.worldInfo = W;
+    this.zones = W.zones || [];
+    this.anvil = W.anvil;
+    this.spawn = W.spawn;
     const c = w.content;
     this.items = Object.fromEntries(c.items.map((i) => [i.id, i]));
     this.recipes = c.recipes;
@@ -135,25 +137,26 @@ class Game {
 
   bindNet() {
     const n = this.net, ui = this.ui;
-    n.on('me', (m) => { const first = !this.me; this.me = m; ui.updateHUD(m); if (first) ui.toast('Welcome to Wickhollow!', 'good'); });
+    n.on('me', (m) => { const first = !this.me; this.me = m; ui.updateHUD(m); if (first) ui.toast(m.zoneName ? `Welcome to ${m.zoneName}!` : `Welcome to ${this.worldInfo.name}!`, 'good'); });
     n.on('snap', (m) => this.onSnap(m));
     n.on('binary', (b) => {
       if (b[0] !== 1) return;
-      const cx = b[1], cz = b[2];
-      this.world.applyChunk(cx, cz, b.subarray(3));
+      const cx = b[1] | (b[2] << 8), cz = b[3] | (b[4] << 8); // uint16 chunk coordinates
+      this.world.applyChunk(cx, cz, b.subarray(5));
       this.chunkPending.delete(`${cx},${cz}`);
       for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        if (this.world.chunkLoaded(cx + dx, cz + dz)) { this.dirty.add(`${cx + dx},${cz + dz},0`); this.dirty.add(`${cx + dx},${cz + dz},1`); }
+        const nx = this.world.wrapC(cx + dx), nz = cz + dz;
+        if (this.world.chunkLoaded(nx, nz)) { this.dirty.add(`${nx},${nz},0`); this.dirty.add(`${nx},${nz},1`); }
       }
     });
     n.on('block', (m) => {
       this.world.set(m.x, m.y, m.z, m.b);
-      const cs = this.world.cs, cx = Math.floor(m.x / cs), cz = Math.floor(m.z / cs);
-      const lx = m.x - cx * cs, lz = m.z - cz * cs;
+      const w = this.world, cs = w.cs, cx = Math.floor(w.wrapX(m.x) / cs), cz = Math.floor(m.z / cs);
+      const lx = w.wrapX(m.x) - cx * cs, lz = m.z - cz * cs;
       this.urgent = this.urgent || new Set();
       this.urgent.add(`${cx},${cz},0`);
-      if (lx === 0) this.urgent.add(`${cx - 1},${cz},0`);
-      if (lx === cs - 1) this.urgent.add(`${cx + 1},${cz},0`);
+      if (lx === 0) this.urgent.add(`${w.wrapC(cx - 1)},${cz},0`);
+      if (lx === cs - 1) this.urgent.add(`${w.wrapC(cx + 1)},${cz},0`);
       if (lz === 0) this.urgent.add(`${cx},${cz - 1},0`);
       if (lz === cs - 1) this.urgent.add(`${cx},${cz + 1},0`);
       this.dirty.add(`${cx},${cz},1`);
@@ -229,7 +232,7 @@ class Game {
       if (!settings.reduceMotion) { this.shake = 0.18; const v = $('#vignette'); v.classList.add('hurt'); setTimeout(() => v.classList.remove('hurt'), 160); }
     }
     if (p && this.vp) {
-      const s = project(this.vp, p[0], p[1], p[2], innerWidth, innerHeight);
+      const s = project(this.vp, ...this.r.rel(p[0], p[1], p[2]), innerWidth, innerHeight);
       if (s) {
         const el = document.createElement('div');
         el.className = 'dmg' + (m.dst === this.myId ? ' me' : '');
@@ -331,7 +334,18 @@ class Game {
 
   eye() { return [this.body.x, this.body.y + 1.55, this.body.z]; }
 
-  nearAnvil() { return !!this.anvil && Math.hypot(this.body.x - this.anvil[0] - 0.5, this.body.z - this.anvil[2] - 0.5) <= 4.5; }
+  nearAnvil() { return !!this.anvil && this.world.dist(this.body.x, this.body.z, this.anvil[0] + 0.5, this.anvil[2] + 0.5) <= 4.5; }
+
+  // The nearest danger zone ([x, z, radius]) to the camera, for darkness and fog.
+  nearestDanger(x, z) {
+    let best = null, bd = Infinity;
+    for (const zn of this.zones) {
+      if (zn.kind !== 'danger') continue;
+      const d = this.world.dist(x, z, zn.x, zn.z) - zn.r;
+      if (d < bd) { bd = d; best = [zn.x, zn.z, zn.r]; }
+    }
+    return best;
+  }
 
   findTargets() {
     const b = this.body, [ex, ey, ez] = this.eye();
@@ -340,7 +354,7 @@ class Game {
     let best = null, bs = Infinity;
     for (const m of this.mobs.values()) {
       if (m.dead || m.hp <= 0) continue;
-      const dx = m.x - b.x, dz = m.z - b.z, d = Math.hypot(dx, dz);
+      const dx = this.world.dx(b.x, m.x), dz = m.z - b.z, d = Math.hypot(dx, dz);
       if (d > 3.2 || Math.abs(m.y - b.y) > 2.4) continue;
       const facing = d < 0.8 ? 1 : (dx * fx + dz * fz) / d;
       if (facing < 0.2) continue;
@@ -350,7 +364,7 @@ class Game {
     this.targetMob = best;
     let bp = null; bs = Infinity;
     for (const p of this.others.values()) {
-      const dx = p.x - b.x, dz = p.z - b.z, d = Math.hypot(dx, dz);
+      const dx = this.world.dx(b.x, p.x), dz = p.z - b.z, d = Math.hypot(dx, dz);
       if (d > 4 || d < 0.01) continue;
       const facing = (dx * fx + dz * fz) / d;
       if (facing < 0.4) continue;
@@ -364,11 +378,11 @@ class Game {
     this.targetBlock = null;
     if (hit) {
       const d = Math.hypot(hit.x + 0.5 - ex, hit.y + 0.5 - ey, hit.z + 0.5 - ez);
-      if (d <= 5.0) this.targetBlock = hit;
+      if (d <= 5.0) this.targetBlock = { ...hit, x: this.world.wrapX(hit.x) }; // canonical x for the server
     }
     this.nearNPC = null;
     for (const n of Object.values(this.npcs)) {
-      if (Math.hypot(n.x - b.x, n.z - b.z) < 4.2 && Math.abs(n.y - b.y) < 3) this.nearNPC = n;
+      if (this.world.dist(b.x, b.z, n.x, n.z) < 4.2 && Math.abs(n.y - b.y) < 3) this.nearNPC = n;
     }
     // HUD target + prompt.
     const tEl = $('#target'), pEl = $('#prompt');
@@ -389,7 +403,7 @@ class Game {
     let prompt = '';
     if (this.nearNPC) prompt = `${glyph(dev, 'interact')} Talk to ${this.nearNPC.name}`;
     else if (bp) prompt = `${glyph(dev, 'interact')} Trade with ${bp.name}`;
-    else if (this.me.zone === 'gloam' && this.me.hp < this.me.mhp * 0.4) prompt = `${glyph(dev, 'hearth')} Hearth Lantern to return home`;
+    else if (this.me.zone === 'danger' && this.me.hp < this.me.mhp * 0.4) prompt = `${glyph(dev, 'hearth')} Hearth Lantern to return home`;
     if (pEl.textContent !== prompt) pEl.textContent = prompt;
   }
 
@@ -398,27 +412,37 @@ class Game {
     if (!this.world || !this.body || this.net.state !== 'open') return;
     const w = this.world, cs = w.cs;
     const pcx = this.body.x / cs, pcz = this.body.z / cs;
-    const need = [];
     const R = this.q.renderDist + 1;
-    for (let cz = 0; cz < w.cz; cz++) for (let cx = 0; cx < w.cx; cx++) {
-      if (w.chunkLoaded(cx, cz) || this.chunkPending.has(`${cx},${cz}`)) continue;
-      const d = Math.hypot(cx + 0.5 - pcx, cz + 0.5 - pcz);
-      if (d <= R) need.push([d, cx, cz]);
+    // Forget chunks well outside the view (the server can always resend them).
+    if ((this.evictTick = (this.evictTick || 0) + 1) % 30 === 0) {
+      for (const [cx, cz] of w.evict(pcx, pcz, R + 3)) { this.r.dropChunk(cx, cz, 0); this.r.dropChunk(cx, cz, 1); }
     }
-    if (!need.length || this.chunkPending.size >= 8) return;
+    if (this.chunkPending.size >= 8) return;
+    const need = [];
+    const c0 = Math.floor(pcx), r = Math.ceil(R);
+    for (let cz = Math.max(0, Math.floor(pcz) - r); cz <= Math.min(w.cz - 1, Math.floor(pcz) + r); cz++) {
+      for (let i = -r; i <= r; i++) {
+        const cx = w.wrapC(c0 + i);
+        if (w.chunkLoaded(cx, cz) || this.chunkPending.has(`${cx},${cz}`)) continue;
+        const d = w.chunkDist(cx, cz, pcx, pcz);
+        if (d <= R) need.push([d, cx, cz]);
+      }
+    }
+    if (!need.length) return;
     need.sort((a, b) => a[0] - b[0]);
     const batch = need.slice(0, 8 - this.chunkPending.size).map(([, cx, cz]) => { this.chunkPending.add(`${cx},${cz}`); return [cx, cz]; });
     this.net.send({ t: 'chunks', chunks: batch });
   }
 
   meshBudget(ms) {
-    if (!this.world) return;
+    if (!this.world || !this.body) return;
     const t0 = performance.now();
     const w = this.world, cs = w.cs;
-    const pcx = (this.body ? this.body.x : 64) / cs, pcz = (this.body ? this.body.z : 64) / cs;
+    const pcx = this.body.x / cs, pcz = this.body.z / cs;
+    const dist = (cx, cz) => w.chunkDist(cx, cz, pcx, pcz);
     const want = (cx, cz, lod) => {
       if (!w.chunkLoaded(cx, cz)) return false;
-      const d = Math.hypot(cx + 0.5 - pcx, cz + 0.5 - pcz);
+      const d = dist(cx, cz);
       if (d > this.q.renderDist + 1.5) return false;
       return lod ? d > this.q.lodDist - 0.8 : d <= this.q.lodDist + 1.2;
     };
@@ -427,17 +451,16 @@ class Game {
       for (const k of this.urgent) { const [cx, cz, lod] = k.split(',').map(Number); if (w.chunkLoaded(cx, cz)) this.r.setChunk(cx, cz, lod, meshChunk(w, cx, cz, { ao: this.q.ao })); }
       this.urgent.clear();
     }
-    // Add newly wanted meshes.
-    for (let cz = 0; cz < w.cz; cz++) for (let cx = 0; cx < w.cx; cx++) for (const lod of [0, 1]) {
-      const k = `${cx},${cz},${lod}`;
-      const has = this.r.chunks.has(k);
-      if (want(cx, cz, lod) && !has) this.dirty.add(k);
-      if (!want(cx, cz, lod) && has) {
-        const d = Math.hypot(cx + 0.5 - pcx, cz + 0.5 - pcz);
-        if (d > this.q.renderDist + 2.5 || (lod === 0 && d > this.q.lodDist + 2.5) || (lod === 1 && d < this.q.lodDist - 2)) this.r.dropChunk(cx, cz, lod);
-      }
+    // Mesh loaded chunks that are now wanted; drop meshes that aren't.
+    for (const k of w.chunks.keys()) {
+      const cx = k % w.cx, cz = Math.floor(k / w.cx);
+      for (const lod of [0, 1]) if (want(cx, cz, lod) && !this.r.chunks.has(`${cx},${cz},${lod}`)) this.dirty.add(`${cx},${cz},${lod}`);
     }
-    const list = [...this.dirty].map((k) => { const [cx, cz, lod] = k.split(',').map(Number); return [Math.hypot(cx + 0.5 - pcx, cz + 0.5 - pcz), cx, cz, lod, k]; }).sort((a, b) => a[0] - b[0]);
+    for (const ch of [...this.r.chunks.values()]) {
+      const d = dist(ch.cx, ch.cz);
+      if (d > this.q.renderDist + 2.5 || (ch.lod === 0 && d > this.q.lodDist + 2.5) || (ch.lod === 1 && d < this.q.lodDist - 2)) this.r.dropChunk(ch.cx, ch.cz, ch.lod);
+    }
+    const list = [...this.dirty].map((k) => { const [cx, cz, lod] = k.split(',').map(Number); return [dist(cx, cz), cx, cz, lod, k]; }).sort((a, b) => a[0] - b[0]);
     for (const [, cx, cz, lod, k] of list) {
       if (performance.now() - t0 > ms) break;
       this.dirty.delete(k);
@@ -454,10 +477,10 @@ class Game {
     const k = 1 - Math.exp(-dt * 12);
     for (const e of [...this.others.values(), ...this.mobs.values()]) {
       if (e.tx === undefined) continue;
-      const dx = e.tx - e.x, dz = e.tz - e.z;
+      const dx = this.world.dx(e.x, e.tx), dz = e.tz - e.z; // the short way across the date line
       e.moving = Math.hypot(dx, dz) > 0.02;
       if (e.moving) e.walk = (e.walk || 0) + dt * 10;
-      e.x += dx * k; e.y += (e.ty - e.y) * k; e.z += dz * k;
+      e.x = this.world.wrapX(e.x + dx * k); e.y += (e.ty - e.y) * k; e.z += dz * k;
       let dy = e.tyaw - e.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); e.yaw += dy * k;
       e.flash = Math.max(0, (e.flash || 0) - dt);
     }
@@ -490,12 +513,12 @@ class Game {
       if (m.dead) continue;
       this.mobModel(m).draw(r, m, this.time);
     }
-    const inGloam = b.x > this.gloamX - 2;
+    const inGloam = this.me.zone === 'danger';
     const playerLight = hasLantern ? [b.x, b.y + 1.2, b.z, inGloam ? 11 : 6] : (inGloam ? [b.x, b.y + 1.2, b.z, 3.5] : [0, 0, 0, 0]);
     const hl = this.targetBlock && !this.targetMob ? [this.targetBlock.x, this.targetBlock.y, this.targetBlock.z] : null;
     this.vp = r.render(this.world, view, {
       renderDist: q.renderDist, lodDist: q.lodDist, maxLights: q.maxLights, sway: q.sway && !settings.reduceMotion,
-      time: this.time, fogNear: q.renderDist * 16 * 0.55, fogFar: q.renderDist * 16 + 8, gloamX: this.gloamX,
+      time: this.time, fogNear: q.renderDist * 16 * 0.55, fogFar: q.renderDist * 16 + 8, danger: this.nearestDanger(eye[0], eye[2]),
       playerLight, highlight: hl,
     });
     this.drawTags();
@@ -505,8 +528,8 @@ class Game {
     const W = innerWidth, H = innerHeight, vp = this.vp, b = this.body;
     const want = new Map();
     const add = (key, x, y, z, html, cls) => {
-      if (Math.hypot(x - b.x, z - b.z) > 22) return;
-      const s = project(vp, x, y, z, W, H);
+      if (this.world.dist(b.x, b.z, x, z) > 22) return;
+      const s = project(vp, ...this.r.rel(x, y, z), W, H);
       if (!s || s[0] < -50 || s[0] > W + 50 || s[1] < -50 || s[1] > H + 50) return;
       want.set(key, { s, html, cls });
     };
@@ -521,7 +544,7 @@ class Game {
       }
       add('n' + n.id, n.x, n.y + 2.35, n.z, `${mark}${esc(n.name)}`, 'tag npc');
     }
-    for (const d of this.drops.values()) if (Math.hypot(d.x - b.x, d.z - b.z) < 7) add('d' + d.id, d.x, d.y + 0.95, d.z, `${esc(this.ui.item(d.item).name)}${d.count > 1 ? ' ×' + d.count : ''}`, 'tag drop');
+    for (const d of this.drops.values()) if (this.world.dist(b.x, b.z, d.x, d.z) < 7) add('d' + d.id, d.x, d.y + 0.95, d.z, `${esc(this.ui.item(d.item).name)}${d.count > 1 ? ' ×' + d.count : ''}`, 'tag drop');
     for (const [k, el] of this.tags) if (!want.has(k)) { el.remove(); this.tags.delete(k); }
     for (const [k, v] of want) {
       let el = this.tags.get(k);
@@ -571,7 +594,8 @@ quality ${this.q.name} · ${this.canvas.width}×${this.canvas.height} · rd ${th
   startBench() {
     const wait = () => {
       if (this.chunkPending.size || this.dirty.size) { setTimeout(wait, 200); return; }
-      this.bench = { t: 0, frames: [], net: [], eye: [64, 30, 64], target: [64, 12, 64] };
+      const [sx, , sz] = this.spawn;
+      this.bench = { t: 0, frames: [], net: [], cx: sx, cz: sz, eye: [sx, 30, sz], target: [sx, 12, sz] };
       this.frameTimes.length = 0;
       console.log('[bench] start', this.q.name);
     };
@@ -582,8 +606,8 @@ quality ${this.q.name} · ${this.canvas.width}×${this.canvas.height} · rd ${th
     const bn = this.bench;
     bn.t += dt;
     const a = bn.t * 0.31;
-    bn.eye = [64 + Math.cos(a) * 30, 24 + Math.sin(a * 0.7) * 4, 64 + Math.sin(a) * 30];
-    bn.target = [64 + Math.cos(a + 1.2) * 10, 13, 64 + Math.sin(a + 1.2) * 10];
+    bn.eye = [bn.cx + Math.cos(a) * 30, 24 + Math.sin(a * 0.7) * 4, bn.cz + Math.sin(a) * 30];
+    bn.target = [bn.cx + Math.cos(a + 1.2) * 10, 13, bn.cz + Math.sin(a + 1.2) * 10];
     if (bn.t > 1) bn.frames.push(this.frameTimes[this.frameTimes.length - 1]);
     if (bn.t > 21 && !bn.done) {
       bn.done = true;

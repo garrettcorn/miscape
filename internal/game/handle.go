@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"lanternfall/internal/protocol"
-	"lanternfall/internal/world"
 )
 
 // ---------- request handling ----------
@@ -124,19 +123,23 @@ func (g *Game) broadcastChat(from, text, kind string) {
 
 func (g *Game) sendChunks(p *Player, cs [][2]int) {
 	for _, c := range cs {
-		if c[0] >= world.ChunksX || c[1] >= world.ChunksZ {
+		cx, cz := ((c[0]%g.W.CX)+g.W.CX)%g.W.CX, c[1]
+		if cz < 0 || cz >= g.W.CZ {
 			continue
 		}
-		g.Out.SendBin(p.ID, protocol.ChunkFrame(c[0], c[1], g.W.EncodeChunk(c[0], c[1])))
-		p.sentChunks[c[1]*world.ChunksX+c[0]] = true
+		g.Out.SendBin(p.ID, protocol.ChunkFrame(cx, cz, g.W.EncodeChunk(cx, cz)))
 	}
 }
 
 func (g *Game) setBlock(x, y, z int, b uint8) {
 	g.W.Set(x, y, z, b)
 	g.Dirty = true
+	x = int(g.W.WrapX(float64(x)))
 	msg := M{"t": "block", "x": x, "y": y, "z": z, "b": b}
-	for id := range g.Players {
-		g.Out.Send(id, msg)
+	// Only players who could have that chunk loaded need to hear about it.
+	for id, p := range g.Players {
+		if g.W.Dist2(p.Char.X, p.Char.Z, float64(x), float64(z)) < BlockUpdateRadius*BlockUpdateRadius {
+			g.Out.Send(id, msg)
+		}
 	}
 }

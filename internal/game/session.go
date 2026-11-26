@@ -69,7 +69,7 @@ func (g *Game) Join(s Session, h *protocol.In) (pid uint32, token string, err er
 		}
 		c = &Character{
 			ID: newID(), Realm: g.Realm.ID, Name: h.Name, TokenHash: HashToken(token), Color: color,
-			X: world.SpawnX, Y: world.SpawnY, Z: world.SpawnZ,
+			X: g.W.Spawn().X, Y: g.W.Spawn().Y, Z: g.W.Spawn().Z,
 			Inv: map[string]int{}, XP: map[string]int{}, Quests: map[string]*QuestState{},
 			Created: g.Now,
 		}
@@ -77,19 +77,22 @@ func (g *Game) Join(s Session, h *protocol.In) (pid uint32, token string, err er
 		g.addChar(c)
 		g.SaveSoon = true
 	}
-	p := &Player{ID: g.allocID(), Char: c, Local: s.Local, lastMove: g.Now, groundY: c.Y, lastRegen: g.Now, dirtyMe: true, sentChunks: map[int]bool{}}
+	p := &Player{ID: g.allocID(), Char: c, Local: s.Local, lastMove: g.Now, groundY: c.Y, lastRegen: g.Now, dirtyMe: true}
 	if c.HP <= 0 {
 		c.HP = c.MaxHP()
 	}
-	// Never resume inside a block (world may have changed while offline).
-	if g.bodyBlocked(c.X, c.Y, c.Z) {
-		c.X, c.Y, c.Z = world.SpawnX, world.SpawnY, world.SpawnZ
+	// Never resume inside a block or outside the world (it may have changed
+	// while they were away).
+	if !g.W.InZ(c.Z) || g.bodyBlocked(c.X, c.Y, c.Z) {
+		sp := g.W.Spawn()
+		c.X, c.Y, c.Z = sp.X, sp.Y, sp.Z
 	}
+	c.X = g.W.WrapX(c.X)
 	g.Players[p.ID] = p
 	g.byChar[c.ID] = p.ID
 	g.ensureEquip(c)
 	g.Dirty = true
-	g.broadcastChat("", fmt.Sprintf("%s arrived in Wickhollow.", c.Name), "system")
+	g.broadcastChat("", fmt.Sprintf("%s arrived in %s.", c.Name, g.W.ZoneName(g.W.Spawn().X, g.W.Spawn().Z)), "system")
 	return p.ID, token, nil
 }
 
@@ -123,9 +126,7 @@ func (g *Game) Welcome(pid uint32, token string) M {
 		"t": "welcome", "proto": protocol.Current, "you": pid, "token": token,
 		"realm": M{"id": g.Realm.ID, "kind": g.Realm.Kind, "name": g.Cfg.Name, "desc": g.Cfg.Description,
 			"modded": g.Realm.EverModded, "mods": g.C.Mods, "pvp": g.Cfg.PvP, "trading": g.Cfg.Trading == "on"},
-		"world": M{"sx": world.SizeX, "sy": world.SizeY, "sz": world.SizeZ, "chunk": world.Chunk,
-			"gloamX": world.GloamMinX, "village": []float64{world.VillageCX, world.VillageCZ, world.VillageR},
-			"spawn": []float64{world.SpawnX, world.SpawnY, world.SpawnZ}, "anvil": []int{world.AnvilX, world.AnvilY, world.AnvilZ}},
+		"world":   g.worldView(),
 		"content": g.C.View(), "contentHash": g.C.Hash,
 		"pos":  []float64{p.Char.X, p.Char.Y, p.Char.Z, p.Char.Yaw},
 		"chat": g.chatLog,
@@ -146,7 +147,7 @@ func (g *Game) meMsg(p *Player) M {
 	}
 	return M{"t": "me", "name": c.Name, "color": c.Color, "hp": c.HP, "mhp": c.MaxHP(), "inv": c.Inv, "eq": c.Equipped, "skills": skills,
 		"quests": c.Quests, "slots": g.slotsUsed(c.Inv), "maxSlots": InventorySlots,
-		"zone": world.ZoneAt(c.X, c.Z), "hearth": hearth, "trade": g.tradeView(p)}
+		"zone": g.W.ZoneAt(c.X, c.Z), "zoneName": g.W.ZoneName(c.X, c.Z), "hearth": hearth, "trade": g.tradeView(p)}
 }
 
 // OnlineNames lists online players (for /api/info and admin).
@@ -157,4 +158,27 @@ func (g *Game) OnlineNames() []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// worldView tells the client the shape of the world: its size (x wraps),
+// the towns and danger zones, and named points such as the anvil.
+func (g *Game) worldView() M {
+	w := g.W
+	var zones []M
+	for _, p := range w.Def.Places {
+		if p.Zone == world.ZoneTown {
+			zones = append(zones, M{"id": p.ID, "name": p.Name, "kind": world.ZoneTown, "x": p.X, "z": p.Z, "r": p.Radius})
+		}
+	}
+	for _, z := range w.Def.Zones {
+		zones = append(zones, M{"id": z.ID, "name": z.Name, "kind": z.Kind, "x": z.X, "z": z.Z, "r": z.Radius})
+	}
+	sp := w.Spawn()
+	a, _ := w.Point("anvil")
+	return M{
+		"name": w.Def.Name, "level": w.Def.Level,
+		"sx": w.W, "sy": world.SizeY, "sz": w.H, "chunk": world.Chunk, "wrapX": true,
+		"groundY": w.Def.GroundY, "zones": zones,
+		"spawn": []float64{sp.X, sp.Y, sp.Z}, "anvil": []float64{a.X, a.Y, a.Z},
+	}
 }

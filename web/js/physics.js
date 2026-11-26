@@ -66,8 +66,8 @@ export function step(world, b, vx, vz, jump, dt) {
     } else { b.y = ny; b.onGround = false; }
   }
   if (!b.onGround && b.vy <= 0 && blocked(world, b.x, b.y - 0.05, b.z)) b.onGround = true;
-  b.x = Math.min(Math.max(b.x, 0.35), world.sx - 0.35);
-  b.z = Math.min(Math.max(b.z, 0.35), world.sz - 0.35);
+  b.x = world.wrapX(b.x); // east–west wraps around the world
+  b.z = Math.min(Math.max(b.z, 0.35), world.sz - 0.35); // the poles are walls
   if (b.y < -5) { b.y = world.surfaceY(Math.floor(b.x), Math.floor(b.z)) + 0.1; b.vy = 0; }
 }
 

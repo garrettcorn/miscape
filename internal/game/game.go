@@ -12,11 +12,13 @@ import (
 	"math"
 	mrand "math/rand/v2"
 	"sort"
+	"sync"
 	"time"
 
 	"lanternfall/internal/config"
 	"lanternfall/internal/content"
 	"lanternfall/internal/world"
+	"lanternfall/maps"
 )
 
 const (
@@ -24,6 +26,7 @@ const (
 	SnapshotEvery         = 2 // ticks (10 Hz)
 	InventorySlots        = 24
 	InterestRadius        = 56.0
+	BlockUpdateRadius     = 160.0 // beyond the farthest render distance (8 chunks)
 	ReachBlocks           = 5.2
 	MeleeRange            = 3.3
 	NPCRange              = 4.5
@@ -31,7 +34,6 @@ const (
 	TradeRange            = 10.0
 	HearthSeconds         = 5.0
 	MaxSkillLevel         = 10
-	WorldSeed             = 20261125
 	MaxPlacedPerCharacter = 500
 )
 
@@ -45,7 +47,6 @@ type Outbox interface {
 type Game struct {
 	C     *content.Content
 	W     *world.World
-	base  *world.World // pristine build, for diffing on save
 	Cfg   config.World
 	Realm Realm
 	Out   Outbox
@@ -59,8 +60,8 @@ type Game struct {
 	nextID  uint32
 
 	regens   []regen
-	nodeHits map[int]int
-	placed   map[int]string // block index -> placer char id
+	nodeHits map[world.Pos]int
+	placed   map[world.Pos]string // block -> placer char id
 	Trades   map[uint32]*Trade
 	Drops    map[uint32]*Drop
 	Invites  map[string]*Invite
@@ -84,12 +85,16 @@ func New(c *content.Content, cfg config.World, kind string, out Outbox) *Game {
 		C: c, Cfg: cfg, Out: out,
 		Chars: map[string]*Character{}, tokens: map[string]string{}, names: map[string]string{},
 		Players: map[uint32]*Player{}, byChar: map[string]uint32{}, Mobs: map[uint32]*Mob{},
-		nodeHits: map[int]int{}, placed: map[int]string{}, Trades: map[uint32]*Trade{}, Drops: map[uint32]*Drop{},
+		nodeHits: map[world.Pos]int{}, placed: map[world.Pos]string{}, Trades: map[uint32]*Trade{}, Drops: map[uint32]*Drop{},
 		Invites: map[string]*Invite{}, Bans: map[string]*Ban{}, rids: map[string]*ridCache{},
 		Now: time.Now(), rng: mrand.New(mrand.NewPCG(uint64(time.Now().UnixNano()), 7)),
 	}
-	g.W = world.Build(WorldSeed)
-	g.base = world.Build(WorldSeed)
+	g.W = world.New(DefaultLevel())
+	rc, err := c.Resolve(g.W.Locate, g.W.WrapX)
+	if err != nil {
+		panic("content doesn't fit the world: " + err.Error())
+	}
+	g.C = rc
 	g.Realm = Realm{ID: newID(), Kind: kind, Created: g.Now}
 	g.noteMods()
 	g.spawnMobs()
@@ -160,12 +165,12 @@ func (g *Game) mobMaxHP(def *content.Mob) int {
 
 func (g *Game) respawnMob(m *Mob) {
 	// Pick a spot with headroom (not inside a trunk), falling back to the spawn center.
-	m.X, m.Z = m.Spawn.X+0.5, m.Spawn.Z+0.5
+	m.X, m.Z = g.W.WrapX(m.Spawn.X), m.Spawn.Z
 	for try_ := 0; try_ < 20; try_++ {
 		a := g.rng.Float64() * 2 * math.Pi
 		r := g.rng.Float64() * m.Spawn.R
-		x, z := m.Spawn.X+math.Cos(a)*r+0.5, m.Spawn.Z+math.Sin(a)*r+0.5
-		if g.W.GroundY(int(x), int(z)) > 0 {
+		x, z := g.W.WrapX(m.Spawn.X+math.Cos(a)*r), m.Spawn.Z+math.Sin(a)*r
+		if g.W.GroundY(int(x), int(z)) > 0 && !g.wet(int(x), int(z)) {
 			m.X, m.Z = x, z
 			break
 		}
@@ -191,3 +196,21 @@ type ActionError string
 func (e ActionError) Error() string { return string(e) }
 
 func fail(format string, a ...any) error { return ActionError(fmt.Sprintf(format, a...)) }
+
+var (
+	defaultLevelOnce sync.Once
+	defaultLevel     *world.Def
+)
+
+// DefaultLevel is the world every game currently runs: Earth, level 1. (Later
+// levels exist in maps/earth; travelling between them is future work.)
+func DefaultLevel() *world.Def {
+	defaultLevelOnce.Do(func() {
+		d, err := world.LoadDef(maps.FS, "earth", "level1")
+		if err != nil {
+			panic("built-in world map: " + err.Error())
+		}
+		defaultLevel = d
+	})
+	return defaultLevel
+}

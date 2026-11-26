@@ -81,7 +81,7 @@ func DefaultWorld(mode string) World {
 		QuestXP: 1, Access: "invite",
 	}
 	if mode == ModeOfficial {
-		w.Name, w.Description, w.MaxPlayers, w.Access = "Wickhollow (Official)", "An official Lanternfall world.", 64, "open"
+		w.Name, w.Description, w.MaxPlayers, w.Access = "Lanternfall (Official)", "An official Lanternfall world.", 64, "open"
 	}
 	return w
 }

@@ -44,9 +44,9 @@ func (g *Game) supported(x, y, z float64) bool {
 }
 
 func (g *Game) entityInCell(x, y, z int) bool {
-	fx, fy, fz := float64(x), float64(y), float64(z)
+	cx, fy, cz := float64(x)+0.5, float64(y), float64(z)+0.5
 	overlap := func(px, py, pz, half, h float64) bool {
-		return px+half > fx && px-half < fx+1 && pz+half > fz && pz-half < fz+1 && py+h > fy && py < fy+1
+		return math.Abs(g.W.DX(cx, px)) < half+0.5 && math.Abs(pz-cz) < half+0.5 && py+h > fy && py < fy+1
 	}
 	for _, p := range g.Players {
 		if overlap(p.Char.X, p.Char.Y, p.Char.Z, BodyHalf, BodyHeight) {
@@ -65,12 +65,13 @@ func (g *Game) entityInCell(x, y, z int) bool {
 // It returns "" when acceptable or a reason string.
 func (g *Game) MoveCheck(p *Player, x, y, z float64) string {
 	c := p.Char
-	if x < 0.3 || z < 0.3 || x > world.SizeX-0.3 || z > world.SizeZ-0.3 || y < 0.5 || y > world.SizeY+4 {
+	// x wraps around the world; z stops at the polar ice.
+	if z < 0.3 || z > float64(g.W.H)-0.3 || y < 0.5 || y > world.SizeY+4 {
 		return "out of bounds"
 	}
 	dt := g.Now.Sub(p.lastMove).Seconds()
 	dt = math.Max(0.05, math.Min(dt, 1.0))
-	horiz := math.Hypot(x-c.X, z-c.Z)
+	horiz := g.W.Dist(c.X, c.Z, x, z)
 	if horiz > SprintSpeed*dt*1.3+0.35 {
 		return "too fast"
 	}
@@ -91,11 +92,12 @@ func (g *Game) MoveCheck(p *Player, x, y, z float64) string {
 }
 
 func (g *Game) sweepBlocked(x0, y0, z0, x1, y1, z1 float64) bool {
-	d := math.Max(math.Hypot(x1-x0, z1-z0), math.Abs(y1-y0))
+	dx := g.W.DX(x0, x1) // the short way, across the date line if need be
+	d := math.Max(math.Hypot(dx, z1-z0), math.Abs(y1-y0))
 	steps := int(math.Ceil(d / 0.25))
 	for i := 1; i <= steps; i++ {
 		t := float64(i) / float64(steps)
-		if g.bodyBlocked(x0+(x1-x0)*t, y0+(y1-y0)*t, z0+(z1-z0)*t) {
+		if g.bodyBlocked(x0+dx*t, y0+(y1-y0)*t, z0+(z1-z0)*t) {
 			return true
 		}
 	}
@@ -107,6 +109,9 @@ func (g *Game) handleMove(p *Player, m *protocol.In) {
 		return
 	}
 	c := p.Char
+	if !math.IsNaN(m.X) {
+		m.X = g.W.WrapX(m.X)
+	}
 	reason := g.MoveCheck(p, m.X, m.Y, m.Z)
 	if reason == "" && !g.supported(m.X, m.Y, m.Z) {
 		if p.airSince.IsZero() {
@@ -121,7 +126,7 @@ func (g *Game) handleMove(p *Player, m *protocol.In) {
 		p.lastMove = g.Now
 		return
 	}
-	prevZone := world.ZoneAt(c.X, c.Z)
+	prevZone := g.W.ZoneAt(c.X, c.Z)
 	c.X, c.Y, c.Z, c.Yaw = m.X, m.Y, m.Z, m.Yaw
 	p.lastMove = g.Now
 	if g.supported(c.X, c.Y, c.Z) {
@@ -131,16 +136,16 @@ func (g *Game) handleMove(p *Player, m *protocol.In) {
 		// Falling lowers the reference so you can jump again after landing.
 		p.groundY = math.Min(p.groundY, c.Y+0.01)
 	}
-	if z := world.ZoneAt(c.X, c.Z); z != prevZone {
+	if z := g.W.ZoneAt(c.X, c.Z); z != prevZone {
 		p.dirtyMe = true
-		if z == world.ZoneGloam {
-			g.toast(p, "You enter the Gloam. Creatures here hit harder. Hold Hearth to return home.", "danger")
+		if z == world.ZoneDanger {
+			g.toast(p, "You enter "+g.W.ZoneName(c.X, c.Z)+". Creatures here hit harder, and a knock-out costs coins. Hold Hearth to return home.", "danger")
 		}
 	}
 	g.Dirty = true
 	if p.trade != nil {
 		o := g.Players[p.trade.other(p.ID)]
-		if o != nil && math.Hypot(o.Char.X-c.X, o.Char.Z-c.Z) > TradeRange+4 {
+		if o != nil && g.W.Dist(o.Char.X, o.Char.Z, c.X, c.Z) > TradeRange+4 {
 			g.cancelTrade(p.trade, "You moved too far apart.")
 		}
 	}

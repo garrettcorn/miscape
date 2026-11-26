@@ -86,7 +86,7 @@ func (g *Game) DropItem(p *Player, item string, count int) error {
 	if g.bodyBlocked(x, c.Y, z) {
 		x, z = c.X, c.Z
 	}
-	d := &Drop{ID: g.allocID(), Item: item, Count: count, X: x, Y: c.Y, Z: z, Owner: c.ID, At: g.Now, Expires: g.Now.Add(DropLifetime)}
+	d := &Drop{ID: g.allocID(), Item: item, Count: count, X: g.W.WrapX(x), Y: c.Y, Z: z, Owner: c.ID, At: g.Now, Expires: g.Now.Add(DropLifetime)}
 	g.Drops[d.ID] = d
 	p.dirtyMe, g.Dirty, g.SaveSoon = true, true, true
 	return nil
@@ -132,7 +132,7 @@ func (g *Game) tickDrops() {
 		}
 		c := p.Char
 		for _, d := range g.Drops {
-			near := math.Abs(d.Y-c.Y) <= 2 && dist2(d.X, d.Z, c.X, c.Z) <= PickupRadius*PickupRadius
+			near := math.Abs(d.Y-c.Y) <= 2 && g.W.Dist2(d.X, d.Z, c.X, c.Z) <= PickupRadius*PickupRadius
 			if d.Owner == c.ID && !d.OwnerLeft && !near {
 				d.OwnerLeft = true
 			}

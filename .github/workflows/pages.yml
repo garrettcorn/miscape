@@ -5,7 +5,7 @@ name: Website
 on:
   push:
     branches: [main]
-    paths: ["site/**", "web/**", "internal/**", "cmd/lanternfall-web/**", "tools/buildplay/**", "go.mod", "go.sum", ".github/workflows/pages.yml"]
+    paths: ["site/**", "web/**", "internal/**", "cmd/lanternfall-web/**", "tools/buildplay/**", "maps/**", "go.mod", "go.sum", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:

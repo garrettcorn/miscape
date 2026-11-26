@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"lanternfall/internal/content"
+	"lanternfall/internal/world"
 )
 
 type QuestState struct {
@@ -52,7 +53,6 @@ type Player struct {
 	trade            *Trade
 	dead             bool
 	dirtyMe          bool
-	sentChunks       map[int]bool
 	fullWarned       time.Time
 }
 
@@ -73,7 +73,7 @@ type Mob struct {
 }
 
 type regen struct {
-	Idx   int       `json:"i"`
+	P     world.Pos `json:"p"`
 	Block uint8     `json:"b"`
 	At    time.Time `json:"at"`
 }

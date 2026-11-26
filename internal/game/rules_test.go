@@ -21,7 +21,7 @@ func TestXPCurve(t *testing.T) {
 func TestGatherTreeYieldsLogsAndRegrows(t *testing.T) {
 	f := newFixture(t)
 	p := f.join("Ada")
-	x, y, z := f.findBlock(world.Log, wild)
+	x, y, z := f.findBlock(world.Log, f.wild)
 	f.standNear(p, x, y, z)
 	node := f.g.C.Nodes[world.Log]
 	for i := 0; i < node.Hits; i++ {
@@ -39,7 +39,7 @@ func TestGatherTreeYieldsLogsAndRegrows(t *testing.T) {
 	}
 	f.mustFail(p, protocol.In{T: "gather", BX: x, BY: y, BZ: z})
 	// Regrows after its timer (move the player out of the way first).
-	f.at(p, world.SpawnX, world.SpawnY, world.SpawnZ)
+	f.atSpawn(p)
 	f.g.Tick(f.g.Now.Add(time.Duration(node.RegrowSec+1) * time.Second))
 	if f.g.W.Get(x, y, z) != world.Log {
 		t.Fatal("tree should regrow")
@@ -49,7 +49,7 @@ func TestGatherTreeYieldsLogsAndRegrows(t *testing.T) {
 func TestGatherCooldownRangeAndLevel(t *testing.T) {
 	f := newFixture(t)
 	p := f.join("Bob")
-	x, y, z := f.findBlock(world.Log, wild)
+	x, y, z := f.findBlock(world.Log, f.wild)
 	f.standNear(p, x, y, z)
 	f.mustOK(p, protocol.In{T: "gather", BX: x, BY: y, BZ: z})
 	if e := f.mustFail(p, protocol.In{T: "gather", BX: x, BY: y, BZ: z}); !strings.Contains(e, "Steady") {
@@ -61,8 +61,10 @@ func TestGatherCooldownRangeAndLevel(t *testing.T) {
 		t.Fatalf("range not enforced: %s", e)
 	}
 	// Copper needs Mining 2.
-	cx, cy, cz := f.findBlock(world.CopperOre, nil)
-	f.standNear(p, cx, cy, cz)
+	wx, wy, wz := f.wildSpot(0, 0)
+	cx, cy, cz := int(wx)+1, int(wy), int(wz)
+	f.g.W.Set(cx, cy, cz, world.CopperOre)
+	f.at(p, wx-0.5, wy, wz)
 	if e := f.mustFail(p, protocol.In{T: "gather", BX: cx, BY: cy, BZ: cz}); !strings.Contains(e, "Mining level 2") {
 		t.Fatalf("level not enforced: %s", e)
 	}
@@ -77,16 +79,17 @@ func TestVillageIsProtected(t *testing.T) {
 	p := f.join("Cyd")
 	// House corner logs are in the village.
 	x, y, z := f.findBlock(world.Log, func(x, y, z int) bool {
-		return !wild(x, y, z) && world.ZoneAt(float64(x), float64(z)) == world.ZoneVillage
+		return f.g.W.ZoneAt(float64(x)+0.5, float64(z)+0.5) == world.ZoneTown
 	})
 	f.standNear(p, x, y, z)
-	if e := f.mustFail(p, protocol.In{T: "gather", BX: x, BY: y, BZ: z}); !strings.Contains(e, "village") {
-		t.Fatalf("village gather allowed: %s", e)
+	if e := f.mustFail(p, protocol.In{T: "gather", BX: x, BY: y, BZ: z}); !strings.Contains(e, "town") {
+		t.Fatalf("town gather allowed: %s", e)
 	}
 	p.Char.Inv["plank"] = 5
-	f.at(p, world.SpawnX, world.SpawnY, world.SpawnZ)
-	if e := f.mustFail(p, protocol.In{T: "place", BX: 66, BY: 13, BZ: 71, Item: "plank"}); !strings.Contains(e, "Wickhollow") {
-		t.Fatalf("village build allowed: %s", e)
+	f.atSpawn(p)
+	sp := f.g.W.Spawn()
+	if e := f.mustFail(p, protocol.In{T: "place", BX: int(sp.X) + 2, BY: 13, BZ: int(sp.Z), Item: "plank"}); !strings.Contains(e, "No building inside Manchester") {
+		t.Fatalf("town build allowed: %s", e)
 	}
 }
 
@@ -109,11 +112,12 @@ func TestCraftingRequirements(t *testing.T) {
 		t.Fatal(e)
 	}
 	p.Char.XP["crafting"] = XPForLevel(3)
-	f.at(p, 30, 13, 30)
+	f.atWild(p, 0, 0)
 	if e := f.mustFail(p, protocol.In{T: "craft", Recipe: "copper_sword"}); !strings.Contains(e, "anvil") {
 		t.Fatal(e)
 	}
-	f.at(p, float64(world.AnvilX)+1.5, 13, float64(world.AnvilZ)+0.5)
+	a, _ := f.g.W.Point("anvil")
+	f.at(p, a.X+1.5, a.Y, a.Z+0.5)
 	f.mustOK(p, protocol.In{T: "craft", Recipe: "copper_sword"})
 	if p.Char.Inv["copper_sword"] != 1 || p.Char.Inv["copper_ore"] != 0 {
 		t.Fatalf("copper sword: %v", p.Char.Inv)
@@ -143,9 +147,9 @@ func TestCombatKillsGiveXPLootAndQuestProgress(t *testing.T) {
 			break
 		}
 	}
-	f.at(p, world.SpawnX, world.SpawnY, world.SpawnZ)
+	f.atSpawn(p)
 	f.g.Talk(p, "mabel")
-	f.at(p, 60.5, 13, 62.5)
+	f.atNPC(p, "mabel")
 	f.mustOK(p, protocol.In{T: "quest_accept", Quest: "lights_for_wickhollow"})
 	f.at(p, m.X+1, m.Y, m.Z)
 	hits := 0
@@ -191,11 +195,11 @@ func TestMobsDamagePlayersAndDeathRespawns(t *testing.T) {
 	if p.Char.HP >= start {
 		t.Fatal("wisp never attacked")
 	}
-	// Knock out in the Gloam: respawn in village, lose 10% coins.
+	// Knocked out in the danger zone: back in town, minus 10% of coins.
 	f.at(p, m.X+0.5, m.Y, m.Z)
 	f.g.damagePlayer(p, 999, m.ID)
-	if p.Char.HP != p.Char.MaxHP() || world.ZoneAt(p.Char.X, p.Char.Z) != world.ZoneVillage {
-		t.Fatal("should respawn in the village at full HP")
+	if p.Char.HP != p.Char.MaxHP() || f.g.W.ZoneAt(p.Char.X, p.Char.Z) != world.ZoneTown {
+		t.Fatal("should wake up in town at full HP")
 	}
 	if p.Char.Inv["coin"] != 90 {
 		t.Fatalf("coin loss: %d", p.Char.Inv["coin"])
@@ -205,8 +209,8 @@ func TestMobsDamagePlayersAndDeathRespawns(t *testing.T) {
 func TestPvPRules(t *testing.T) {
 	f := newFixture(t)
 	a, b := f.join("Hal"), f.join("Ivy")
-	f.at(a, 30, 13, 30)
-	f.at(b, 31, 13, 30)
+	f.atWild(a, 0, 0)
+	f.atWild(b, 1, 0)
 	if e := f.mustFail(a, protocol.In{T: "attack", Target: b.ID}); !strings.Contains(e, "PvP is off") {
 		t.Fatal(e)
 	}
@@ -216,8 +220,9 @@ func TestPvPRules(t *testing.T) {
 		t.Fatal("pvp damage not applied")
 	}
 	f.advance(time.Second)
-	f.at(a, world.SpawnX, world.SpawnY, world.SpawnZ)
-	f.at(b, world.SpawnX+1, world.SpawnY, world.SpawnZ)
+	f.atSpawn(a)
+	f.atSpawn(b)
+	b.Char.X += 1
 	if e := f.mustFail(a, protocol.In{T: "attack", Target: b.ID}); !strings.Contains(e, "safe") {
 		t.Fatal(e)
 	}
@@ -226,7 +231,7 @@ func TestPvPRules(t *testing.T) {
 func TestQuestFlow(t *testing.T) {
 	f := newFixture(t)
 	p := f.join("Joy")
-	f.at(p, 60.5, 13, 62.5)
+	f.atNPC(p, "mabel")
 	f.mustFail(p, protocol.In{T: "quest_accept", Quest: "what_glimmers_below"}) // wrong giver range / locked
 	f.mustOK(p, protocol.In{T: "quest_accept", Quest: "lights_for_wickhollow"})
 	f.mustFail(p, protocol.In{T: "quest_accept", Quest: "lights_for_wickhollow"})
@@ -240,7 +245,7 @@ func TestQuestFlow(t *testing.T) {
 	}
 	f.mustFail(p, protocol.In{T: "quest_turnin", Quest: "lights_for_wickhollow"}) // no double reward
 	// Second quest: deliver shards to Ott.
-	f.at(p, 95.5, 13, 62.5)
+	f.atNPC(p, "ott")
 	f.mustOK(p, protocol.In{T: "quest_accept", Quest: "what_glimmers_below"})
 	p.Char.Inv["glimmer_shard"] = 2
 	f.mustFail(p, protocol.In{T: "quest_turnin", Quest: "what_glimmers_below"})
@@ -254,35 +259,86 @@ func TestQuestFlow(t *testing.T) {
 func TestMovementValidation(t *testing.T) {
 	f := newFixture(t)
 	p := f.join("Kit")
-	f.at(p, world.SpawnX, world.SpawnY, world.SpawnZ)
+	f.atSpawn(p)
 	p.lastMove = f.g.Now
 	move := func(x, y, z float64) bool {
 		f.advance(50 * time.Millisecond)
 		f.g.Handle(p.ID, &protocol.In{T: "move", X: x, Y: y, Z: z})
 		return p.Char.X == x && p.Char.Y == y && p.Char.Z == z
 	}
-	if !move(world.SpawnX+0.3, world.SpawnY, world.SpawnZ) {
+	sp := f.g.W.Spawn()
+	if !move(sp.X+0.3, sp.Y, sp.Z) {
 		t.Fatal("normal step rejected")
 	}
-	if move(world.SpawnX+5, world.SpawnY, world.SpawnZ) {
+	if move(sp.X+5, sp.Y, sp.Z) {
 		t.Fatal("teleport accepted")
 	}
 	if f.out.last(p.ID, "correct") == nil {
 		t.Fatal("expected correction")
 	}
-	if move(world.SpawnX+0.3, world.SpawnY+3, world.SpawnZ) {
+	if move(sp.X+0.3, sp.Y+3, sp.Z) {
 		t.Fatal("super jump accepted")
 	}
-	// Into the plaza well (solid cobble rim at y=13).
-	if move(64.2, 13.0, 63.0) {
+	// Into the plaza well (solid cobble rim at y=13), from right beside it.
+	wx, wz := f.town(-1, 0)
+	f.at(p, wx-1.2, 13, wz)
+	if move(wx, 13.0, wz) {
 		t.Fatal("moved into a solid block")
 	}
-	// Long gap then a big move through the ridge wall must still be blocked.
-	f.at(p, 96.5, 13, 50.5)
+	// Long gap then a big move through a wall must still be blocked.
+	x, y, z := f.wildSpot(0, 0)
+	for dz := -3; dz <= 3; dz++ {
+		for yy := int(y); yy < int(y)+4; yy++ {
+			f.g.W.Set(int(x)+2, yy, int(z)+dz, world.Stone)
+		}
+	}
+	f.at(p, x, y, z)
 	f.advance(time.Second)
-	f.g.Handle(p.ID, &protocol.In{T: "move", X: 102.5, Y: 13, Z: 50.5})
-	if p.Char.X != 96.5 {
-		t.Fatal("tunneled through the ridge")
+	f.g.Handle(p.ID, &protocol.In{T: "move", X: x + 4, Y: y, Z: z})
+	if p.Char.X != x {
+		t.Fatal("tunneled through a wall")
+	}
+}
+
+// The world wraps east–west: walking over the date line is a short step, but
+// jumping to the far side of the world is still a teleport.
+func TestMoveAcrossDateLine(t *testing.T) {
+	f := newFixture(t)
+	p := f.join("Magellan")
+	w := f.g.W
+	// Find dry, open ground on both sides of the line (Chukotka, Antarctica…).
+	stand := w.Def.GroundY + 1
+	z := -1
+	for zz := 4; zz < w.H-4 && z < 0; zz++ {
+		ok := true
+		for _, x := range []int{w.W - 2, w.W - 1, 0, 1} {
+			ok = ok && !f.g.wet(x, zz) && w.SurfaceY(x, zz) == stand && w.GroundY(x, zz) == stand
+		}
+		if ok {
+			z = zz
+		}
+	}
+	if z < 0 {
+		t.Fatal("no dry ground across the date line")
+	}
+	fz := float64(z) + 0.5
+	f.at(p, float64(w.W)-0.2, float64(stand), fz)
+	p.lastMove = f.g.Now
+	f.advance(50 * time.Millisecond)
+	f.g.Handle(p.ID, &protocol.In{T: "move", X: 0.1, Y: float64(stand), Z: fz})
+	if p.Char.X != 0.1 {
+		t.Fatalf("step across the date line rejected: %v", f.out.last(p.ID, "correct"))
+	}
+	// A client that sends x just past the edge is wrapped, not rejected.
+	f.advance(50 * time.Millisecond)
+	f.g.Handle(p.ID, &protocol.In{T: "move", X: -0.15, Y: float64(stand), Z: fz})
+	if p.Char.X != float64(w.W)-0.15 {
+		t.Fatalf("x not wrapped: %v", p.Char.X)
+	}
+	f.advance(50 * time.Millisecond)
+	f.g.Handle(p.ID, &protocol.In{T: "move", X: float64(w.W) / 2, Y: float64(stand), Z: fz})
+	if p.Char.X == float64(w.W)/2 {
+		t.Fatal("teleport to the far side accepted")
 	}
 }
 
@@ -292,14 +348,10 @@ func TestPlaceAndBreakOwnership(t *testing.T) {
 	a.Char.Inv["plank"] = 2
 	// Creatures spawn at random spots and could stand in the target cell.
 	clear(f.g.Mobs)
-	x, z := 30, 40
-	y := f.g.W.SurfaceY(x, z)
-	for f.g.W.Get(x, y, z) != world.Air || !wild(x, y, z) {
-		x++
-		y = f.g.W.SurfaceY(x, z)
-	}
-	f.at(a, float64(x)+2.5, float64(f.g.W.SurfaceY(x+2, z)), float64(z)+0.5)
-	f.at(b, float64(x)+2.5, float64(f.g.W.SurfaceY(x+2, z)), float64(z)+1.5)
+	wx, wy, wz := f.wildSpot(0, 0)
+	x, y, z := int(wx)-1, int(wy), int(wz)
+	f.at(a, wx+1, wy, wz)
+	f.at(b, wx+1, wy, wz+1)
 	f.mustOK(a, protocol.In{T: "place", BX: x, BY: y, BZ: z, Item: "plank"})
 	if f.g.W.Get(x, y, z) != world.Plank || a.Char.Inv["plank"] != 1 {
 		t.Fatal("place failed")
@@ -347,17 +399,19 @@ func (f *fixture) joinWithChar(c *Character) (uint32, string, error) {
 func TestHearthChannelAndInterrupt(t *testing.T) {
 	f := newFixture(t)
 	p := f.join("Ozzy")
-	f.at(p, 115, 11, 60)
+	clear(f.g.Mobs) // creatures in the danger zone would interrupt the channel
+	dx, dy, dz := f.danger()
+	f.at(p, dx, dy, dz)
 	f.mustOK(p, protocol.In{T: "hearth"})
 	f.g.Tick(f.g.Now.Add(2 * time.Second))
 	f.g.damagePlayer(p, 1, 0)
 	f.g.Tick(f.g.Now.Add(4 * time.Second))
-	if world.ZoneAt(p.Char.X, p.Char.Z) == world.ZoneVillage {
+	if f.g.W.ZoneAt(p.Char.X, p.Char.Z) == world.ZoneTown {
 		t.Fatal("damage should interrupt hearth")
 	}
 	f.mustOK(p, protocol.In{T: "hearth"})
 	f.g.Tick(f.g.Now.Add(time.Duration(HearthSeconds*float64(time.Second)) + time.Millisecond))
-	if world.ZoneAt(p.Char.X, p.Char.Z) != world.ZoneVillage {
+	if f.g.W.ZoneAt(p.Char.X, p.Char.Z) != world.ZoneTown {
 		t.Fatal("hearth should return home")
 	}
 }
@@ -365,10 +419,10 @@ func TestHearthChannelAndInterrupt(t *testing.T) {
 func TestShop(t *testing.T) {
 	f := newFixture(t)
 	p := f.join("Pip")
-	f.at(p, 30, 13, 30)
+	f.atWild(p, 0, 0)
 	p.Char.Inv["coin"] = 10
 	f.mustFail(p, protocol.In{T: "buy", Item: "berry", Count: 1}) // not near Bertram
-	f.at(p, 69.5, 13, 66.5)
+	f.atNPC(p, "bertram")
 	f.mustOK(p, protocol.In{T: "buy", Item: "berry", Count: 3})
 	if p.Char.Inv["coin"] != 4 || p.Char.Inv["berry"] != 3 {
 		t.Fatal(p.Char.Inv)
@@ -386,10 +440,8 @@ func TestStepUpIsAccepted(t *testing.T) {
 	f := newFixture(t)
 	p := f.join("Stepper")
 	// Build a one-block step in an open wild spot: ground at 13 with a block at x+1.
-	x, z := 30, 90
-	for !wild(x, 0, z) || f.g.W.SurfaceY(x, z) != f.g.W.SurfaceY(x+1, z) {
-		x++
-	}
+	wx, _, wz := f.wildSpot(-1, 0)
+	x, z := int(wx), int(wz)
 	y := f.g.W.SurfaceY(x, z)
 	f.g.W.Set(x+1, y, z, world.Stone)
 	for yy := y + 1; yy < y+4; yy++ {
