@@ -1,15 +1,17 @@
 # Lanternfall — Architecture
 
-Lanternfall is a small, cozy multiplayer voxel RPG. You arrive in the lantern-lit
-village of **Wickhollow**, gather wood and ore, craft gear, help villagers, and —
-if you're brave — carry a lantern into **the Gloam**, a dim and optional hollow
-with better rewards and tougher creatures.
+Lanternfall is a small, cozy multiplayer voxel RPG on a blocky, flat Earth that
+wraps east–west. You arrive in **Manchester** (c. 1807), gather wood and ore,
+craft gear, help the townsfolk, and — if you're brave — carry a lantern onto the
+**Highland moors**, a dark and optional danger zone with better rewards and
+tougher creatures. The world is generated from a map image (see
+[EXTENDING.md](EXTENDING.md#the-world-map-and-levels)).
 
 ## 1. Overview
 
 ```
  Browser client (WebGL2, vanilla ES modules, no build step)
-        │  WebSocket (JSON control messages + binary chunk frames, protocol v1)
+        │  WebSocket (JSON control messages + binary chunk frames, protocol v2)
         ▼
  Go game server  ── single authoritative simulation loop (20 Hz)
    ├─ internal/game      rules: movement validation, gather, craft, combat, quests, trade, permissions

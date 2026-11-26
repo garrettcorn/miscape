@@ -16,7 +16,7 @@ body { margin: 0; color: var(--ink); background: #121826;
   -webkit-font-smoothing: antialiased; }
 /* Fixed backdrop: game art + lantern-colored light, so the glass has something to refract. */
 body::before { content: ""; position: fixed; inset: -40px; z-index: -2;
-  background: url(img/village.jpg) center 30% / cover no-repeat; filter: blur(6px) saturate(130%) brightness(.55); }
+  background: url(img/manchester.jpg) center 30% / cover no-repeat; filter: blur(6px) saturate(130%) brightness(.55); }
 body::after { content: ""; position: fixed; inset: 0; z-index: -1;
   background:
     radial-gradient(42% 46% at 18% 18%, rgba(255, 170, 70, .45), transparent 70%),

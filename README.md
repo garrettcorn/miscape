@@ -12,9 +12,11 @@
 
 **🌐 [Download & play: garrettcorn.github.io/miscape](https://garrettcorn.github.io/miscape/)**
 
-A small, cozy multiplayer voxel RPG for the web. Explore the lantern-lit village
-of **Wickhollow**, chop and mine, craft gear, help villagers with quests, trade
-with friends, and, if you dare, carry a lantern into **the Gloam**.
+A small, cozy multiplayer voxel RPG for the web, set on a blocky Earth that
+wraps around east to west. Start in **Manchester around 1807**, as gas light
+arrives and the mills never sleep. Chop and mine, craft gear, help the
+townsfolk with quests, trade with friends, and, if you dare, carry a lantern
+north onto **the Highland moors**, where the will-o'-the-wisps dance.
 
 - **Server:** Go, authoritative, single binary (the client is embedded).
 - **Client:** raw WebGL2 + vanilla ES modules. No build step, about 44 KB gzipped, no image downloads.
@@ -137,7 +139,7 @@ git push origin v0.1.0
 - [First-release scope](docs/SCOPE.md)
 - [Hosting a private world](docs/HOSTING.md) (backups, recovery, troubleshooting)
 - [Configuration](docs/CONFIG.md) and [deployment](docs/DEPLOY.md)
-- [Extending the game](docs/EXTENDING.md): where new items, blocks, actions and screens go
+- [Extending the game](docs/EXTENDING.md): the world map and levels, and where new items, blocks, actions and screens go
 - [Mods](docs/MODS.md)
 - [Performance budgets & measurements](docs/PERFORMANCE.md)
 - [Roadmap](docs/ROADMAP.md)
@@ -147,7 +149,7 @@ git push origin v0.1.0
 ```
 cmd/lanternfall     CLI: serve, host, join, backups, restore, mods check
 internal/game       authoritative rules (movement, gather, craft, combat, quests, trade, access)
-internal/world      voxel grid, curated world builder, chunk RLE
+internal/world      wrapping chunked world generated from map images, levels, towns, chunk RLE
 internal/content    data-driven content + declarative mod loader (base.json)
 internal/store      atomic checksummed snapshots, backups, recovery
 internal/protocol   versioned wire format + validation
@@ -155,8 +157,9 @@ internal/local      single-player browser world host (runs as WebAssembly)
 internal/server     HTTP/WebSocket sessions, game loop, autosave, admin API
 internal/p2p        Tailcat host listener + friend join companion
 cmd/lanternfall-web engine entry point for the browser (GOOS=js GOARCH=wasm)
-tools/              buildplay (assembles site/play/), sitepreview
+tools/              buildplay (assembles site/play/), sitepreview, mkmap (makes terrain images)
 web/                browser client (embedded into the binary)
+maps/               world maps: terrain image, legend, level files (embedded)
 mods/               example mod
 ```
 
@@ -178,6 +181,10 @@ if you distribute it **or run a modified version that other people connect to
 over a network**, you must make your full source code available under the same
 license. Running a modified server? Set `LF_SOURCE_URL` to where your source is
 published. It's shown to players on the join screen and in `/api/info`.
+
+The Earth terrain map (`maps/earth/terrain.png`) is derived from
+[Natural Earth](https://www.naturalearthdata.com/) II raster data, which is in
+the public domain.
 
 The AGPL does not grant rights to the **Lanternfall** name or logo. Please
 don't present a fork as the official game. Commercial licenses for uses the

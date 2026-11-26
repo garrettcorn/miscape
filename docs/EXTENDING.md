@@ -13,13 +13,50 @@ Mods can add the same kinds of entries (see [MODS.md](MODS.md)).
 
 | Add | Where | Notes |
 |---|---|---|
-| Item | `items` | Pick a `kind` (material, weapon, food, tool, block). Use `model` to choose how it looks held, dropped and as an icon, `glow` to make it shine, and `light` to make it light the Gloam while carried. |
+| Item | `items` | Pick a `kind` (material, weapon, food, tool, block). Use `model` to choose how it looks held, dropped and as an icon, `glow` to make it shine, and `light` to make it light dark places while carried. |
 | Recipe | `recipes` | `station: "anvil"` requires standing at the anvil. |
 | Quest | `quests` | Steps are `gather`, `kill`, `craft` or `deliver`. `requires` chains quests. The HUD hint points players at the next available giver automatically. |
 | Shop entry | `shop` | Buying is served by the listed NPC. |
 | NPC | `npcs` | `hat` is one of `content.NPCHats`. |
 | Creature | `mobs` + `spawns` | `model` is one of `content.MobModels`. |
 | Gatherable | `nodes` | Maps a block to an item, skill, level and regrow time. |
+
+## The world map and levels
+
+The world is generated from files in [`maps/earth/`](../maps/earth/), embedded in the
+server and the in-browser world:
+
+| File | What it is |
+|---|---|
+| `terrain.png` | One pixel per level-1 column (3072×1536, equirectangular: x is longitude from 180°W, z is latitude from the North Pole). Each colour is a terrain type. |
+| `legend.json` | Colour → terrain: `ocean`, `shallows`, `grass`, `forest`, `desert`, `snow`, `ice`, `tundra`, `rock`. Colours not in the legend use the nearest one, so soft brushes are fine. |
+| `level1.json` | The level: map, legend, `scale` (blocks per pixel), ground height, seed, the `spawn` place, and its `places` and `zones`. |
+| `level2.json` | `"inherits": "level1"`: everything from level 1, at twice the scale (6144×3072), plus its own places and zones. |
+
+**Change the terrain:** edit `terrain.png` in any paint program using the
+legend colours, or regenerate it from a source map with
+[`tools/mkmap`](../tools/mkmap/main.go). The current map comes from
+Natural Earth II (public domain). The width × scale must be a multiple of 16.
+
+**Add a town:** add a place with `lat`, `lon`, `"structure": "town"`,
+`"zone": "town"` and a `radius`. Towns always stand on grass, whatever the map
+says. They get a plaza, houses, an anvil, roads, and a gate facing the nearest
+danger zone. Its named points (`place:<id>`, `town:<id>:spawn`,
+`town:<id>:gate`, `anvil`) can be used as `"at"` in content.
+
+**Add a danger zone:** add a zone with `"kind": "danger"`, a `radius`, and
+either `lat`/`lon` or `"at": "<place>"` with `dx`/`dz` offsets. Its ground
+becomes moor, and creatures spawned in it stay in it.
+
+**Place NPCs and creatures:** in content, give them `"at"` (a place, zone or
+named point) and `dx`/`dz` offsets in blocks. Positions are worked out per level,
+so the same content works at every scale.
+
+**Add a level:** create `levelN.json` with `"inherits": "level<N-1>"` and
+`"level": N`. Scale doubles automatically. Places and zones use latitude and
+longitude, so they keep their place on Earth while the world doubles around
+them. Travelling between levels (portals) isn't built yet. A server runs one
+level (`game.DefaultLevel`).
 
 ## Code changes
 

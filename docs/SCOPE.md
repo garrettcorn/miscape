@@ -1,27 +1,25 @@
 # First release scope (vertical slice)
 
 ## In
-- **World**: one curated 128×128 footprint (40 tall) map built deterministically
-  by code. Areas:
-  - Wickhollow village (hub, protected: no PvP, no building)
-  - Mossmeadow woods (trees)
-  - Pebblebrook quarry (stone, copper)
-  - Lily pond
-  - Lantern Gate
-  - **The Gloam**, an optional walled hollow behind the gate: darker, harder, richer
+- **World**: Earth, level 1: 3072×1536 columns (40 tall), flat ground, wrapping
+  east–west, generated from `maps/earth/terrain.png` (ocean, grassland, forest,
+  desert, tundra, snow, ice, rock). Areas:
+  - Manchester (hub, protected: no PvP, no building)
+  - The countryside: forests, bilberry bushes, rocky ground with copper
+  - **The Highland moors**, an optional danger zone to the north: darker, harder, richer
 - **Skills (4, levels 1–10)**: Woodcutting, Mining (gathering), Crafting, Combat.
-- **Items (12)**: log, plank, stone, copper ore, glimmer shard, berry, wooden
-  sword, copper sword, glimmer blade, lantern, coin, and placeable plank/stone blocks.
-- **Recipes (5)**: planks, wooden sword, copper sword (anvil), lantern, glimmer
+- **Items (12)**: log, plank, stone, copper ore, wisp-light shard, bilberry, wooden
+  sword, copper sword, wisp-light blade, lantern, coin, and placeable plank/stone blocks.
+- **Recipes (5)**: planks, wooden sword, copper sword (anvil), lantern, wisp-light
   blade (anvil).
-- **Enemies (2)**: Bramblet (meadow, easy) and Gloamwisp (Gloam, harder, drops shards).
+- **Enemies (2)**: Boggart (countryside, easy) and Will-o'-the-Wisp (the moors, harder, drops wisp-light shards).
 - **NPCs (3)** and **quests (2)**:
-  - Mabel the Lamplighter — *Lights for Wickhollow* (gather, craft, defeat)
-  - Ott the Gate Warden — *What Glimmers Below* (optional Gloam quest)
-  - Bertram's stall — a tiny shop: buy berries, sell logs
+  - Mabel Hartley, lamplighter — *Lights for Manchester* (gather, craft, defeat)
+  - Ottiwell Kershaw, watchman — *Lights on the Moors* (optional danger-zone quest)
+  - Bertram Oakes, Shudehill market — a tiny shop: buy bilberries, sell logs
 - **Combat**: auto-targeting melee (controller-friendly), cooldowns, damage
-  numbers, hit flash, death → respawn in Wickhollow, coin penalty only in the Gloam.
-- **Gloam danger cues**: warning sign and warden at the gate, darker fog, a HUD
+  numbers, hit flash, knock-out → wake in Manchester, coin penalty only in a danger zone.
+- **Danger-zone cues**: warning sign and watchman on the north road, darker fog, a HUD
   "Danger" badge, and stronger enemies. Recovery: walk out, or channel *Hearth
   Lantern* (5 s, cancelled by damage) to return to the village.
 - **Building (small)**: place and break plank/stone blocks outside the village.

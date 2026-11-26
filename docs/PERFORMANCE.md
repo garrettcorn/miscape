@@ -9,7 +9,7 @@
 | Triangles | ≤ 60k (High), ≤ 25k (Low) | Face culling, AO quad flipping, 2× LOD beyond `lodDist` |
 | Meshing | ≤ 3 ms (Low) / 5 ms per frame | Time-sliced mesh queue, nearest chunks first |
 | GPU memory | ≤ 16 MB | 8-byte vertices, shared index buffer, LOD meshes dropped with hysteresis |
-| JS heap | ≤ 32 MB | Fixed world array (640 KB), reused buffers |
+| JS heap | ≤ 32 MB | Only chunks near the player (10 KB each, evicted beyond view), reused buffers |
 | Initial download | ≤ 100 KB gzipped, no images | Procedural texture atlas, no frameworks |
 | Network | ≤ 16 KB/s down, ≤ 2 KB/s up per player | 10 Hz interest-managed snapshots, 20 Hz move updates, RLE chunks on demand |
 
@@ -43,7 +43,7 @@ spread across frames with a 3–5 ms budget.)
 | Other measurement | Value |
 |---|---|
 | Client download | 143 KB raw / **44 KB gzipped** (HTML+CSS+JS, no images) |
-| Whole world chunk data | 55 KB RLE (640 KB raw) |
+| World generation (server) | about 38 µs per 16×16×40 chunk (`BenchmarkGenChunk`); a full 11×11-chunk view is about 4 ms. Memory and saves grow with player edits, not with the 3072×1536 world |
 | In-browser world engine (`lanternfall.wasm`) | 5.9 MB raw / **1.6 MB gzipped**, downloaded once and then cached |
 | Server binary | 31 MB (includes Tailcat/WireGuard stack) |
 | Network, 1 other player + 7 creatures in view | ~10 KB/s down (idle or moving), ~1.1 KB/s up while moving |

@@ -32,7 +32,11 @@
 11. Scheduled off-machine backups and a restore picker in the admin screen.
 
 ## P2: content and gameplay
-12. A third zone and a Gloam boss with a telegraphed attack. More recipes and
+- **Portals between levels.** Levels 2–7 (each 2× per side, inheriting the
+  previous level) already load from `maps/earth`. Still to do: portal
+  structures, moving characters between level servers (or one server hosting
+  several levels), and level-2+ content.
+12. More towns and danger zones around the world, and a moors boss with a telegraphed attack. More recipes and
     equipment slots (armor, offhand lantern as an item slot).
 13. Ranged combat, dodge, and better creature pathfinding (A* on the voxel grid).
 14. A bank or storage chest, and housing plots with per-plot permissions.
