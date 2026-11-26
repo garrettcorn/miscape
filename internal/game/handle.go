@@ -80,7 +80,7 @@ var requestHandlers = map[string]requestHandler{
 	"trade_lock":    func(g *Game, p *Player, m *protocol.In) error { return g.TradeLock(p, m.Trade) },
 	"trade_confirm": func(g *Game, p *Player, m *protocol.In) error { return g.TradeConfirm(p, m.Trade) },
 	"trade_cancel":  func(g *Game, p *Player, m *protocol.In) error { return g.TradeCancel(p, m.Trade) },
-	"hearth":        func(g *Game, p *Player, m *protocol.In) error { return g.Hearth(p) },
+	"hearth":        func(g *Game, p *Player, m *protocol.In) error { return g.Hearth(p, m.Place) },
 	"chat": func(g *Game, p *Player, m *protocol.In) error {
 		g.broadcastChat(p.Char.Name, strings.TrimSpace(m.Text), "say")
 		return nil

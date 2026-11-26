@@ -60,7 +60,7 @@ func (w *World) terrainAt(x, z int) Terrain {
 	// Towns always stand on open grassland, whatever the map says there,
 	// including their roads and gate (which reach townLand blocks past the edge).
 	for _, p := range w.Def.Places {
-		if p.Structure == "town" && w.Dist2(fx, fz, p.X, p.Z) <= (p.Radius+townLand)*(p.Radius+townLand) {
+		if (p.Structure == "town" || p.Structure == "village") && w.Dist2(fx, fz, p.X, p.Z) <= (p.Radius+townLand)*(p.Radius+townLand) {
 			return TGrass
 		}
 	}
@@ -114,7 +114,7 @@ func (w *World) column(c []uint8, lx, lz, x, z int) {
 		for y := floor + 1; y <= g; y++ {
 			set(y, Water)
 		}
-		if h < 0.08 && w.coastal(x, z) {
+		if h < 0.025 && w.coastal(x, z) {
 			set(g, FishSpot)
 		}
 		return
@@ -143,7 +143,7 @@ func (w *World) column(c []uint8, lx, lz, x, z int) {
 		}
 	case TRock:
 		under, top = Stone, Stone
-		if h < 0.05 {
+		if h < 0.01 {
 			top = CopperOre
 		}
 	case TMoor:
@@ -192,27 +192,21 @@ func (w *World) featureAt(gx, gz int) (x, z int, f feature, h float64) {
 			f = fTree
 		} else if r < 0.7 {
 			f = fBerry
-		} else if r < 0.74 {
-			f = fYew
 		}
 	case TGrass:
 		if r < 0.1 {
 			f = fTree
 		} else if r < 0.15 {
 			f = fBerry
-		} else if r < 0.18 {
+		} else if r < 0.152 {
 			f = fBoulder
-		} else if r < 0.195 {
-			f = fRowan
-		} else if r < 0.202 {
-			f = fYew
 		}
 	case TTundra, TSnow:
 		if r < 0.04 {
 			f = fTree
 		}
 	case TRock:
-		if r < 0.2 {
+		if r < 0.04 {
 			f = fBoulder
 		}
 	case TMoor:
@@ -220,10 +214,6 @@ func (w *World) featureAt(gx, gz int) (x, z int, f feature, h float64) {
 			f = fDeadwood
 		} else if r < 0.42 {
 			f = fGlimmer
-		} else if r < 0.45 {
-			f = fRowan
-		} else if r < 0.47 {
-			f = fBoulder
 		}
 	}
 	return x, z, f, h
@@ -321,6 +311,7 @@ func (w *World) genChunk(cx, cz int) []uint8 {
 			}
 		}
 	}
+	w.stampSites(c, cx, cz)
 	for _, o := range w.overlay[w.chunkKey(cx, cz)] {
 		c[local(int(o.p.X), int(o.p.Y), int(o.p.Z))] = o.b
 	}

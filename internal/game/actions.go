@@ -72,7 +72,7 @@ func (g *Game) Gather(p *Player, bx, by, bz int) error {
 	// Check space before spending effort.
 	item, xp := node.Item, node.XP
 	if len(node.Catches) > 0 {
-		item, xp = g.catch(p.Char, node)
+		item, xp = g.catch(p.Char, node, float64(bx)+0.5, float64(bz)+0.5)
 	}
 	probe, _ := applyDelta(p.Char.Inv, nil, map[string]int{item: 1})
 	if !g.fits(probe) {
@@ -395,8 +395,9 @@ func (g *Game) Sell(p *Player, item string, count int) error {
 	return nil
 }
 
-// Hearth starts a channelled return to the village (cancelled by damage or moving).
-func (g *Game) Hearth(p *Player) error {
+// Hearth starts a channelled trip to a visited town (the nearest if none is
+// named), cancelled by damage or moving.
+func (g *Game) Hearth(p *Player, place string) error {
 	if err := g.alive(p); err != nil {
 		return err
 	}
@@ -405,6 +406,12 @@ func (g *Game) Hearth(p *Player) error {
 		p.dirtyMe = true
 		return nil // pressing again cancels
 	}
+	if place == "" {
+		place = g.nearestVisited(p.Char, p.Char.X, p.Char.Z)
+	} else if !slices.Contains(p.Char.Visited, place) || g.W.Def.Place(place) == nil {
+		return fail("You can only Hearth to towns you've been to.")
+	}
+	p.hearthTo = place
 	p.hearthStart = g.Now
 	p.hearthX, p.hearthZ = p.Char.X, p.Char.Z
 	p.dirtyMe = true
@@ -422,7 +429,7 @@ func burnChance(r *content.Recipe, lvl int) float64 {
 
 // catch picks what a fishing spot yields: one of the catches the player's
 // level allows, picked at random.
-func (g *Game) catch(c *Character, n *content.Node) (string, int) {
-	ct := g.pickCatch(c.Level(n.Skill), n.Catches)
+func (g *Game) catch(c *Character, n *content.Node, x, z float64) (string, int) {
+	ct := g.pickCatch(c.Level(n.Skill), n.Catches, x, z)
 	return ct.Item, ct.XP
 }

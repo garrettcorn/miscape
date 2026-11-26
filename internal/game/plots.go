@@ -128,7 +128,7 @@ func (g *Game) collectTrap(p *Player, i int) error {
 	got := map[string]int{tr.Item: 1}
 	var ct *content.Catch
 	if it != nil && it.Trap != nil && !g.Now.Before(tr.Ready) {
-		c := g.pickCatch(p.Char.Level("hunting"), it.Trap.Catches)
+		c := g.pickCatch(p.Char.Level("hunting"), it.Trap.Catches, float64(tr.P.X)+0.5, float64(tr.P.Z)+0.5)
 		ct = &c
 		got[c.Item]++
 		for k, n := range c.Extra {
@@ -234,12 +234,14 @@ func (g *Game) tickPlots() {
 	}
 }
 
-// pickCatch chooses a random catch among those the level allows (the
-// lowest one if none do).
-func (g *Game) pickCatch(lvl int, cs []content.Catch) content.Catch {
+// pickCatch chooses a random catch among those the player's level allows
+// and the place (x,z) offers: better catches are found further from home
+// (see catchCap). The lowest one if none qualify.
+func (g *Game) pickCatch(lvl int, cs []content.Catch, x, z float64) content.Catch {
+	limit := catchCap(g.W.Tier(max(1, g.W.Danger(x, z))))
 	var ok []content.Catch
 	for _, ct := range cs {
-		if ct.Level <= lvl {
+		if ct.Level <= lvl && ct.Level <= limit {
 			ok = append(ok, ct)
 		}
 	}

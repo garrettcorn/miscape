@@ -36,18 +36,29 @@ func TestFishingNeedsARodAndKeepsTheSpot(t *testing.T) {
 	}
 	// Better fish come with levels: a novice only ever catches herring.
 	for i := 0; i < 50; i++ {
-		if it, _ := f.g.catch(p.Char, node); it != "raw_herring" {
+		if it, _ := f.g.catch(p.Char, node, float64(x), float64(z)); it != "raw_herring" {
 			t.Fatalf("level 1 caught %s", it)
 		}
 	}
+	// A master angler still only finds herring and trout in home waters...
 	p.Char.XP["fishing"] = XPForLevel(10)
 	seen := map[string]bool{}
+	for i := 0; i < 200; i++ {
+		it, _ := f.g.catch(p.Char, node, float64(x), float64(z))
+		seen[it] = true
+	}
+	if seen["raw_cod"] || seen["raw_salmon"] {
+		t.Fatalf("cod or salmon by Manchester: %v", seen)
+	}
+	// ...but everything off far-away coasts.
+	syd := f.g.W.Def.Place("sydney")
+	seen = map[string]bool{}
 	for i := 0; i < 400; i++ {
-		it, _ := f.g.catch(p.Char, node)
+		it, _ := f.g.catch(p.Char, node, syd.X+30, syd.Z)
 		seen[it] = true
 	}
 	if !seen["raw_cod"] || !seen["raw_salmon"] || !seen["raw_trout"] {
-		t.Fatalf("level 10 catches: %v", seen)
+		t.Fatalf("level 10 catches off Sydney: %v", seen)
 	}
 }
 
@@ -162,9 +173,10 @@ func TestFishwifeQuestHandsOverGear(t *testing.T) {
 	}
 }
 
-func TestNewTiersGrowNearManchester(t *testing.T) {
+// Manchester has a mine (copper and tin), a wood and a fishing ground nearby.
+func TestHotspotsNearManchester(t *testing.T) {
 	f := newFixture(t)
-	for _, b := range []uint8{world.Rowan, world.Yew, world.TinOre, world.Coal, world.IronOre, world.CopperOre} {
+	for _, b := range []uint8{world.CopperOre, world.TinOre, world.Log, world.FishSpot} {
 		f.findBlock(b, nil)
 	}
 }

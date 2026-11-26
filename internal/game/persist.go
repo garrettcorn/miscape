@@ -10,12 +10,13 @@ import (
 	"lanternfall/internal/world"
 )
 
-// SaveVersion 4 adds adventure points (characters from older saves get the
+// SaveVersion 5 remembers the towns each character has visited (older
+// characters start with the spawn town). Version 4 adds adventure points (characters from older saves get the
 // points for the quests they had already finished). Version 3 splits the old combat skill into melee, range and magic
 // (combat XP becomes melee XP). Version 2 stored block edits by position on a
 // world level; version 1 (the original 128x128 map) is migrated on load: see
 // migrateV1.
-const SaveVersion = 4
+const SaveVersion = 5
 
 // SaveData is the full persistent state of one world (one realm).
 type SaveData struct {
@@ -124,6 +125,9 @@ func Load(c *content.Content, cfg config.World, d *SaveData, out Outbox) (*Game,
 		}
 		if ch.Quests == nil {
 			ch.Quests = map[string]*QuestState{}
+		}
+		if len(ch.Visited) == 0 {
+			ch.Visited = []string{g.W.Def.Spawn}
 		}
 		// Version 4: adventure points for quests finished before they existed.
 		if d.Version < 4 {

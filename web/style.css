@@ -357,3 +357,7 @@ body.touch { --mm: 6.5em; }
 .slot .charmic { font-size: 22px; line-height: 1; filter: drop-shadow(0 0 4px rgba(255, 220, 150, 0.7)); }
 .slot.charm { background: rgba(122, 92, 143, 0.35); }
 .slot.dim .charmic { opacity: 0.4; filter: grayscale(1); }
+
+/* World map danger legend. */
+.dgrad { display: inline-block; width: 60px; height: 8px; border-radius: 4px; vertical-align: middle;
+  background: linear-gradient(90deg, hsl(120,85%,50%), hsl(60,85%,45%), hsl(0,85%,38%)); }

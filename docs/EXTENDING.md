@@ -62,15 +62,40 @@ legend colours, or regenerate it from a source map with
 [`tools/mkmap`](../tools/mkmap/main.go). The current map comes from
 Natural Earth II (public domain). The width × scale must be a multiple of 16.
 
-**Add a town:** add a place with `lat`, `lon`, `"structure": "town"`,
-`"zone": "town"` and a `radius`. Towns always stand on grass, whatever the map
-says. They get a plaza, houses, an anvil, roads, and a gate facing the nearest
-danger zone. Its named points (`place:<id>`, `town:<id>:spawn`,
-`town:<id>:gate`, `anvil`) can be used as `"at"` in content.
+**Add a town:** add a place with `lat`, `lon`, `"structure": "town"` (a city:
+plaza, houses, anvil, kitchen range, allotment, market stalls) or `"village"`
+(a green, two cottages, a stall, an anvil and a range), `"zone": "town"`, a
+`radius`, and `known`: the skills it's best known for. Towns always stand on
+grass, whatever the map says, and are safe. Each gets resource hotspots for
+the skills it's known for close by, and its named points (`place:<id>`,
+`town:<id>:spawn`, `:gate`, `:anvil`, `:range`, and `:allotment` or `:stall`)
+can be used as `"at"` in content. The spawn town's points also go by their
+plain names (`anvil`, `range`, `allotment`). Players remember the towns they
+walk into, and the Hearth Lantern takes them to any of those.
 
 **Add a danger zone:** add a zone with `"kind": "danger"`, a `radius`, and
 either `lat`/`lon` or `"at": "<place>"` with `dx`/`dz` offsets. Its ground
-becomes moor, and creatures spawned in it stay in it.
+becomes moor, and creatures spawned in it stay in it. Give it a `danger` level
+to override the one from distance.
+
+**Danger levels:** every spot has one (`world.Danger`): 0 in towns, otherwise
+1 near the spawn town rising to 10 × the world level on the far side of the
+globe, by great-circle distance. Roaming creatures are as strong as the danger
+level where they appear; ores, timber and catches get better with it.
+
+**Resource hotspots** (`world/sites.go`) are placed from the map and the seed,
+like trees, so nothing is saved: mines (1-3 ores from `world.OreBands` for the
+danger level there), woods (1-2 trees from `world.TreeBands`), fishing grounds
+(catches capped by `game.catchCap`: the best fish are far from home) and
+hunting grounds (game animals from content `hunting`). They're drawn on the
+world map and the minimap. Rowan, yew and ore outcrops only grow in hotspots;
+the open country keeps oak, berries and the odd boulder.
+
+**Roaming creatures** come from content `wilds`: `{region, mob, minTier,
+maxTier, weight}`, where region is a continent name from `regions.json` (or
+left out for anywhere) and tiers are danger on a 1-10 scale. Up to
+`game.WildsPerPlayer` appear around each player outside town and vanish when
+nobody's near.
 
 **Place NPCs and creatures:** in content, give them `"at"` (a place, zone or
 named point) and `dx`/`dz` offsets in blocks. Positions are worked out per level,

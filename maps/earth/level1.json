@@ -12,10 +12,23 @@
   "spawn": "manchester",
   "places": [
     {"id": "manchester", "name": "Manchester", "lat": 53.48, "lon": -2.24,
-     "structure": "town", "zone": "town", "radius": 18}
+     "structure": "town", "zone": "town", "radius": 18, "known": ["crafting", "firemaking"]},
+    {"id": "bergen", "name": "Bergen", "lat": 60.39, "lon": 5.32, "structure": "village", "zone": "town", "radius": 10, "known": ["fishing", "cooking"]},
+    {"id": "falun", "name": "Falun", "lat": 60.61, "lon": 15.63, "structure": "village", "zone": "town", "radius": 10, "known": ["mining", "woodcutting"]},
+    {"id": "boston", "name": "Boston", "lat": 42.36, "lon": -71.06, "structure": "town", "zone": "town", "radius": 16, "known": ["range", "fishing"]},
+    {"id": "quebec", "name": "Quebec", "lat": 46.81, "lon": -71.21, "structure": "village", "zone": "town", "radius": 10, "known": ["hunting", "woodcutting"]},
+    {"id": "rio", "name": "Rio de Janeiro", "lat": -22.91, "lon": -43.17, "structure": "town", "zone": "town", "radius": 16, "known": ["farming", "agility"]},
+    {"id": "potosi", "name": "Potosí", "lat": -19.58, "lon": -65.75, "structure": "village", "zone": "town", "radius": 10, "known": ["mining"]},
+    {"id": "cape_town", "name": "Cape Town", "lat": -33.92, "lon": 18.42, "structure": "town", "zone": "town", "radius": 16, "known": ["hunting", "range"]},
+    {"id": "cairo", "name": "Cairo", "lat": 30.04, "lon": 31.24, "structure": "village", "zone": "town", "radius": 10, "known": ["thieving", "cooking"]},
+    {"id": "timbuktu", "name": "Timbuktu", "lat": 16.77, "lon": -3.01, "structure": "village", "zone": "town", "radius": 10, "known": ["magic"]},
+    {"id": "canton", "name": "Canton", "lat": 23.13, "lon": 113.26, "structure": "town", "zone": "town", "radius": 16, "known": ["crafting", "thieving"]},
+    {"id": "calcutta", "name": "Calcutta", "lat": 22.57, "lon": 88.36, "structure": "village", "zone": "town", "radius": 10, "known": ["farming", "magic"]},
+    {"id": "sydney", "name": "Sydney Cove", "lat": -33.86, "lon": 151.21, "structure": "town", "zone": "town", "radius": 16, "known": ["slaying", "agility"]},
+    {"id": "hobart", "name": "Hobart Town", "lat": -42.88, "lon": 147.33, "structure": "village", "zone": "town", "radius": 10, "known": ["fishing", "hunting"]}
   ],
   "zones": [
     {"id": "highland_moors", "name": "The Highland Moors", "kind": "danger",
-     "lat": 57.4, "lon": -4.2, "radius": 12}
+     "lat": 57.4, "lon": -4.2, "radius": 12, "danger": 3}
   ]
 }

@@ -34,6 +34,15 @@
     {"giver": "rawcliffe", "mob": "gloamwisp", "level": 3, "min": 4, "max": 7, "xp": 32, "coins": 6},
     {"giver": "rawcliffe", "mob": "clough_boggart", "level": 8, "min": 1, "max": 1, "xp": 160, "coins": 90}
   ],
+  "wilds": [
+    {"mob": "bramblet", "minTier": 1, "maxTier": 10, "weight": 3},
+    {"mob": "gloamwisp", "minTier": 2, "maxTier": 10, "weight": 2}
+  ],
+  "hunting": [
+    {"mob": "hare", "minTier": 1},
+    {"mob": "grouse", "minTier": 2},
+    {"mob": "deer", "minTier": 4}
+  ],
   "items": [
     {"id": "coin", "name": "Coin", "desc": "A copper cartwheel penny, stamped with King George III.", "kind": "currency", "tradeable": true, "stack": 999, "color": "#f2c14e"},
     {"id": "log", "name": "Log", "desc": "Good Lancashire oak. Burns steadily on a campfire.", "kind": "material", "model": "log", "burn": {"level": 1, "xp": 12, "sec": 60}, "tradeable": true, "stack": 64, "value": 1, "color": "#9a6b3f"},

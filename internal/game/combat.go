@@ -213,7 +213,7 @@ func (g *Game) killMob(m *Mob, killer *Player) {
 	if skill == "" {
 		skill = g.weaponStyle(killer.Char)
 	}
-	g.addXP(killer, skill, m.Def.XP)
+	g.addXP(killer, skill, int(math.Round(float64(m.Def.XP)*levelScale(m.Level, 0.5))))
 	g.progress(killer, "kill", m.Def.ID, 1)
 	g.bountyKill(killer, m)
 	loot := map[string]int{}
@@ -279,6 +279,9 @@ func (g *Game) playerDied(p *Player) {
 	p.hearthStart = time.Time{}
 	g.broadcastNear(c.X, c.Z, M{"t": "die", "id": p.ID})
 	sp := g.W.Spawn()
+	if tp, ok := g.townSpawn(g.nearestVisited(c, c.X, c.Z)); ok {
+		sp = tp
+	}
 	g.teleport(p, sp.X, sp.Y, sp.Z)
 	msg := fmt.Sprintf("You were knocked out and woke up in %s.", g.W.ZoneName(sp.X, sp.Z))
 	if lost > 0 {
@@ -293,7 +296,11 @@ func (g *Game) tickMobs() {
 	for _, m := range g.Mobs {
 		if m.HP <= 0 {
 			if !m.deadUntil.IsZero() && g.Now.After(m.deadUntil) {
-				g.respawnMob(m)
+				if m.Wild {
+					delete(g.Mobs, m.ID) // roaming creatures don't come back; others will appear
+				} else {
+					g.respawnMob(m)
+				}
 			}
 			continue
 		}
@@ -343,7 +350,7 @@ func (g *Game) tickMobs() {
 				speed = 0
 				if g.Now.After(m.nextAtk) {
 					m.nextAtk = g.Now.Add(time.Duration(m.Def.CooldownMs) * time.Millisecond)
-					dmg := int(math.Round(float64(m.Def.Damage) * g.C.Rules.MobDamageMult))
+					dmg := int(math.Round(float64(m.Def.Damage) * g.C.Rules.MobDamageMult * levelScale(m.Level, 0.35)))
 					if dmg > 0 {
 						g.damagePlayer(tp, dmg, m.ID)
 					}

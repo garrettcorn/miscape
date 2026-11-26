@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"math"
 	"time"
 
@@ -138,6 +139,9 @@ func (g *Game) handleMove(p *Player, m *protocol.In) {
 	}
 	if z := g.W.ZoneAt(c.X, c.Z); z != prevZone {
 		p.dirtyMe = true
+		if z == world.ZoneTown {
+			g.visit(p)
+		}
 		if z == world.ZoneDanger {
 			g.toast(p, "You enter "+g.W.ZoneName(c.X, c.Z)+". Creatures here hit harder, and a knock-out costs coins. Hold Hearth to return home.", "danger")
 		}
@@ -164,5 +168,6 @@ func (g *Game) placeKey(c *Character) string {
 	if g.atSea(c) {
 		s += "|sea"
 	}
+	s += fmt.Sprintf("|%d", g.W.Danger(c.X, c.Z))
 	return s
 }

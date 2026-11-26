@@ -7,6 +7,28 @@ import { esc } from './ui.js';
 
 const MIN_ZOOM = 0.15, MAX_ZOOM = 6; // screen pixels per block
 
+// Resource hotspot icons, shared with the minimap.
+export const SITE_ICON = { mine: '⛏', wood: '🌲', fishing: '🎣', hunting: '🐾' };
+export const SITE_NAME = { mine: 'Mine', wood: 'Wood', fishing: 'Fishing ground', hunting: 'Hunting ground' };
+
+// dangerAt mirrors world.Danger's distance part: the great-circle angle from
+// the spawn town, spread over 1..max.
+export function dangerAt(world, dv, x, z) {
+  if (!dv) return 1;
+  const r = Math.PI / 180, lon = (world.wrapX(x) / world.sx) * 360 - 180, lat = 90 - (z / world.sz) * 180;
+  const dp = (lat - dv.lat) * r, dl = (lon - dv.lon) * r;
+  const h = Math.sin(dp / 2) ** 2 + Math.cos(lat * r) * Math.cos(dv.lat * r) * Math.sin(dl / 2) ** 2;
+  const a = 2 * Math.asin(Math.min(1, Math.sqrt(h))) / r;
+  return 1 + Math.round((dv.max - 1) * a / 180);
+}
+
+// Danger colors: green near home through yellow to deep red far away.
+export function dangerColor(d, max) {
+  const t = Math.min(1, Math.max(0, (d - 1) / Math.max(1, max - 1)));
+  const hue = 120 * (1 - t);
+  return `hsl(${hue.toFixed(0)}, 85%, ${(50 - t * 12).toFixed(0)}%)`;
+}
+
 export class WorldMap {
   constructor(game) {
     this.g = game;
@@ -43,10 +65,12 @@ export class WorldMap {
         <button class="btn" data-do="mapZoom" data-arg="1" data-fid="wm-in" aria-label="Zoom in">＋</button>
         <button class="btn" data-do="mapZoom" data-arg="-1" data-fid="wm-out" aria-label="Zoom out">－</button>
         <button class="btn" data-do="mapCenter" data-fid="wm-me">◎ Center on me</button>
+        <button class="btn ${this.showDanger ? 'primary' : ''}" data-do="mapDanger" data-fid="wm-danger" aria-pressed="${!!this.showDanger}">⚠ Danger</button>
+        <button class="btn ${this.showSites !== false ? 'primary' : ''}" data-do="mapSites" data-fid="wm-sites" aria-pressed="${this.showSites !== false}">⛏ Hotspots</button>
         <span class="grow"></span>
         <span class="note" id="wmwhere">${esc(me && me.zoneName ? me.zoneName + ' · ' : '')}${esc(ll)}</span>
       </div>
-      <div class="wmlegend note"><span class="k town"></span>Town <span class="k danger"></span>Danger zone <span class="k me"></span>You <span class="k player"></span>Players</div>
+      <div class="wmlegend note"><span class="k town"></span>Town <span class="k danger"></span>Danger zone <span class="k me"></span>You <span class="k player"></span>Players · ⛏ mine 🌲 wood 🎣 fishing 🐾 hunting${this.showDanger ? ' · <span class="dgrad"></span> danger 1 → ' + ((this.g.worldInfo && this.g.worldInfo.danger && this.g.worldInfo.danger.max) || 10) : ''}</div>
     </div>`;
   }
 
@@ -115,7 +139,38 @@ export class WorldMap {
     const x = cx + (e.clientX - r.left - r.width / 2) / this.zoom, z = cz + (e.clientY - r.top - r.height / 2) / this.zoom;
     if (z < 0 || z > w.sz) return;
     const zone = (this.g.zones || []).find((zn) => w.dist(x, z, zn.x, zn.z) <= zn.r);
-    el.textContent = `${zone ? zone.name + ' · ' : ''}${this.latLon(x, z)}`;
+    const sites = (this.g.worldInfo && this.g.worldInfo.sites) || [];
+    const site = this.showSites !== false && sites.find((s) => w.dist(x, z, s.x, s.z) <= Math.max(s.r, 8 / this.zoom));
+    let text;
+    if (site) text = `${SITE_ICON[site.kind]} ${SITE_NAME[site.kind]}${site.what && site.what.length ? ': ' + site.what.join(', ') : ''} · danger ${site.danger}`;
+    else if (zone && zone.kind === 'town') text = `${zone.name}${zone.known && zone.known.length ? ' · known for ' + zone.known.map((k) => this.g.ui.skillName(k)).join(', ') : ''}${(this.g.me.visited || []).includes(zone.id) ? ' · visited' : ''}`;
+    else text = `${zone ? zone.name + ' · ' : ''}danger ${dangerAt(w, this.g.worldInfo && this.g.worldInfo.danger, x, z)}`;
+    el.textContent = `${text} · ${this.latLon(x, z)}`;
+  }
+
+  // A tint over the land by danger level, from a small image built once
+  // (one pixel per 16 blocks) and stretched over the map.
+  drawDanger(ctx, W, H, z, cx, cz) {
+    const w = this.g.world, dv = this.g.worldInfo && this.g.worldInfo.danger;
+    if (!w || !dv) return;
+    if (!this.dangerImg) {
+      const cw = Math.ceil(w.sx / 16), ch = Math.ceil(w.sz / 16);
+      const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+      const cc = c.getContext('2d');
+      for (let j = 0; j < ch; j++) for (let i = 0; i < cw; i++) {
+        cc.fillStyle = dangerColor(dangerAt(w, dv, i * 16 + 8, j * 16 + 8), dv.max);
+        cc.fillRect(i, j, 1, 1);
+      }
+      this.dangerImg = c;
+    }
+    const iw = w.sx * z, ih = w.sz * z;
+    let x0 = W / 2 - cx * z;
+    x0 -= Math.ceil(x0 / iw) * iw;
+    ctx.save();
+    ctx.globalAlpha = 0.38;
+    ctx.imageSmoothingEnabled = true;
+    for (let x = x0; x < W; x += iw) ctx.drawImage(this.dangerImg, x, H / 2 - cz * z, iw, ih);
+    ctx.restore();
   }
 
   // Continent and ocean names. Every copy of the wrapping map that's on screen
@@ -184,6 +239,7 @@ export class WorldMap {
       ctx.fillText(this.failed ? 'The map couldn’t be loaded.' : 'Loading map…', W / 2, H / 2);
     }
     const toX = (wx) => W / 2 + w.dx(cx, wx) * z;
+    if (this.showDanger) this.drawDanger(ctx, W, H, z, cx, cz);
     // Zones and town names (a name is skipped if it would overlap one already drawn).
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     const labels = [];
@@ -209,6 +265,23 @@ export class WorldMap {
       ctx.strokeText(zn.name, px, py - r - 3 * dpr);
       ctx.fillStyle = danger ? '#ffc2dc' : '#fff1c8';
       ctx.fillText(zn.name, px, py - r - 3 * dpr);
+    }
+    if (this.showSites !== false) {
+      // Hotspot icons: big enough to read when zoomed in, dots when zoomed out.
+      const sites = (g.worldInfo && g.worldInfo.sites) || [];
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (const s of sites) {
+        const px = toX(s.x), py = toY(s.z);
+        if (px < -20 || py < -20 || px > W + 20 || py > H + 20) continue;
+        if (this.zoom < 0.35) {
+          ctx.beginPath(); ctx.arc(px, py, 2 * dpr, 0, Math.PI * 2);
+          ctx.fillStyle = { mine: '#c9c3b8', wood: '#4fbf5a', fishing: '#7cc4ff', hunting: '#e0a060' }[s.kind] || '#fff'; ctx.fill();
+          continue;
+        }
+        ctx.font = `${Math.round(13 * dpr)}px system-ui, sans-serif`;
+        ctx.fillText(SITE_ICON[s.kind] || '•', px, py);
+      }
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     }
     if (g.body) labels.push([toX(g.body.x), toY(g.body.z), 22 * dpr, 22 * dpr]);
     if (!regionsFirst) this.drawRegionLabels(ctx, W, H, z, dpr, toX, toY, labels);

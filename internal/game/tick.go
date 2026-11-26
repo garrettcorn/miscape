@@ -15,6 +15,7 @@ func (g *Game) Tick(now time.Time) {
 	g.tickRegen()
 	g.tickFires()
 	g.tickPlots()
+	g.tickWilds()
 	g.tickPlayers()
 	g.tickDrops()
 	g.tickTrades()
@@ -62,9 +63,13 @@ func (g *Game) tickPlayers() {
 				p.dirtyMe = true
 			} else if g.Now.Sub(p.hearthStart).Seconds() >= HearthSeconds {
 				p.hearthStart = time.Time{}
-				sp := g.W.Spawn()
-				g.teleport(p, sp.X, sp.Y, sp.Z)
-				g.toast(p, "The lantern's glow carries you home.", "good")
+				if sp, ok := g.townSpawn(p.hearthTo); ok {
+					g.teleport(p, sp.X, sp.Y, sp.Z)
+				} else {
+					sp := g.W.Spawn()
+					g.teleport(p, sp.X, sp.Y, sp.Z)
+				}
+				g.toast(p, "The lantern's glow carries you to "+g.W.ZoneName(c.X, c.Z)+".", "good")
 			}
 		}
 	}
@@ -107,6 +112,7 @@ type snapMob struct {
 	Yaw    float64 `json:"r"`
 	HP     int     `json:"hp"`
 	MaxHP  int     `json:"mhp"`
+	Level  int     `json:"lv,omitempty"`
 	Aggro  bool    `json:"a"` // targeting this viewer
 	target uint32
 }
@@ -142,7 +148,7 @@ func (g *Game) sendSnapshots() {
 	mobs := make([]snapMob, 0, len(g.Mobs))
 	for id, m := range g.Mobs {
 		if m.HP > 0 {
-			mobs = append(mobs, snapMob{ID: id, Kind: m.Def.ID, X: r2(m.X), Y: r2(m.Y), Z: r2(m.Z), Yaw: r2(m.Yaw), HP: m.HP, MaxHP: m.MaxHP, target: m.target})
+			mobs = append(mobs, snapMob{ID: id, Kind: m.Def.ID, X: r2(m.X), Y: r2(m.Y), Z: r2(m.Z), Yaw: r2(m.Yaw), HP: m.HP, MaxHP: m.MaxHP, Level: m.Level, target: m.target})
 		}
 	}
 	drops := make([]snapDrop, 0, len(g.Drops))

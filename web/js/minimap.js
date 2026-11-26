@@ -1,3 +1,4 @@
+import { SITE_ICON } from './worldmap.js';
 // Minimap (HUD corner) and shared map helpers. The minimap is drawn from the
 // chunks the client already has: each chunk becomes a cached 16x16 image of
 // its top blocks, colored from the game's own block textures, so it costs
@@ -99,6 +100,14 @@ export class MiniMap {
       ctx.stroke();
     }
     ctx.setLineDash([]);
+    // Resource hotspots.
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `${Math.round(12 * dpr)}px system-ui, sans-serif`;
+    for (const st of (g.worldInfo && g.worldInfo.sites) || []) {
+      const px = toX(st.x), py = toY(st.z);
+      if (px < -8 || py < -8 || px > size + 8 || py > size + 8) continue;
+      ctx.fillText(SITE_ICON[st.kind] || '•', px, py);
+    }
     const dot = (x, z, col, r) => {
       const px = toX(x), py = toY(z);
       if (px < -4 || py < -4 || px > size + 4 || py > size + 4) return;

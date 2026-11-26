@@ -59,16 +59,17 @@ type Game struct {
 	Mobs    map[uint32]*Mob
 	nextID  uint32
 
-	regens   []regen
-	fires    []fire
-	traps    []plot
-	crops    []plot
-	nodeHits map[world.Pos]int
-	placed   map[world.Pos]string // block -> placer char id
-	Trades   map[uint32]*Trade
-	Drops    map[uint32]*Drop
-	Invites  map[string]*Invite
-	Bans     map[string]*Ban
+	regens    []regen
+	fires     []fire
+	traps     []plot
+	nextWilds time.Time
+	crops     []plot
+	nodeHits  map[world.Pos]int
+	placed    map[world.Pos]string // block -> placer char id
+	Trades    map[uint32]*Trade
+	Drops     map[uint32]*Drop
+	Invites   map[string]*Invite
+	Bans      map[string]*Ban
 
 	// rid cache: per character, survives reconnects within a process run.
 	rids map[string]*ridCache
@@ -155,16 +156,20 @@ func (g *Game) spawnMobs() {
 	for _, s := range g.C.Spawns {
 		def := g.C.Mobs[s.Mob]
 		for i := 0; i < s.Count; i++ {
-			m := &Mob{ID: g.allocID(), Def: def, Spawn: s}
+			m := &Mob{ID: g.allocID(), Def: def, Spawn: s, Level: 1}
 			g.respawnMob(m)
 			g.Mobs[m.ID] = m
 		}
 	}
 }
 
-func (g *Game) mobMaxHP(def *content.Mob) int {
-	return max(1, int(math.Round(float64(def.HP)*g.C.Rules.MobHPMultiplier)))
+func (g *Game) mobMaxHP(def *content.Mob, level int) int {
+	return max(1, int(math.Round(float64(def.HP)*g.C.Rules.MobHPMultiplier*levelScale(level, 0.45))))
 }
+
+// levelScale is how much a creature's stat grows with its level: 1 at level
+// 1, plus per for every level above.
+func levelScale(level int, per float64) float64 { return 1 + per*float64(max(1, level)-1) }
 
 func (g *Game) respawnMob(m *Mob) {
 	// Pick a dry spot outside town, falling back to the spawn center.
@@ -179,7 +184,7 @@ func (g *Game) respawnMob(m *Mob) {
 		}
 	}
 	m.Y = float64(max(0, g.W.GroundY(int(m.X), int(m.Z))))
-	m.MaxHP = g.mobMaxHP(m.Def)
+	m.MaxHP = g.mobMaxHP(m.Def, m.Level)
 	m.HP = m.MaxHP
 	m.target = 0
 	m.deadUntil = time.Time{}

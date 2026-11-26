@@ -31,8 +31,9 @@ type Character struct {
 	Placed    int                    `json:"placed"`
 	Created   time.Time              `json:"created"`
 	LastSeen  time.Time              `json:"lastSeen"`
-	Bounty    *BountyState           `json:"bounty,omitempty"` // an open slaying warrant
-	AP        int                    `json:"ap"`               // adventure points, earned from quests
+	Bounty    *BountyState           `json:"bounty,omitempty"`  // an open slaying warrant
+	AP        int                    `json:"ap"`                // adventure points, earned from quests
+	Visited   []string               `json:"visited,omitempty"` // towns walked into (Hearth destinations)
 
 	levelCap int // the world's skill level cap (set when added to a game)
 }
@@ -54,6 +55,7 @@ type Player struct {
 	lastRegen        time.Time
 	hearthStart      time.Time
 	hearthX, hearthZ float64
+	hearthTo         string // the town the Hearth Lantern is taking them to
 	trade            *Trade
 	dead             bool
 	dirtyMe          bool
@@ -72,6 +74,9 @@ type Mob struct {
 	ID        uint32
 	Def       *content.Mob
 	Spawn     content.Spawn
+	Level     int  // danger level it scales with (1 for hand-placed creatures)
+	Wild      bool // a roaming creature: despawns when nobody is near
+	lonely    time.Time
 	X, Y, Z   float64
 	Yaw       float64
 	HP, MaxHP int

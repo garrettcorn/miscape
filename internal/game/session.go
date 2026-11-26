@@ -98,6 +98,9 @@ func (g *Game) Join(s Session, h *protocol.In) (pid uint32, token string, err er
 
 func (g *Game) addChar(c *Character) {
 	c.levelCap = g.LevelCap()
+	if len(c.Visited) == 0 {
+		c.Visited = []string{g.W.Def.Spawn}
+	}
 	g.Chars[c.ID] = c
 	g.tokens[c.TokenHash] = c.ID
 	g.names[strings.ToLower(c.Name)] = c.ID
@@ -141,7 +144,7 @@ func (g *Game) meMsg(p *Player) M {
 	if !p.hearthStart.IsZero() {
 		hearth = g.Now.Sub(p.hearthStart).Seconds() / HearthSeconds
 	}
-	return M{"t": "me", "name": c.Name, "color": c.Color, "hp": c.HP, "mhp": c.MaxHP(), "inv": c.Inv, "eq": c.Equipped, "skills": skills, "cap": g.LevelCap(), "combat": c.CombatLevel(), "fx": g.effectsView(p), "run": g.runView(p), "bounty": c.Bounty, "ap": c.AP,
+	return M{"t": "me", "name": c.Name, "color": c.Color, "hp": c.HP, "mhp": c.MaxHP(), "inv": c.Inv, "eq": c.Equipped, "skills": skills, "cap": g.LevelCap(), "combat": c.CombatLevel(), "fx": g.effectsView(p), "run": g.runView(p), "bounty": c.Bounty, "ap": c.AP, "danger": g.W.Danger(c.X, c.Z), "visited": g.visitedView(c),
 		"quests": c.Quests, "slots": g.slotsUsed(c.Inv), "maxSlots": InventorySlots,
 		"zone": g.W.ZoneAt(c.X, c.Z), "zoneName": g.W.ZoneName(c.X, c.Z), "sea": g.atSea(c), "hearth": hearth, "trade": g.tradeView(p)}
 }
@@ -163,11 +166,11 @@ func (g *Game) worldView() M {
 	var zones []M
 	for _, p := range w.Def.Places {
 		if p.Zone == world.ZoneTown {
-			zones = append(zones, M{"id": p.ID, "name": p.Name, "kind": world.ZoneTown, "x": p.X, "z": p.Z, "r": p.Radius})
+			zones = append(zones, M{"id": p.ID, "name": p.Name, "kind": world.ZoneTown, "x": p.X, "z": p.Z, "r": p.Radius, "known": p.Known, "village": p.Structure == "village"})
 		}
 	}
 	for _, z := range w.Def.Zones {
-		zones = append(zones, M{"id": z.ID, "name": z.Name, "kind": z.Kind, "x": z.X, "z": z.Z, "r": z.Radius})
+		zones = append(zones, M{"id": z.ID, "name": z.Name, "kind": z.Kind, "x": z.X, "z": z.Z, "r": z.Radius, "danger": z.Danger})
 	}
 	sp := w.Spawn()
 	a, _ := w.Point("anvil")
@@ -179,6 +182,8 @@ func (g *Game) worldView() M {
 		"map":   g.mapView(),
 		"spawn": []float64{sp.X, sp.Y, sp.Z}, "anvil": []float64{a.X, a.Y, a.Z},
 		"regions": g.regionView(),
+		"sites":   g.siteView(),
+		"danger":  g.dangerView(),
 	}
 }
 

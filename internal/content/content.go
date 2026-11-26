@@ -310,6 +310,8 @@ type Pack struct {
 	Charms   []Charm     `json:"charms,omitempty"`
 	Courses  []Course    `json:"courses,omitempty"`
 	Bounties []Bounty    `json:"bounties,omitempty"`
+	Wilds    []Wild      `json:"wilds,omitempty"`
+	Hunting  []Quarry    `json:"hunting,omitempty"`
 	Items    []Item      `json:"items"`
 	Recipes  []Recipe    `json:"recipes"`
 	Mobs     []Mob       `json:"mobs"`
@@ -326,6 +328,8 @@ type Content struct {
 	Charms   []*Charm // in display order
 	Courses  []*Course
 	Bounties []Bounty
+	Wilds    []Wild
+	Hunting  []Quarry
 	Items    map[string]*Item
 	Recipes  map[string]*Recipe
 	Mobs     map[string]*Mob
@@ -387,6 +391,8 @@ func (c *Content) merge(p *Pack, ns string) error {
 		return fmt.Errorf("mods can't add bounties in mod API 1")
 	}
 	c.Bounties = append(c.Bounties, p.Bounties...)
+	c.Wilds = append(c.Wilds, p.Wilds...)
+	c.Hunting = append(c.Hunting, p.Hunting...)
 	for i := range p.Courses {
 		if ns != "" {
 			return fmt.Errorf("mods can't add agility courses in mod API 1")
@@ -470,6 +476,16 @@ func (c *Content) Validate() error {
 	for _, s := range c.Skills {
 		if !skillIDRe.MatchString(s.ID) || s.Name == "" || !slices.Contains(SkillGroups, s.Group) {
 			return fmt.Errorf("skill %q: bad id, name or group %q", s.ID, s.Group)
+		}
+	}
+	for _, wd := range c.Wilds {
+		if c.Mobs[wd.Mob] == nil || wd.MinTier < 1 || wd.MaxTier < wd.MinTier || wd.MaxTier > 10 || wd.Weight < 0 {
+			return fmt.Errorf("wild %s/%s: bad mob or tiers", wd.Region, wd.Mob)
+		}
+	}
+	for _, q := range c.Hunting {
+		if c.Mobs[q.Mob] == nil || q.MinTier < 1 || q.MinTier > 10 {
+			return fmt.Errorf("hunting %s: bad mob or tier", q.Mob)
 		}
 	}
 	for _, b := range c.Bounties {
@@ -933,4 +949,22 @@ type Course struct {
 	At       string       `json:"at"`
 	Offsets  [][2]float64 `json:"offsets"`
 	Points   [][2]float64 `json:"points,omitempty"`
+}
+
+// Wild is a creature that roams the countryside of a region (a continent's
+// name from the map's regions, or "" for anywhere) between two danger tiers
+// (1-10). Roaming creatures are as strong as the danger level where they
+// appear. Weight is how common it is (default 1).
+type Wild struct {
+	Region  string `json:"region,omitempty"`
+	Mob     string `json:"mob"`
+	MinTier int    `json:"minTier"`
+	MaxTier int    `json:"maxTier"`
+	Weight  int    `json:"weight,omitempty"`
+}
+
+// Quarry is a game animal found at hunting grounds from a danger tier up.
+type Quarry struct {
+	Mob     string `json:"mob"`
+	MinTier int    `json:"minTier"`
 }

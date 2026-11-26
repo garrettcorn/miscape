@@ -266,7 +266,7 @@ func TestRegionsNameTheCountryside(t *testing.T) {
 			{40.0, -77.0, "the North American countryside"},  // Pennsylvania
 			{-15.8, -47.9, "the South American countryside"}, // Brasília
 			{24, 15, "the African countryside"},              // Sahara
-			{30.0, 31.2, "the African countryside"},          // Cairo
+			{15.0, 20.0, "the African countryside"},          // Chad
 			{24.7, 46.7, "the Asian countryside"},            // Riyadh
 			{39.9, 116.4, "the Asian countryside"},           // Beijing
 			{-25, 134, "the Australian countryside"},         // Alice Springs

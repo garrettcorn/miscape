@@ -160,7 +160,8 @@ export class UI {
     // Zone kinds come from the server; names come from the world's map files.
     const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
     const wild = `${me.sea ? '🌊' : '🌿'} ${cap(me.zoneName || 'the countryside')}`; // e.g. "The European countryside"
-    const zn = me.zone === 'town' ? `🏙 ${me.zoneName} — safe` : me.zone === 'danger' ? `⚠ DANGER · ${me.zoneName}` : wild;
+    const dz = me.danger ? ` · Danger ${me.danger}` : '';
+    const zn = me.zone === 'town' ? `🏙 ${me.zoneName} — safe` : me.zone === 'danger' ? `⚠ DANGER · ${me.zoneName}${dz}` : wild + dz;
     z.textContent = zn;
     z.className = me.zone === 'danger' ? 'gloam' : '';
     $('#vignette').classList.toggle('on', me.zone === 'danger' && !settings.reduceMotion);
@@ -301,6 +302,7 @@ export class UI {
     if (!this.panel) return;
     if (this.panel.kind === 'dialog') return this.renderDialog();
     if (this.panel.kind === 'trade') return this.renderTrade();
+    if (this.panel.kind === 'hearth') return; // drawn once by hearthPicker
     this.lastTab = this.panel.tab;
     const tab = MENU_TABS.find((t) => t.id === this.panel.tab) || MENU_TABS[0];
     this.setBody(tab.render(this));
@@ -350,6 +352,9 @@ export class UI {
       case 'craftOnly': this.craftOnly = !this.craftOnly; this.renderPanel(); return;
       case 'mapZoom': g.worldMap.setZoom(g.worldMap.zoom * (+arg > 0 ? 1.5 : 1 / 1.5)); return;
       case 'mapCenter': g.worldMap.center = null; g.worldMap.draw(); return;
+      case 'mapDanger': g.worldMap.showDanger = !g.worldMap.showDanger; this.renderPanel(); return;
+      case 'mapSites': g.worldMap.showSites = g.worldMap.showSites === false; this.renderPanel(); return;
+      case 'hearthTo': this.close(); r = await n.request({ t: 'hearth', place: arg }); break;
       case 'craft': {
         r = await n.request({ t: 'craft', recipe: arg });
         const rec = g.recipes.find((x) => x.id === arg);
@@ -368,7 +373,12 @@ export class UI {
         r = await n.request({ t: 'sell', item: arg, count: cnt });
         break;
       }
-      case 'hearth': this.close(); r = await n.request({ t: 'hearth' }); break;
+      case 'hearth': {
+        // With more than one town visited, choose where to go.
+        const towns = (g.me.visited || []).map((id) => g.zones.find((z) => z.id === id)).filter(Boolean);
+        if (towns.length > 1 && !g.me.hearth) { this.hearthPicker(towns); return; }
+        this.close(); r = await n.request({ t: 'hearth' }); break;
+      }
       case 'offer': {
         const tr = g.me.trade; if (!tr) return;
         const o = { ...(tr.mine || {}) };
@@ -674,6 +684,16 @@ export class UI {
         In menus: Ⓐ choose · Ⓑ back · Ⓧ drop one · LB/RB switch tabs.</p>
       <h4>Touch</h4><p class="note">Left stick to move, drag the right side to look. ⚔ attack/gather (auto-targets the nearest creature), ✋ use/place, 💬 talk/trade. Drop items from the ☰ menu’s Pack.</p>
       <h4>Keyboard &amp; mouse (click to remap)</h4>${rows}<button class="btn" data-do="resetKeys" data-fid="rk">Reset to defaults</button></div>`;
+  }
+
+  // The Hearth Lantern's destinations: visited towns, nearest first.
+  hearthPicker(towns) {
+    const g = this.g, b = g.body;
+    towns.sort((a, c) => g.world.dist(b.x, b.z, a.x, a.z) - g.world.dist(b.x, b.z, c.x, c.z));
+    this.openPanel('hearth');
+    $('#paneltitle').textContent = 'Hearth Lantern';
+    this.setBody(`<p class="note">Hold still while the lantern glows; moving or being hit breaks it.</p><div class="grid">${towns.map((t, i) => `<button class="item" data-do="hearthTo" data-arg="${esc(t.id)}" data-fid="h-${esc(t.id)}"><span class="charmic">🏮</span><span><b>${esc(t.name)}</b><small>${i === 0 ? 'nearest · ' : ''}${Math.round(g.world.dist(b.x, b.z, t.x, t.z))} blocks away${t.known && t.known.length ? ' · ' + t.known.map((k) => esc(this.skillName(k))).join(', ') : ''}</small></span></button>`).join('')}</div>`);
+    this.focusFirst();
   }
 
   // ---------- NPC dialog ----------

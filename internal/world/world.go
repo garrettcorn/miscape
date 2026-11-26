@@ -113,6 +113,8 @@ type World struct {
 	nEdits   int
 	cache    map[int64]*chunk
 	useClock uint64
+	sites    []*Site
+	siteIdx  map[int64][]*Site // sites reaching into each chunk
 }
 
 type overlayBlock struct {
@@ -131,6 +133,7 @@ func New(d *Def) *World {
 		cache: map[int64]*chunk{}, Points: map[string]Point{},
 	}
 	w.buildStructures()
+	w.buildSites()
 	return w
 }
 

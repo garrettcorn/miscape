@@ -22,10 +22,12 @@ const (
 	// and plant messages).
 	// Version 5: thieving and slaying (stall blocks 40-41; steal, bounty_take
 	// and bounty_claim).
-	ProtoMin = 5
-	ProtoMax = 5
+	// Version 6: towns on every continent, danger levels and hotspots (sent in
+	// welcome), and Hearth to a chosen visited town.
+	ProtoMin = 6
+	ProtoMax = 6
 	// Current is what this server speaks natively.
-	Current = 5
+	Current = 6
 
 	// MaxCoord bounds block and chunk coordinates; the game checks them
 	// against the actual world size.
@@ -85,6 +87,7 @@ type In struct {
 
 	Recipe string         `json:"recipe,omitempty"`
 	Charm  string         `json:"charm,omitempty"`
+	Place  string         `json:"place,omitempty"` // hearth: the town to go to
 	Item   string         `json:"item,omitempty"`
 	Count  int            `json:"count,omitempty"`
 	NPC    string         `json:"npc,omitempty"`
@@ -226,6 +229,10 @@ func Validate(m *In) error {
 	case "buy", "sell":
 		if !validID(m.Item) || m.Count < 1 || m.Count > 999 {
 			return bad("item/count")
+		}
+	case "hearth":
+		if m.Place != "" && !validID(m.Place) {
+			return bad("place")
 		}
 	case "talk", "steal", "bounty_take", "bounty_claim":
 		if !validID(m.NPC) {

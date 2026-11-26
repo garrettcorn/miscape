@@ -46,17 +46,21 @@ func (w *World) buildStructures() {
 	for _, p := range w.Def.Places {
 		ox, oz := int(math.Floor(p.X)), int(math.Floor(p.Z))
 		w.Points["place:"+p.ID] = Point{float64(ox) + 0.5, float64(w.Def.GroundY + 1), float64(oz) + 0.5}
-		if p.Structure != "town" {
+		if p.Structure != "town" && p.Structure != "village" {
 			continue
 		}
 		r := p.Radius
 		if r <= 0 {
-			r = 18
+			r = map[string]float64{"town": 18, "village": 10}[p.Structure]
 		}
 		// Trees stay out of town and off the roads just outside it.
 		w.clear = append(w.clear, clearing{float64(ox) + 0.5, float64(oz) + 0.5, r + 8})
 		b := &builder{w: w, blocks: all, ox: ox, oz: oz, g: w.Def.GroundY}
-		b.town(p.ID, int(r), w.gateDir(p.X, p.Z))
+		if p.Structure == "village" {
+			b.village(p.ID, int(r), w.gateDir(p.X, p.Z))
+		} else {
+			b.town(p.ID, int(r), w.gateDir(p.X, p.Z))
+		}
 	}
 	for p, blk := range all {
 		k := w.chunkKey(int(p.X)/Chunk, int(p.Z)/Chunk)
@@ -142,14 +146,72 @@ func (b *builder) town(id string, r int, gate [2]int) {
 	pt := func(name string, dx, dz float64) {
 		w.Points[name] = Point{w.WrapX(float64(b.ox) + dx), float64(g + 1), float64(b.oz) + dz}
 	}
-	pt("anvil", -6, 3)
-	pt("range", 5, -3)
-	pt("allotment", 10.5, 8.5)
-	pt("town:"+id+":spawn", 0.5, 6.5)
-	if _, ok := w.Points["spawn"]; !ok && w.Def.Spawn == id {
-		pt("spawn", 0.5, 6.5)
+	townPt := func(name string, dx, dz float64) {
+		pt("town:"+id+":"+name, dx, dz)
+		if w.Def.Spawn == id {
+			pt(name, dx, dz)
+		}
 	}
+	townPt("anvil", -6, 3)
+	townPt("range", 5, -3)
+	townPt("allotment", 10.5, 8.5)
+	townPt("spawn", 0.5, 6.5)
 	pt("town:"+id+":gate", float64(gate[0]*(r+4))+0.5, float64(gate[1]*(r+4))+0.5)
+}
+
+// village is a small settlement: a cobbled green with a well, a ring of
+// lamps, two cottages, a market stall, an anvil and a kitchen range, and two
+// roads out. Its points are town:<id>:spawn, :gate, :anvil, :range and :stall.
+func (b *builder) village(id string, r int, gate [2]int) {
+	g := b.g
+	for z := -4; z <= 4; z++ {
+		for x := -4; x <= 4; x++ {
+			if math.Hypot(float64(x), float64(z)) <= 4.3 {
+				b.set(x, g, z, Cobble)
+			}
+		}
+	}
+	reach := r + 6
+	for _, d := range [][2]int{gate, {-gate[0], -gate[1]}} {
+		for i := 0; i <= reach; i++ {
+			x, z := d[0]*i, d[1]*i
+			for k := -1; k <= 1; k++ {
+				if b.land(x+k*d[1], z+k*d[0]) {
+					b.set(x+k*d[1], g, z+k*d[0], Cobble)
+				}
+			}
+		}
+	}
+	for i := 0; i < 6; i++ {
+		a := float64(i)*math.Pi/3 + math.Pi/6
+		b.lamp(int(math.Round(math.Cos(a)*5.5)), int(math.Round(math.Sin(a)*5.5)))
+	}
+	b.box(-1, g+1, -1, 1, g+1, 1, Cobble)
+	b.set(0, g+1, 0, Water)
+	// Cottages either side of the road, clear of the green and the lamps.
+	if gate[0] != 0 {
+		b.house(-8, 6, false)
+		b.house(-8, -11, true)
+	} else {
+		b.house(6, -8, true)
+		b.house(-11, -8, true)
+	}
+	// A stall, an anvil and a range around the green.
+	b.box(3, g+1, 3, 4, g+1, 3, Plank)
+	b.set(3, g+2, 3, Stall)
+	b.set(-3, g, 3, Cobble)
+	b.set(-3, g+1, 3, Anvil)
+	b.set(3, g+1, -3, Range)
+
+	w := b.w
+	pt := func(name string, dx, dz float64) {
+		w.Points["town:"+id+":"+name] = Point{w.WrapX(float64(b.ox) + dx), float64(g + 1), float64(b.oz) + dz}
+	}
+	pt("spawn", 0.5, -2.5)
+	pt("anvil", -3, 3)
+	pt("range", 3, -3)
+	pt("stall", 3, 3)
+	pt("gate", float64(gate[0]*(r+4))+0.5, float64(gate[1]*(r+4))+0.5)
 }
 
 func (b *builder) lamp(x, z int) {

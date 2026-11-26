@@ -225,7 +225,7 @@ class Game {
       ms.add(q.id);
       let e = this.mobs.get(q.id);
       if (!e || e.dead) { e = { id: q.id, x: q.x, y: q.y, z: q.z, yaw: q.r, flash: 0 }; this.mobs.set(q.id, e); }
-      Object.assign(e, { tx: q.x, ty: q.y, tz: q.z, tyaw: q.r, kind: q.k, hp: q.hp, mhp: q.mhp, aggro: q.a });
+      Object.assign(e, { tx: q.x, ty: q.y, tz: q.z, tyaw: q.r, kind: q.k, hp: q.hp, mhp: q.mhp, lv: q.lv || 1, aggro: q.a });
     }
     for (const id of this.mobs.keys()) if (!ms.has(id)) this.mobs.delete(id);
     this.drops.clear();
@@ -299,7 +299,12 @@ class Game {
       if (inp.pressed.has('hotNext')) ui.cycleHot(1);
       for (let i = 1; i <= 8; i++) if (inp.pressed.has('slot' + i)) { ui.hot = i - 1; ui.renderHotbar(this.me); }
       if (inp.pressed.has('drop')) ui.dropHot();
-      if (inp.pressed.has('hearth')) this.net.request({ t: 'hearth' }).then((r) => { if (!r.ok) ui.toast(r.err, 'warn'); });
+      if (inp.pressed.has('hearth')) {
+        // With more than one town visited (and not already on the way), choose where to go.
+        const towns = (this.me.visited || []).map((id) => this.zones.find((z) => z.id === id)).filter(Boolean);
+        if (towns.length > 1 && !this.me.hearth) ui.hearthPicker(towns);
+        else this.net.request({ t: 'hearth' }).then((r) => { if (!r.ok) ui.toast(r.err, 'warn'); });
+      }
     }
     // Movement relative to camera yaw. Forward = (sin yaw, cos yaw).
     const [mx, mz] = ui.open ? [0, 0] : inp.move;
@@ -443,7 +448,7 @@ class Game {
     const dev = this.input.device;
     if (best) {
       const def = this.mobDefs[best.kind];
-      tEl.innerHTML = `<b>${esc(def ? def.name : best.kind)}</b><div class="thp"><div style="width:${best.hp / best.mhp * 100}%"></div></div>`;
+      tEl.innerHTML = `<b>${esc(def ? def.name : best.kind)}${best.lv > 1 ? ` · Lv ${best.lv}` : ''}</b><div class="thp"><div style="width:${best.hp / best.mhp * 100}%"></div></div>`;
     } else if (this.targetBlock) {
       const tb = this.targetBlock, node = this.nodes[tb.block];
       let txt = BLOCKS[tb.block] ? BLOCKS[tb.block].name : '';

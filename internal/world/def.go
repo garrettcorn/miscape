@@ -40,15 +40,16 @@ type Def struct {
 
 // Place is a named spot, optionally with a structure (e.g. a town) and a safe zone.
 type Place struct {
-	ID        string  `json:"id"`
-	Name      string  `json:"name"`
-	Lat       float64 `json:"lat"`
-	Lon       float64 `json:"lon"`
-	Structure string  `json:"structure,omitempty"` // "town" or ""
-	Zone      string  `json:"zone,omitempty"`      // "town" makes the circle a safe zone
-	Radius    float64 `json:"radius,omitempty"`
-	Level     int     `json:"-"` // the level that added it
-	X, Z      float64 `json:"-"`
+	ID        string   `json:"id"`
+	Name      string   `json:"name"`
+	Lat       float64  `json:"lat"`
+	Lon       float64  `json:"lon"`
+	Structure string   `json:"structure,omitempty"` // "town", "village" or ""
+	Zone      string   `json:"zone,omitempty"`      // "town" makes the circle a safe zone
+	Radius    float64  `json:"radius,omitempty"`
+	Known     []string `json:"known,omitempty"` // skill ids the town is best known for
+	Level     int      `json:"-"`               // the level that added it
+	X, Z      float64  `json:"-"`
 }
 
 // ZoneDef is a circular region with a gameplay kind (e.g. "danger").
@@ -62,6 +63,7 @@ type ZoneDef struct {
 	Lat    *float64 `json:"lat,omitempty"`
 	Lon    *float64 `json:"lon,omitempty"`
 	Radius float64  `json:"radius"`
+	Danger int      `json:"danger,omitempty"` // the danger level inside it (0: by distance, as everywhere)
 	X, Z   float64  `json:"-"`
 }
 
@@ -210,7 +212,7 @@ func (d *Def) resolve() error {
 		if p.Lat < -90 || p.Lat > 90 || p.Lon < -180 || p.Lon > 180 {
 			return fmt.Errorf("place %s: lat/lon out of range", p.ID)
 		}
-		if p.Structure != "" && p.Structure != "town" {
+		if p.Structure != "" && p.Structure != "town" && p.Structure != "village" {
 			return fmt.Errorf("place %s: unknown structure %q", p.ID, p.Structure)
 		}
 		p.X, p.Z = d.LatLon(p.Lat, p.Lon)
