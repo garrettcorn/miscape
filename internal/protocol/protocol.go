@@ -15,11 +15,13 @@ import (
 const (
 	// ProtoMin..ProtoMax is the range of client protocol versions accepted.
 	// Version 2: the wrapping Earth world (16-bit chunk coordinates, world
-	// shape sent in welcome).
-	ProtoMin = 2
-	ProtoMax = 2
+	// shape sent in welcome). Version 3: skills (xp and levelup messages),
+	// blocks 24-31 (fishing spots, campfires, new trees and ores) and the
+	// light_fire message.
+	ProtoMin = 3
+	ProtoMax = 3
 	// Current is what this server speaks natively.
-	Current = 2
+	Current = 3
 
 	// MaxCoord bounds block and chunk coordinates; the game checks them
 	// against the actual world size.

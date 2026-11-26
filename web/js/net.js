@@ -1,4 +1,4 @@
-export const PROTO = 2;
+export const PROTO = 3;
 export const CLIENT = 'lanternfall-web/0.1.0';
 
 // WebSocket client with request ids, safe resend on reconnect (the server
