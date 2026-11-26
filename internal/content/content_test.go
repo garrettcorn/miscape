@@ -12,7 +12,7 @@ func TestBaseContentValid(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(c.Items) < 10 || len(c.Recipes) < 5 || len(c.Quests) < 2 || len(c.Mobs) != 2 {
+	if len(c.Items) < 10 || len(c.Recipes) < 5 || len(c.Quests) < 2 || len(c.Mobs) < 2 {
 		t.Fatalf("unexpected content counts: %d items %d recipes %d quests %d mobs", len(c.Items), len(c.Recipes), len(c.Quests), len(c.Mobs))
 	}
 	if c.Hash == "" {

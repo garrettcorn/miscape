@@ -117,6 +117,19 @@ func (b *builder) town(id string, r int, gate [2]int) {
 	b.set(-6, g+1, 3, Anvil)
 	// A kitchen range across the plaza, for cooking.
 	b.set(5, g+1, -3, Range)
+	// Allotments: a field of tilled soil with a path round it, for farming.
+	for z := 6; z <= 11; z++ {
+		for x := 7; x <= 14; x++ {
+			if !b.land(x, z) {
+				continue
+			}
+			if x == 7 || x == 14 || z == 6 || z == 11 {
+				b.set(x, g, z, Cobble)
+			} else {
+				b.set(x, g, z, Soil)
+			}
+		}
+	}
 	// Lantern posts and a warning sign where the road toward danger leaves town.
 	gx, gz := gate[0]*(r+2), gate[1]*(r+2)
 	sx, sz := gate[1], gate[0] // sideways
@@ -130,6 +143,7 @@ func (b *builder) town(id string, r int, gate [2]int) {
 	}
 	pt("anvil", -6, 3)
 	pt("range", 5, -3)
+	pt("allotment", 10.5, 8.5)
 	pt("town:"+id+":spawn", 0.5, 6.5)
 	if _, ok := w.Points["spawn"]; !ok && w.Def.Spawn == id {
 		pt("spawn", 0.5, 6.5)

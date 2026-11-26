@@ -18,10 +18,12 @@ const (
 	// shape sent in welcome). Version 3: skills (xp and levelup messages),
 	// blocks 24-31 (fishing spots, campfires, new trees and ores) and the
 	// light_fire message.
-	ProtoMin = 3
-	ProtoMax = 3
+	// Version 4: snares, crops and agility courses (blocks 32-39, the set_trap
+	// and plant messages).
+	ProtoMin = 4
+	ProtoMax = 4
 	// Current is what this server speaks natively.
-	Current = 3
+	Current = 4
 
 	// MaxCoord bounds block and chunk coordinates; the game checks them
 	// against the actual world size.
@@ -95,7 +97,7 @@ type In struct {
 // Message types and whether they need a request id (state-changing).
 var types = map[string]bool{
 	"hello": false, "move": false, "chunks": false, "ping": false,
-	"gather": true, "attack": true, "place": true, "break": true, "light_fire": true,
+	"gather": true, "attack": true, "place": true, "break": true, "light_fire": true, "set_trap": true, "plant": true,
 	"craft": true, "eat": true, "equip": true, "drop": true, "cast": true,
 	"talk": true, "quest_accept": true, "quest_turnin": true,
 	"buy": true, "sell": true,
@@ -189,11 +191,11 @@ func Validate(m *In) error {
 		if m.Color != "" && !colorRe.MatchString(m.Color) {
 			return bad("color")
 		}
-	case "gather", "place", "break", "light_fire":
+	case "gather", "place", "break", "light_fire", "set_trap", "plant":
 		if m.BX < -MaxCoord || m.BX > MaxCoord || m.BY < 0 || m.BY > 255 || m.BZ < 0 || m.BZ > MaxCoord {
 			return bad("block")
 		}
-		if (m.T == "place" || m.T == "light_fire") && !validID(m.Item) {
+		if (m.T == "place" || m.T == "light_fire" || m.T == "set_trap" || m.T == "plant") && !validID(m.Item) {
 			return bad("item")
 		}
 	case "attack", "trade_request":

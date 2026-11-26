@@ -72,7 +72,7 @@ func (g *Game) MoveCheck(p *Player, x, y, z float64) string {
 	dt := g.Now.Sub(p.lastMove).Seconds()
 	dt = math.Max(0.05, math.Min(dt, 1.0))
 	horiz := g.W.Dist(c.X, c.Z, x, z)
-	if horiz > SprintSpeed*dt*1.3+0.35 {
+	if horiz > sprintSpeed(c)*dt*1.3+0.35 {
 		return "too fast"
 	}
 	if y-p.groundY > MaxJumpRise {
@@ -148,6 +148,7 @@ func (g *Game) handleMove(p *Player, m *protocol.In) {
 		p.place = place
 		p.dirtyMe = true
 	}
+	g.checkCourse(p)
 	g.Dirty = true
 	if p.trade != nil {
 		o := g.Players[p.trade.other(p.ID)]

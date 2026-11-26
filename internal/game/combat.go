@@ -72,6 +72,9 @@ func (g *Game) Attack(p *Player, target uint32) error {
 		if m.HP <= 0 {
 			return fail("It's already gone.")
 		}
+		if err := g.meets(c, m.Def.Needs); err != nil {
+			return err
+		}
 		tx, ty, tz = m.X, m.Y, m.Z
 	} else {
 		o = g.Players[target]
@@ -206,7 +209,11 @@ func (g *Game) killMob(m *Mob, killer *Player) {
 	m.deadUntil = g.Now.Add(MobRespawn)
 	m.target = 0
 	g.broadcastNear(m.X, m.Z, M{"t": "die", "id": m.ID, "mob": true})
-	g.addXP(killer, g.weaponStyle(killer.Char), m.Def.XP)
+	skill := m.Def.Skill
+	if skill == "" {
+		skill = g.weaponStyle(killer.Char)
+	}
+	g.addXP(killer, skill, m.Def.XP)
 	g.progress(killer, "kill", m.Def.ID, 1)
 	loot := map[string]int{}
 	for _, d := range m.Def.Drops {
@@ -222,6 +229,7 @@ func (g *Game) killMob(m *Mob, killer *Player) {
 	}
 	for id, n := range loot {
 		if g.grant(killer, map[string]int{id: n}) {
+			g.progress(killer, "gather", id, n)
 			g.toast(killer, fmt.Sprintf("+%d %s", n, g.itemName(id)), "item")
 		} else {
 			g.toast(killer, "Your pack is full — some loot was lost.", "warn")
@@ -297,7 +305,8 @@ func (g *Game) tickMobs() {
 			tp = g.Players[m.target]
 			if tp == nil || tp.dead || g.W.ZoneAt(tp.Char.X, tp.Char.Z) == world.ZoneTown ||
 				g.W.Dist(tp.Char.X, tp.Char.Z, m.Spawn.X, m.Spawn.Z) > MobLeash+m.Spawn.R ||
-				g.warded(m, tp.Char.X, tp.Char.Y, tp.Char.Z, FireWard) {
+				g.warded(m, tp.Char.X, tp.Char.Y, tp.Char.Z, FireWard) ||
+				(m.Def.Flees && g.W.Dist(tp.Char.X, tp.Char.Z, m.X, m.Z) > m.Def.Aggro+4) {
 				m.target, tp = 0, nil
 			}
 		}
@@ -314,7 +323,19 @@ func (g *Game) tickMobs() {
 		}
 		var gx, gz float64
 		speed := m.Def.Speed
-		if tp != nil {
+		if tp != nil && m.Def.Flees {
+			// Game animals bolt directly away from whoever comes near.
+			ax, az := g.W.DX(tp.Char.X, m.X), m.Z-tp.Char.Z
+			if d := math.Hypot(ax, az); d > 0.01 {
+				ax, az = ax/d, az/d
+			} else {
+				ax, az = 1, 0
+			}
+			gx, gz = m.X+ax*4, m.Z+az*4
+			if g.W.Dist(gx, gz, m.Spawn.X, m.Spawn.Z) > MobLeash+m.Spawn.R {
+				gx, gz = m.X-az*4, m.Z+ax*4 // cornered at the edge of its range: dodge sideways
+			}
+		} else if tp != nil {
 			gx, gz = tp.Char.X, tp.Char.Z
 			d := g.W.Dist(m.X, m.Z, gx, gz)
 			if d <= MobMeleeRange && math.Abs(tp.Char.Y-m.Y) < 2 {

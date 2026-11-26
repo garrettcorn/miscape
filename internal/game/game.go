@@ -61,6 +61,8 @@ type Game struct {
 
 	regens   []regen
 	fires    []fire
+	traps    []plot
+	crops    []plot
 	nodeHits map[world.Pos]int
 	placed   map[world.Pos]string // block -> placer char id
 	Trades   map[uint32]*Trade

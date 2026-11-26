@@ -52,6 +52,8 @@ export function itemFacts(it) {
   if (it.kind === 'block') f.push('🧱 pick it on the hotbar to place it');
   if (it.burn) f.push(`🔥 burns for ${it.burn.sec}s on a campfire (Firemaking ${it.burn.level}); pick it on the hotbar and use it on the ground`);
   if (it.kindle) f.push('🔥 lights campfires while you carry it');
+  if (it.trap) f.push(`🪤 set it on open ground in the countryside (Hunting ${it.trap.level}); it catches something in about ${it.trap.sec}s`);
+  if (it.crop) f.push(`🌱 plant it in allotment soil (Farming ${it.crop.level}); ready in about ${Math.round(it.crop.sec / 60)} min`);
   if (it.value > 0) f.push(`🪙 sells for ${it.value}`);
   if (it.kind !== 'missing' && !it.tradeable) f.push('🔒 can’t be traded or dropped');
   if (it.stack > 1 && it.kind !== 'currency') f.push(`stacks to ${it.stack}`);
@@ -201,7 +203,7 @@ export class UI {
 
   // The hotbar holds blocks, food, fuel, and the charms you know ("charm:<id>").
   hotItems(me) {
-    const items = Object.keys(me.inv).filter((id) => { const k = this.item(id).kind; const it = this.item(id); return k === 'block' || k === 'food' || !!it.burn; }).sort();
+    const items = Object.keys(me.inv).filter((id) => { const k = this.item(id).kind; const it = this.item(id); return k === 'block' || k === 'food' || !!it.burn || !!it.trap || !!it.crop; }).sort();
     const magic = (me.skills.magic || { lvl: 1 }).lvl;
     return items.concat((this.g.charms || []).filter((c) => magic >= c.level).map((c) => 'charm:' + c.id));
   }

@@ -6,12 +6,12 @@ import { Input, glyph } from './input.js';
 import { Net, WorkerNet, PROTO, CLIENT } from './net.js';
 import { UI, esc, applyAccessibility } from './ui.js';
 import { settings, quality, save } from './settings.js';
-import { drawPerson, drawDropped, drawShot, MOB_MODELS } from './models.js';
+import { drawPerson, drawDropped, drawShot, drawFlag, MOB_MODELS } from './models.js';
 import { project } from './mat.js';
 import { showJoin } from './join.js';
 import { MiniMap } from './minimap.js';
 import { WorldMap } from './worldmap.js';
-import { B, BLOCKS, isWater } from './blocks.js';
+import { B, BLOCKS, isWater, COLLECT } from './blocks.js';
 
 // Station blocks (must match game.stationBlocks).
 const STATIONS = { anvil: [B.ANVIL], fire: [B.CAMPFIRE, B.RANGE] };
@@ -129,6 +129,7 @@ class Game {
     this.nodes = Object.fromEntries(c.nodes.map((n) => [n.block, n]));
     this.skills = c.skills || [];
     this.charms = c.charms || [];
+    this.courses = c.courses || [];
     this.body = new Body(w.pos[0], w.pos[1], w.pos[2]);
     this.yaw = w.pos[3] || 0;
     $('#screen-join').hidden = true;
@@ -302,7 +303,8 @@ class Game {
     }
     // Movement relative to camera yaw. Forward = (sin yaw, cos yaw).
     const [mx, mz] = ui.open ? [0, 0] : inp.move;
-    const speed = inp.sprint ? SPRINT : WALK;
+    // Agility adds 1% sprint speed per level (the server allows the same).
+    const speed = inp.sprint ? SPRINT * (1 + 0.01 * ((this.me.skills.agility || { lvl: 1 }).lvl)) : WALK;
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
     const rx = -fz, rz = fx; // right vector
     const vx = (fx * mz + rx * mx) * speed, vz = (fz * mz + rz * mx) * speed;
@@ -336,7 +338,7 @@ class Game {
         this.nextGather = tnow + 460;
         this.swing = 1;
         const placeable = tb.block === B.PLANK || tb.block === B.COBBLE;
-        const msg = this.nodes[tb.block] ? { t: 'gather', bx: tb.x, by: tb.y, bz: tb.z } : placeable ? { t: 'break', bx: tb.x, by: tb.y, bz: tb.z } : null;
+        const msg = this.nodes[tb.block] || COLLECT.has(tb.block) ? { t: 'gather', bx: tb.x, by: tb.y, bz: tb.z } : placeable ? { t: 'break', bx: tb.x, by: tb.y, bz: tb.z } : null;
         if (msg) this.net.request(msg).then((r) => { if (!r.ok && !/Steady/.test(r.err)) ui.toast(r.err, 'warn'); });
       } else if (!this.targetMob && !this.targetBlock && inp.pressed.has('primary') && this.targetPlayer && this.realm.pvp) {
         this.net.request({ t: 'attack', target: this.targetPlayer.id }).then((r) => { if (!r.ok) ui.toast(r.err, 'warn'); });
@@ -346,7 +348,12 @@ class Game {
       const sel = ui.hotSel, it = sel && this.items[sel];
       if (sel && sel.startsWith('charm:') && inp.pressed.has('use')) { this.nextUse = tnow + 400; this.swing = 1; this.net.request({ t: 'cast', charm: sel.slice(6) }).then((r) => { if (!r.ok) ui.toast(r.err, 'warn'); }); }
       else       if (it && it.kind === 'food' && inp.pressed.has('use')) { this.nextUse = tnow + 400; this.net.request({ t: 'eat', item: sel }).then((r) => { if (!r.ok) ui.toast(r.err, 'warn'); }); }
-      else if (it && it.burn && this.targetBlock && inp.pressed.has('use')) {
+      else if (it && (it.trap || it.crop) && this.targetBlock && inp.pressed.has('use')) {
+        const tb = this.targetBlock, px = tb.x + tb.face[0], py = tb.y + tb.face[1], pz = tb.z + tb.face[2];
+        this.nextUse = tnow + 450;
+        this.swing = 1;
+        this.net.request({ t: it.trap ? 'set_trap' : 'plant', bx: px, by: py, bz: pz, item: sel }).then((r) => { if (!r.ok) ui.toast(r.err, 'warn'); });
+      }       else if (it && it.burn && this.targetBlock && inp.pressed.has('use')) {
         const tb = this.targetBlock, px = tb.x + tb.face[0], py = tb.y + tb.face[1], pz = tb.z + tb.face[2];
         this.nextUse = tnow + 600;
         this.swing = 1;
@@ -561,6 +568,7 @@ class Game {
       if (m.dead) continue;
       this.mobModel(m).draw(r, m, this.time);
     }
+    this.drawCourses(r);
     this.shots = (this.shots || []).filter((s) => drawShot(r, s, this.time, this.world));
     const inGloam = this.me.zone === 'danger';
     const playerLight = hasLantern ? [b.x, b.y + 1.2, b.z, inGloam ? 11 : 6] : (inGloam ? [b.x, b.y + 1.2, b.z, 3.5] : [0, 0, 0, 0]);
@@ -574,6 +582,30 @@ class Game {
     if (settings.showMinimap !== false && (this.mmTick = (this.mmTick || 0) + 1) % 3 === 0) this.minimap.draw();
   }
 
+  // Agility course flags: the start is gold, the next checkpoint of the
+  // course you're running glows green, the rest are white.
+  drawCourses(r) {
+    const run = this.me && this.me.run, b = this.body;
+    for (const co of this.courses) {
+      (co.points || []).forEach((pt, i) => {
+        if (this.world.dist(b.x, b.z, pt[0], pt[1]) > 60) return;
+        const y = this.flagY(pt);
+        if (y == null) return;
+        const next = run && run.id === co.id && run.next === i;
+        const col = next ? [0.35, 1, 0.45] : i === 0 ? [1, 0.8, 0.25] : [0.95, 0.95, 0.95];
+        drawFlag(r, pt[0], y, pt[1], col, next || (!run && i === 0), this.time);
+      });
+    }
+  }
+
+  flagY(pt) {
+    const k = `${Math.floor(pt[0])},${Math.floor(pt[1])}`;
+    this.flagYs ||= new Map();
+    let y = this.flagYs.get(k);
+    if (y == null) { y = this.world.surfaceY(Math.floor(pt[0]), Math.floor(pt[1])); if (y > 0) this.flagYs.set(k, y); }
+    return y > 0 ? y : null;
+  }
+
   drawTags() {
     const W = innerWidth, H = innerHeight, vp = this.vp, b = this.body;
     const want = new Map();
@@ -585,6 +617,20 @@ class Game {
     };
     for (const p of this.others.values()) add('p' + p.id, p.x, p.y + 2.15, p.z, `${esc(p.name)}<div class="bar"><div style="width:${p.hp / p.mhp * 100}%"></div></div>`, 'tag');
     for (const m of this.mobs.values()) if (!m.dead && (m.hp < m.mhp || m === this.targetMob || m.aggro)) add('m' + m.id, m.x, m.y + this.mobModel(m).tag, m.z, `<div class="bar"><div style="width:${m.hp / m.mhp * 100}%"></div></div>`, 'tag');
+    // Agility: name the start flags, and count down to the next checkpoint.
+    const run = this.me && this.me.run;
+    if (run && this.runSeen !== this.me) { this.runSeen = this.me; this.runEnd = this.time + run.left; }
+    for (const co of this.courses) {
+      const pts = co.points || [];
+      if (!pts.length) continue;
+      if (run && run.id === co.id) {
+        const pt = pts[run.next], y = pt && this.flagY(pt);
+        if (y != null) add('run', pt[0], y + 2.9, pt[1], `<b>Flag ${run.next}/${pts.length - 1}</b> · ${Math.max(0, this.runEnd - this.time).toFixed(1)}s`, 'tag npc');
+      } else if (!run) {
+        const y = this.flagY(pts[0]);
+        if (y != null) add('co' + co.id, pts[0][0], y + 2.9, pts[0][1], `🏁 ${esc(co.name)} · Agility ${co.level}`, 'tag npc');
+      }
+    }
     for (const n of Object.values(this.npcs)) {
       let mark = '';
       for (const q of Object.values(this.quests)) if (q.giver === n.id) {

@@ -23,6 +23,12 @@
     {"id": "boggart_bane", "name": "Boggart-bane", "icon": "🧂", "level": 7, "xp": 45, "reagents": {"salt": 2, "glimmer_shard": 1}, "effect": "bane", "against": "bramblet", "sec": 60, "cooldownMs": 1000,
      "desc": "For a minute, you deal double damage to boggarts.", "words": "Salt on the doorstep, light in the hall, no boggart of yours shall come here at all."}
   ],
+  "courses": [
+    {"id": "irk_valley", "name": "Irk Valley Run", "level": 1, "xp": 35, "limitSec": 12, "at": "manchester",
+     "offsets": [[-6, -20], [1, -22], [8, -21], [4, -24], [-3, -23]]},
+    {"id": "pennine_fell_race", "name": "Pennine Fell Race", "level": 5, "xp": 80, "limitSec": 7, "at": "manchester",
+     "offsets": [[21, 3], [22, -4], [21, -11], [17, -16], [10, -20], [3, -24]]}
+  ],
   "items": [
     {"id": "coin", "name": "Coin", "desc": "A copper cartwheel penny, stamped with King George III.", "kind": "currency", "tradeable": true, "stack": 999, "color": "#f2c14e"},
     {"id": "log", "name": "Log", "desc": "Good Lancashire oak. Burns steadily on a campfire.", "kind": "material", "model": "log", "burn": {"level": 1, "xp": 12, "sec": 60}, "tradeable": true, "stack": 64, "value": 1, "color": "#9a6b3f"},
@@ -53,6 +59,7 @@
     {"id": "salmon", "name": "Poached Salmon", "desc": "Restores 11 health.", "kind": "food", "model": "fish", "heal": 11, "tradeable": true, "stack": 32, "value": 10, "color": "#f0a080"},
     {"id": "cod", "name": "Fried Cod", "desc": "Restores 14 health.", "kind": "food", "model": "fish", "heal": 14, "tradeable": true, "stack": 32, "value": 14, "color": "#e2c27a"},
     {"id": "burnt_fish", "name": "Burnt Fish", "desc": "Charcoal with fins. Nobody wants this.", "kind": "material", "model": "fish", "tradeable": true, "stack": 32, "color": "#3a2a20"},
+    {"id": "burnt_meat", "name": "Burnt Meat", "desc": "Blackened through. Even the dogs won't touch it.", "kind": "material", "model": "food", "tradeable": true, "stack": 32, "color": "#2e211a"},
     {"id": "salt", "name": "Salt", "desc": "Cheshire salt from the Northwich brine pits. Wands and charms use it up.", "kind": "material", "model": "gem", "ammo": {"kind": "salt", "damage": 0}, "tradeable": true, "stack": 99, "value": 1, "color": "#eef2f4"},
     {"id": "copper_arrow", "name": "Copper Arrow", "desc": "Copper-headed. Bows shoot them; each shot uses one.", "kind": "material", "model": "arrow", "ammo": {"kind": "arrow", "damage": 1}, "tradeable": true, "stack": 99, "value": 1, "color": "#e09060"},
     {"id": "iron_arrow", "name": "Iron Arrow", "desc": "A heavy iron bodkin.", "kind": "material", "model": "arrow", "ammo": {"kind": "arrow", "damage": 3}, "tradeable": true, "stack": 99, "value": 2, "color": "#aeb6bf"},
@@ -61,7 +68,35 @@
     {"id": "longbow", "name": "Yew Longbow", "desc": "The old English war bow. Shoots arrows up to 16 blocks.", "kind": "weapon", "style": "range", "model": "bow", "damage": 6, "cooldownMs": 1100, "reach": 16, "ammoKind": "arrow", "needs": {"range": 8}, "tradeable": true, "stack": 1, "value": 30, "color": "#7a3f2c"},
     {"id": "rowan_wand", "name": "Rowan Wand", "desc": "Throws a bolt of will-light up to 11 blocks, spending a pinch of salt each time.", "kind": "weapon", "style": "magic", "model": "wand", "damage": 3, "cooldownMs": 1000, "reach": 11, "ammoKind": "salt", "tradeable": true, "stack": 1, "value": 6, "color": "#b5764a"},
     {"id": "wisp_staff", "glow": true, "name": "Wisp-light Staff", "desc": "Yew bound with wisp-light shards. Its bolts reach 14 blocks.", "kind": "weapon", "style": "magic", "model": "wand", "damage": 6, "cooldownMs": 1000, "reach": 14, "ammoKind": "salt", "needs": {"magic": 7}, "tradeable": true, "stack": 1, "value": 45, "color": "#c9a8ff"},
-    {"id": "bronze_sword", "name": "Bronze Sword", "desc": "Copper and tin, hammered together.", "kind": "weapon", "model": "sword", "damage": 6, "cooldownMs": 600, "needs": {"melee": 3}, "tradeable": true, "stack": 1, "value": 16, "color": "#c9954a"}
+    {"id": "bronze_sword", "name": "Bronze Sword", "desc": "Copper and tin, hammered together.", "kind": "weapon", "model": "sword", "damage": 6, "cooldownMs": 600, "needs": {"melee": 3}, "tradeable": true, "stack": 1, "value": 16, "color": "#c9954a"},
+    {"id": "snare", "name": "Snare", "desc": "A wire loop on a peg. Select it and use it on open ground in the countryside; come back later to see what it caught.", "kind": "tool", "model": "snare",
+     "trap": {"level": 1, "sec": 45, "catches": [{"item": "raw_hare", "level": 1, "xp": 16, "extra": {"hide": 1}}, {"item": "raw_grouse", "level": 3, "xp": 26, "extra": {"feather": 3}}, {"item": "fox_fur", "level": 6, "xp": 45}]},
+     "tradeable": true, "stack": 8, "value": 2, "color": "#b9a27a"},
+    {"id": "raw_hare", "name": "Raw Hare", "desc": "A brown hare from the fields. Cook it at a fire or range.", "kind": "material", "model": "food", "tradeable": true, "stack": 32, "value": 3, "color": "#a0785a"},
+    {"id": "raw_grouse", "name": "Raw Grouse", "desc": "Red grouse from the edge of the moors. Cook it at a fire or range.", "kind": "material", "model": "food", "tradeable": true, "stack": 32, "value": 5, "color": "#8a4b3a"},
+    {"id": "venison", "name": "Raw Venison", "desc": "Red deer meat. Cook it at a fire or range.", "kind": "material", "model": "food", "tradeable": true, "stack": 32, "value": 8, "color": "#8c2f2f"},
+    {"id": "hide", "name": "Hide", "desc": "A pelt for the tanner. Sells well.", "kind": "material", "model": "bundle", "tradeable": true, "stack": 32, "value": 4, "color": "#9a7a56"},
+    {"id": "feather", "name": "Feather", "desc": "For fletching arrows.", "kind": "material", "model": "arrow", "tradeable": true, "stack": 99, "value": 1, "color": "#e8e2d4"},
+    {"id": "fox_fur", "name": "Fox Fur", "desc": "A russet fox pelt, worth a good deal to a furrier.", "kind": "material", "model": "bundle", "tradeable": true, "stack": 16, "value": 15, "color": "#d0702e"},
+    {"id": "roast_hare", "name": "Jugged Hare", "desc": "Restores 7 health.", "kind": "food", "model": "food", "heal": 7, "tradeable": true, "stack": 32, "value": 5, "color": "#7a4a2a"},
+    {"id": "roast_grouse", "name": "Roast Grouse", "desc": "Restores 10 health.", "kind": "food", "model": "food", "heal": 10, "tradeable": true, "stack": 32, "value": 8, "color": "#a0522d"},
+    {"id": "venison_steak", "name": "Venison Steak", "desc": "Restores 13 health.", "kind": "food", "model": "food", "heal": 13, "tradeable": true, "stack": 32, "value": 12, "color": "#6b2a1e"},
+    {"id": "seed_potato", "name": "Seed Potatoes", "desc": "Select them and use them on allotment soil.", "kind": "material", "model": "food",
+     "crop": {"level": 1, "xp": 14, "sec": 90, "ripe": 36, "yield": "potato", "min": 2, "max": 4}, "tradeable": true, "stack": 32, "value": 1, "color": "#c9a46a"},
+    {"id": "oat_seed", "name": "Oat Seed", "desc": "Select it and use it on allotment soil.", "kind": "material", "model": "gem",
+     "crop": {"level": 3, "xp": 24, "sec": 150, "ripe": 37, "yield": "oats", "min": 3, "max": 5}, "tradeable": true, "stack": 32, "value": 1, "color": "#d9c48a"},
+    {"id": "cabbage_seed", "name": "Cabbage Seed", "desc": "Select it and use it on allotment soil.", "kind": "material", "model": "gem",
+     "crop": {"level": 5, "xp": 34, "sec": 240, "ripe": 38, "yield": "cabbage", "min": 1, "max": 3}, "tradeable": true, "stack": 32, "value": 2, "color": "#7fa860"},
+    {"id": "feverfew_seed", "name": "Feverfew Seed", "desc": "Select it and use it on allotment soil.", "kind": "material", "model": "gem",
+     "crop": {"level": 8, "xp": 50, "sec": 300, "ripe": 39, "yield": "feverfew", "min": 2, "max": 3}, "tradeable": true, "stack": 32, "value": 3, "color": "#e8e8b0"},
+    {"id": "potato", "name": "Potato", "desc": "Bake it at a fire or range.", "kind": "material", "model": "food", "tradeable": true, "stack": 64, "value": 1, "color": "#c9a46a"},
+    {"id": "oats", "name": "Oats", "desc": "Boil them into porridge at a fire or range.", "kind": "material", "model": "bundle", "tradeable": true, "stack": 64, "value": 1, "color": "#d9c48a"},
+    {"id": "cabbage", "name": "Cabbage", "desc": "Goes in a good lobscouse.", "kind": "food", "model": "food", "heal": 3, "tradeable": true, "stack": 32, "value": 2, "color": "#7fa860"},
+    {"id": "feverfew", "name": "Feverfew", "desc": "A daisy-like herb for headaches and fevers. Brew it into a tea.", "kind": "material", "model": "food", "tradeable": true, "stack": 64, "value": 4, "color": "#f2f2c8"},
+    {"id": "baked_potato", "name": "Baked Potato", "desc": "Restores 4 health.", "kind": "food", "model": "food", "heal": 4, "tradeable": true, "stack": 32, "value": 2, "color": "#b88a4a"},
+    {"id": "porridge", "name": "Porridge", "desc": "Restores 6 health.", "kind": "food", "model": "food", "heal": 6, "tradeable": true, "stack": 32, "value": 3, "color": "#e8d8b0"},
+    {"id": "feverfew_tea", "name": "Feverfew Tea", "desc": "Restores 10 health.", "kind": "food", "model": "food", "heal": 10, "tradeable": true, "stack": 32, "value": 9, "color": "#c8c890"},
+    {"id": "lobscouse", "name": "Lobscouse", "desc": "The sailors' stew of Liverpool: meat, potatoes and cabbage. Restores 18 health.", "kind": "food", "model": "food", "heal": 18, "tradeable": true, "stack": 32, "value": 18, "color": "#8a5a3a"}
   ],
   "recipes": [
     {"id": "planks", "output": "plank", "count": 4, "inputs": {"log": 1}, "level": 1, "xp": 4},
@@ -83,19 +118,39 @@
     {"id": "shortbow", "output": "shortbow", "count": 1, "inputs": {"rowan_log": 2}, "level": 5, "xp": 35},
     {"id": "iron_arrows", "output": "iron_arrow", "count": 10, "inputs": {"plank": 1, "iron_ore": 1}, "level": 7, "xp": 35, "station": "anvil"},
     {"id": "wisp_staff", "output": "wisp_staff", "count": 1, "inputs": {"yew_log": 1, "glimmer_shard": 3}, "level": 7, "xp": 70},
-    {"id": "longbow", "output": "longbow", "count": 1, "inputs": {"yew_log": 2}, "level": 8, "xp": 60}
+    {"id": "longbow", "output": "longbow", "count": 1, "inputs": {"yew_log": 2}, "level": 8, "xp": 60},
+    {"id": "snare", "output": "snare", "count": 2, "inputs": {"plank": 1, "copper_ore": 1}, "level": 2, "xp": 12},
+    {"id": "fletched_arrows", "output": "copper_arrow", "count": 20, "inputs": {"plank": 1, "copper_ore": 1, "feather": 2}, "level": 3, "xp": 20},
+    {"id": "cook_hare", "output": "roast_hare", "count": 1, "inputs": {"raw_hare": 1}, "skill": "cooking", "level": 2, "xp": 16, "station": "fire", "burnt": "burnt_meat", "safeAt": 6},
+    {"id": "cook_grouse", "output": "roast_grouse", "count": 1, "inputs": {"raw_grouse": 1}, "skill": "cooking", "level": 4, "xp": 26, "station": "fire", "burnt": "burnt_meat", "safeAt": 8},
+    {"id": "cook_venison", "output": "venison_steak", "count": 1, "inputs": {"venison": 1}, "skill": "cooking", "level": 6, "xp": 36, "station": "fire", "burnt": "burnt_meat", "safeAt": 10},
+    {"id": "bake_potato", "output": "baked_potato", "count": 1, "inputs": {"potato": 1}, "skill": "cooking", "level": 1, "xp": 8, "station": "fire"},
+    {"id": "porridge", "output": "porridge", "count": 1, "inputs": {"oats": 2}, "skill": "cooking", "level": 3, "xp": 16, "station": "fire"},
+    {"id": "feverfew_tea", "output": "feverfew_tea", "count": 1, "inputs": {"feverfew": 2}, "skill": "cooking", "level": 7, "xp": 30, "station": "fire"},
+    {"id": "lobscouse", "output": "lobscouse", "count": 1, "inputs": {"venison": 1, "potato": 2, "cabbage": 1}, "skill": "cooking", "level": 8, "xp": 60, "station": "fire", "burnt": "burnt_meat", "safeAt": 11}
   ],
   "mobs": [
     {"id": "bramblet", "name": "Boggart", "model": "bramblet", "hp": 8, "damage": 1, "cooldownMs": 1400, "speed": 2.2, "aggro": 5, "xp": 15,
      "drops": [{"item": "berry", "min": 1, "max": 2, "chance": 0.6}, {"item": "coin", "min": 1, "max": 3, "chance": 0.8}]},
     {"id": "gloamwisp", "name": "Will-o'-the-Wisp", "model": "wisp", "hp": 28, "damage": 4, "cooldownMs": 1200, "speed": 3.0, "aggro": 9, "xp": 45, "fearsFire": true,
      "drops": [{"item": "glimmer_shard", "min": 1, "max": 2, "chance": 0.7}, {"item": "coin", "min": 4, "max": 9, "chance": 1}]}
+,
+    {"id": "hare", "name": "Brown Hare", "model": "hare", "hp": 4, "damage": 0, "cooldownMs": 1000, "speed": 4.2, "aggro": 5, "xp": 14, "flees": true, "skill": "hunting",
+     "drops": [{"item": "raw_hare", "min": 1, "max": 1, "chance": 1}, {"item": "hide", "min": 1, "max": 1, "chance": 0.6}]},
+    {"id": "grouse", "name": "Red Grouse", "model": "grouse", "hp": 5, "damage": 0, "cooldownMs": 1000, "speed": 3.8, "aggro": 6, "xp": 24, "flees": true, "skill": "hunting", "needs": {"hunting": 3},
+     "drops": [{"item": "raw_grouse", "min": 1, "max": 1, "chance": 1}, {"item": "feather", "min": 2, "max": 4, "chance": 1}]},
+    {"id": "deer", "name": "Red Deer", "model": "deer", "hp": 14, "damage": 0, "cooldownMs": 1000, "speed": 4.6, "aggro": 9, "xp": 45, "flees": true, "skill": "hunting", "needs": {"hunting": 6},
+     "drops": [{"item": "venison", "min": 1, "max": 2, "chance": 1}, {"item": "hide", "min": 1, "max": 2, "chance": 1}]}
   ],
   "spawns": [
     {"mob": "bramblet", "at": "manchester", "dx": 20, "dz": 12, "r": 5, "count": 4},
     {"mob": "bramblet", "at": "manchester", "dx": -6, "dz": 22, "r": 5, "count": 3},
     {"mob": "gloamwisp", "at": "highland_moors", "dx": -5, "dz": -3, "r": 5, "count": 3},
-    {"mob": "gloamwisp", "at": "highland_moors", "dx": 5, "dz": 4, "r": 5, "count": 3}
+    {"mob": "gloamwisp", "at": "highland_moors", "dx": 5, "dz": 4, "r": 5, "count": 3},
+    {"mob": "hare", "at": "manchester", "dx": 4, "dz": 20, "r": 4, "count": 4},
+    {"mob": "hare", "at": "manchester", "dx": -34, "dz": -12, "r": 3, "count": 3},
+    {"mob": "grouse", "at": "manchester", "dx": -2, "dz": -24, "r": 4, "count": 4},
+    {"mob": "deer", "at": "manchester", "dx": 40, "dz": 32, "r": 5, "count": 3}
   ],
   "nodes": [
     {"block": 6, "name": "Tree", "item": "log", "skill": "woodcutting", "level": 1, "xp": 10, "hits": 3, "regrowSec": 45},
@@ -147,7 +202,25 @@
        {"kind": "cast", "target": "hearth_charm", "count": 1, "text": "Work a Hearth Charm (it's on your hotbar)"}
      ],
      "start": {"rowan_wand": 1, "salt": 24, "berry": 2},
-     "reward": {"coins": 20, "items": {"salt": 10}, "xp": {"magic": 60}}}
+     "reward": {"coins": 20, "items": {"salt": 10}, "xp": {"magic": 60}}},
+    {"id": "squires_hares", "name": "The Squire's Hares", "giver": "abel",
+     "intro": "Hares in the squire's turnips again. The game laws say only gentlemen may take them, but the squire says I may deputise. Take these snares: set them on open ground out in the fields and come back for them. Or chase the beasts down yourself, if you're quick.",
+     "outro": "Four hares and the hides besides. The squire will be pleased, and I'll not ask where you learned to snare like that.",
+     "steps": [
+       {"kind": "gather", "target": "raw_hare", "count": 4, "text": "Snare or bring down 4 hares"},
+       {"kind": "deliver", "target": "hide", "count": 2, "text": "Bring Abel 2 hides"}
+     ],
+     "start": {"snare": 3},
+     "reward": {"coins": 30, "items": {"snare": 1}, "xp": {"hunting": 60}}},
+    {"id": "poorhouse_potatoes", "name": "Potatoes for the Poorhouse", "giver": "jonas",
+     "intro": "The poorhouse on Cumberland Street feeds three hundred souls, and the parish pays a pittance. Here's seed potatoes: plant them in the allotment soil behind me, wait for them to come up, and bake a few for the poor folk.",
+     "outro": "Good, honest work. Keep the spare seed, and come back when you want oats or cabbages.",
+     "steps": [
+       {"kind": "gather", "target": "potato", "count": 6, "text": "Grow and dig up 6 potatoes"},
+       {"kind": "craft", "target": "baked_potato", "count": 3, "text": "Bake 3 potatoes"}
+     ],
+     "start": {"seed_potato": 4},
+     "reward": {"coins": 25, "items": {"oat_seed": 3}, "xp": {"farming": 50, "cooking": 20}}}
   ],
   "shop": [
     {"npc": "bertram", "item": "berry", "price": 2},
@@ -160,7 +233,12 @@
     {"npc": "bertram", "item": "copper_arrow", "price": 1},
     {"npc": "bertram", "item": "salt", "price": 1},
     {"npc": "nance", "item": "salt", "price": 1},
-    {"npc": "nance", "item": "rowan_wand", "price": 12}
+    {"npc": "nance", "item": "rowan_wand", "price": 12},
+    {"npc": "abel", "item": "snare", "price": 4},
+    {"npc": "jonas", "item": "seed_potato", "price": 1},
+    {"npc": "jonas", "item": "oat_seed", "price": 2},
+    {"npc": "jonas", "item": "cabbage_seed", "price": 4},
+    {"npc": "jonas", "item": "feverfew_seed", "price": 8}
   ],
   "npcs": [
     {"id": "mabel", "name": "Mabel Hartley, Lamplighter", "at": "manchester", "dx": -4, "dz": -3, "yaw": 0.6, "color": "#e8a33d", "hat": "tall",
@@ -175,6 +253,12 @@
     {"id": "nance", "name": "Nance Clegg, Cunning-woman", "at": "manchester", "dx": -4, "dz": 6, "yaw": 2.4, "color": "#7a5c8f", "hat": "",
      "lines": ["Salt on the step and rowan over the door. My grandmother swore by it, and no boggart ever crossed her threshold.",
                "A cunning-woman finds lost things, cures warts and keeps the dark at bay. The magistrate pretends not to know me."]},
+    {"id": "abel", "name": "Abel Fothergill, Gamekeeper", "at": "manchester", "dx": 15.5, "dz": -3.5, "yaw": 4.7, "color": "#5a6b3a", "hat": "cap",
+     "lines": ["Hares by the field gate, grouse up toward the moors, and red deer off to the north-east. Deer need a steady hand.",
+               "Poaching's a hanging matter if the magistrate's in a mood. Snares are fine when the squire allows it, mind."]},
+    {"id": "jonas", "name": "Jonas Ogden, Smallholder", "at": "allotment", "dx": -3.5, "dz": -2.5, "yaw": 0.8, "color": "#7a6a3a", "hat": "tall",
+     "lines": ["Potatoes keep a family alive through winter. Oats too, if you've a pot to boil them in.",
+               "Plant and walk away; they grow whether you watch or not."]},
     {"id": "ott", "name": "Ottiwell Kershaw, Watchman", "at": "town:manchester:gate", "dx": 2, "dz": 0, "yaw": 1.57, "color": "#5b8fb9", "hat": "helm",
      "lines": ["The moors are no shame to avoid, friend. Nobody will think less of you for staying by the fire.",
                "Shakespeare had Puck do what the wisps do: \"Mislead night-wanderers, laughing at their harm.\""]}

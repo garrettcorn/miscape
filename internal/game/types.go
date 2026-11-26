@@ -59,6 +59,9 @@ type Player struct {
 	place            string               // last place name sent to the client (see placeKey)
 	effects          map[string]effect    // active charm effects by name ("ward", "bane:<mob>")
 	charmReady       map[string]time.Time // charm cooldowns
+	run              *courseRun           // the agility course being run, if any
+	runCooldown      time.Time
+	runWarned        string
 }
 
 type Mob struct {

@@ -48,15 +48,27 @@ const (
 	TinOre     uint8 = 29
 	Coal       uint8 = 30
 	IronOre    uint8 = 31
-	NumBlocks        = 32
+	Snare      uint8 = 32 // a set snare (hunting)
+	SnareFull  uint8 = 33 // a snare with something in it
+	Soil       uint8 = 34 // tilled allotment soil (farming)
+	Sprout     uint8 = 35 // a growing crop
+	Potatoes   uint8 = 36 // ripe crops
+	Oats       uint8 = 37
+	Cabbages   uint8 = 38
+	Feverfew   uint8 = 39
+	NumBlocks        = 40
 )
+
+// Plant reports whether a block is a small see-through thing you walk
+// through: snares and crops.
+func Plant(b uint8) bool { return b >= Snare && b <= Feverfew && b != Soil }
 
 // IsWater reports whether a block is water (fishing spots are water too).
 func IsWater(b uint8) bool { return b == Water || b == FishSpot }
 
 // Solid reports whether a block blocks movement.
 func Solid(b uint8) bool {
-	return b != Air && b != Water && b != Flowers && b != FishSpot && b != Campfire
+	return b != Air && b != Water && b != Flowers && b != FishSpot && b != Campfire && !Plant(b)
 }
 
 const (

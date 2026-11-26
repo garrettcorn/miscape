@@ -29,12 +29,12 @@ const (
 
 // Models are the shapes the client knows how to draw for held and dropped
 // items. An empty model picks a default from the item kind.
-var Models = map[string]bool{"sword": true, "axe": true, "pickaxe": true, "club": true, "lantern": true, "gem": true, "food": true, "block": true, "bundle": true, "coin": true, "rod": true, "fish": true, "tinderbox": true, "log": true, "sling": true, "bow": true, "arrow": true, "wand": true}
+var Models = map[string]bool{"sword": true, "axe": true, "pickaxe": true, "club": true, "lantern": true, "gem": true, "food": true, "block": true, "bundle": true, "coin": true, "rod": true, "fish": true, "tinderbox": true, "log": true, "sling": true, "bow": true, "arrow": true, "wand": true, "snare": true}
 
 // MobModels and NPCHats are the creature models and NPC hats the client can
 // draw (web/js/models.js). Add a drawing there before adding a name here.
 var (
-	MobModels = map[string]bool{"bramblet": true, "wisp": true}
+	MobModels = map[string]bool{"bramblet": true, "wisp": true, "hare": true, "grouse": true, "deer": true}
 	NPCHats   = map[string]bool{"": true, "tall": true, "cap": true, "helm": true}
 )
 
@@ -61,6 +61,29 @@ type Item struct {
 	Reach     float64        `json:"reach,omitempty"`    // range and magic weapons: how far they shoot
 	AmmoKind  string         `json:"ammoKind,omitempty"` // range and magic weapons: what they use up (arrow, shot, salt)
 	Ammo      *Ammo          `json:"ammo,omitempty"`     // ammunition for weapons with this AmmoKind
+	Trap      *Trap          `json:"trap,omitempty"`     // a snare you set on the ground (hunting)
+	Crop      *Crop          `json:"crop,omitempty"`     // a seed you plant in soil (farming)
+}
+
+// Trap makes an item a snare: set on open ground, after Sec seconds it has
+// caught one of Catches (by Hunting level), which the setter collects.
+type Trap struct {
+	Level   int     `json:"level"`
+	Sec     int     `json:"sec"`
+	Catches []Catch `json:"catches"`
+}
+
+// Crop makes an item a seed: planted in soil, it grows for Sec seconds
+// (in real time, even with nobody online) into the Ripe block, which the
+// planter harvests for Min..Max of Yield.
+type Crop struct {
+	Level int    `json:"level"`
+	XP    int    `json:"xp"`
+	Sec   int    `json:"sec"`
+	Ripe  uint8  `json:"ripe"`
+	Yield string `json:"yield"`
+	Min   int    `json:"min"`
+	Max   int    `json:"max"`
 }
 
 // Ammo makes an item ammunition: one is used per shot, adding Damage.
@@ -101,17 +124,20 @@ type Drop struct {
 }
 
 type Mob struct {
-	ID         string  `json:"id"`
-	Name       string  `json:"name"`
-	Model      string  `json:"model"`
-	HP         int     `json:"hp"`
-	Damage     int     `json:"damage"`
-	CooldownMs int     `json:"cooldownMs"`
-	Speed      float64 `json:"speed"`
-	Aggro      float64 `json:"aggro"`
-	XP         int     `json:"xp"`
-	Drops      []Drop  `json:"drops"`
-	FearsFire  bool    `json:"fearsFire,omitempty"` // won't come near a campfire
+	ID         string         `json:"id"`
+	Name       string         `json:"name"`
+	Model      string         `json:"model"`
+	HP         int            `json:"hp"`
+	Damage     int            `json:"damage"`
+	CooldownMs int            `json:"cooldownMs"`
+	Speed      float64        `json:"speed"`
+	Aggro      float64        `json:"aggro"`
+	XP         int            `json:"xp"`
+	Drops      []Drop         `json:"drops"`
+	FearsFire  bool           `json:"fearsFire,omitempty"` // won't come near a campfire
+	Flees      bool           `json:"flees,omitempty"`     // runs from players instead of fighting (game animals)
+	Skill      string         `json:"skill,omitempty"`     // the skill a kill trains, instead of the weapon's style
+	Needs      map[string]int `json:"needs,omitempty"`     // skill levels needed to attack it
 }
 
 // Spawn is a group of creatures wandering around a point. Positions are
@@ -146,9 +172,10 @@ type Node struct {
 // Catch is one possible yield of a node: a random catch among those your
 // level allows.
 type Catch struct {
-	Item  string `json:"item"`
-	Level int    `json:"level"`
-	XP    int    `json:"xp"`
+	Item  string         `json:"item"`
+	Level int            `json:"level"`
+	XP    int            `json:"xp"`
+	Extra map[string]int `json:"extra,omitempty"` // also given with the catch
 }
 
 // Quest step kinds.
@@ -255,6 +282,7 @@ func (r Rules) Clamp() Rules {
 type Pack struct {
 	Skills  []Skill     `json:"skills,omitempty"`
 	Charms  []Charm     `json:"charms,omitempty"`
+	Courses []Course    `json:"courses,omitempty"`
 	Items   []Item      `json:"items"`
 	Recipes []Recipe    `json:"recipes"`
 	Mobs    []Mob       `json:"mobs"`
@@ -269,6 +297,7 @@ type Pack struct {
 type Content struct {
 	Skills   []*Skill // in display order
 	Charms   []*Charm // in display order
+	Courses  []*Course
 	Items    map[string]*Item
 	Recipes  map[string]*Recipe
 	Mobs     map[string]*Mob
@@ -325,6 +354,13 @@ func (c *Content) merge(p *Pack, ns string) error {
 			}
 			c.Skills = append(c.Skills, &s)
 		}
+	}
+	for i := range p.Courses {
+		if ns != "" {
+			return fmt.Errorf("mods can't add agility courses in mod API 1")
+		}
+		co := p.Courses[i]
+		c.Courses = append(c.Courses, &co)
 	}
 	if len(p.Charms) > 0 {
 		if ns != "" {
@@ -400,6 +436,11 @@ func (c *Content) Validate() error {
 			return fmt.Errorf("skill %q: bad id, name or group %q", s.ID, s.Group)
 		}
 	}
+	for _, co := range c.Courses {
+		if !skillIDRe.MatchString(co.ID) || co.Name == "" || co.Level < 1 || co.Level > 100 || co.XP < 0 || co.LimitSec < 5 || len(co.Offsets) < 2 || len(co.Offsets) > 20 {
+			return fmt.Errorf("course %q: bad id, name, level, limit or checkpoints", co.ID)
+		}
+	}
 	for _, ch := range c.Charms {
 		if !skillIDRe.MatchString(ch.ID) || ch.Name == "" || !slices.Contains(CharmEffects, ch.Effect) || ch.Level < 1 || ch.Level > 100 || ch.Power < 0 || ch.Sec < 0 || ch.Sec > 600 || ch.CooldownMs < 0 {
 			return fmt.Errorf("charm %q: bad id, name, effect or numbers", ch.ID)
@@ -447,6 +488,17 @@ func (c *Content) Validate() error {
 			if !found {
 				return fmt.Errorf("item %s: no ammunition of kind %q", id, it.AmmoKind)
 			}
+		}
+		if tr := it.Trap; tr != nil {
+			if tr.Level < 1 || tr.Level > 100 || tr.Sec < 5 || tr.Sec > 3600 || len(tr.Catches) == 0 {
+				return fmt.Errorf("item %s: bad trap", id)
+			}
+			if err := c.checkCatches("item "+id, tr.Catches); err != nil {
+				return err
+			}
+		}
+		if cr := it.Crop; cr != nil && (cr.Level < 1 || cr.Level > 100 || cr.Sec < 5 || cr.Sec > 86400 || c.Items[cr.Yield] == nil || cr.Min < 1 || cr.Max < cr.Min || cr.Max > 64 || cr.Ripe == 0) {
+			return fmt.Errorf("item %s: bad crop", id)
 		}
 		if a := it.Ammo; a != nil && (!skillIDRe.MatchString(a.Kind) || a.Damage < 0 || a.Damage > 50) {
 			return fmt.Errorf("item %s: bad ammo", id)
@@ -496,6 +548,12 @@ func (c *Content) Validate() error {
 		if m.HP < 1 || m.Damage < 0 || m.Speed <= 0 || m.CooldownMs < 200 {
 			return fmt.Errorf("mob %s: bad stats", id)
 		}
+		if m.Skill != "" && !c.validSkill(m.Skill) {
+			return fmt.Errorf("mob %s: unknown skill %q", id, m.Skill)
+		}
+		if err := c.checkNeeds("mob "+id, m.Needs); err != nil {
+			return err
+		}
 		if !MobModels[m.Model] {
 			return fmt.Errorf("mob %s: unknown model %q", id, m.Model)
 		}
@@ -525,10 +583,8 @@ func (c *Content) Validate() error {
 		if n.Tool != "" && c.Items[n.Tool] == nil {
 			return fmt.Errorf("node %s: unknown tool %q", n.Name, n.Tool)
 		}
-		for _, ct := range n.Catches {
-			if c.Items[ct.Item] == nil || ct.Level < 1 || ct.Level > 100 || ct.XP < 0 {
-				return fmt.Errorf("node %s: bad catch %q", n.Name, ct.Item)
-			}
+		if err := c.checkCatches("node "+n.Name, n.Catches); err != nil {
+			return err
 		}
 	}
 	for id, q := range c.Quests {
@@ -668,6 +724,7 @@ func (c *Content) rehash() {
 type ClientView struct {
 	Skills  []*Skill    `json:"skills"`
 	Charms  []*Charm    `json:"charms"`
+	Courses []*Course   `json:"courses"`
 	Items   []*Item     `json:"items"`
 	Recipes []*Recipe   `json:"recipes"`
 	Mobs    []ClientMob `json:"mobs"`
@@ -685,7 +742,7 @@ type ClientMob struct {
 }
 
 func (c *Content) View() ClientView {
-	v := ClientView{Shop: c.Shop, Skills: c.Skills, Charms: c.Charms}
+	v := ClientView{Shop: c.Shop, Skills: c.Skills, Charms: c.Charms, Courses: c.Courses}
 	for _, k := range sortedKeys(c.Items) {
 		v.Items = append(v.Items, c.Items[k])
 	}
@@ -737,6 +794,19 @@ func (c *Content) Resolve(at Locator, wrapX func(float64) float64) (*Content, er
 		nn.X, nn.Y, nn.Z = wrapX(x+n.DX), y, z+n.DZ
 		cp.NPCs[id] = &nn
 	}
+	cp.Courses = make([]*Course, len(c.Courses))
+	for i, co := range c.Courses {
+		x, _, z, ok := at(co.At)
+		if !ok {
+			return nil, fmt.Errorf("course %s: unknown place %q", co.ID, co.At)
+		}
+		cc := *co
+		cc.Points = make([][2]float64, len(co.Offsets))
+		for j, o := range co.Offsets {
+			cc.Points[j] = [2]float64{wrapX(x + o[0]), z + o[1]}
+		}
+		cp.Courses[i] = &cc
+	}
 	cp.Spawns = make([]Spawn, len(c.Spawns))
 	for i, s := range c.Spawns {
 		x, _, z, ok := at(s.At)
@@ -780,4 +850,32 @@ func (c *Content) Charm(id string) *Charm {
 		}
 	}
 	return nil
+}
+
+func (c *Content) checkCatches(what string, cs []Catch) error {
+	for _, ct := range cs {
+		if c.Items[ct.Item] == nil || ct.Level < 1 || ct.Level > 100 || ct.XP < 0 {
+			return fmt.Errorf("%s: bad catch %q", what, ct.Item)
+		}
+		for it, n := range ct.Extra {
+			if c.Items[it] == nil || n < 1 || n > 64 {
+				return fmt.Errorf("%s: bad extra %q", what, it)
+			}
+		}
+	}
+	return nil
+}
+
+// Course is an agility course: run through its checkpoints in order within
+// LimitSec seconds for Agility XP. Offsets are from the place At; Points are
+// the resolved positions (filled in by Resolve).
+type Course struct {
+	ID       string       `json:"id"`
+	Name     string       `json:"name"`
+	Level    int          `json:"level"`
+	XP       int          `json:"xp"`
+	LimitSec int          `json:"limitSec"`
+	At       string       `json:"at"`
+	Offsets  [][2]float64 `json:"offsets"`
+	Points   [][2]float64 `json:"points,omitempty"`
 }

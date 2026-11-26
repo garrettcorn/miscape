@@ -140,6 +140,26 @@ func (g *Game) unlocksAt(skill string, level int) []string {
 		if b := it.Burn; b != nil && skill == "firemaking" && b.Level == level {
 			add(it.Name + " fires")
 		}
+		if cr := it.Crop; cr != nil && skill == "farming" && cr.Level == level {
+			add(g.itemName(cr.Yield))
+		}
+		if tr := it.Trap; tr != nil && skill == "hunting" {
+			for _, ct := range tr.Catches {
+				if ct.Level == level && ct.Level > tr.Level {
+					add("snaring " + g.itemName(ct.Item))
+				}
+			}
+		}
+	}
+	for _, m := range g.C.Mobs {
+		if m.Needs[skill] == level {
+			add("hunting the " + m.Name)
+		}
+	}
+	for _, co := range g.C.Courses {
+		if skill == "agility" && co.Level == level {
+			add("the " + co.Name)
+		}
 	}
 	for _, ch := range g.C.Charms {
 		if skill == "magic" && ch.Level == level {

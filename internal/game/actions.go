@@ -41,9 +41,12 @@ func (g *Game) Gather(p *Player, bx, by, bz int) error {
 	if g.eyeDist(p, bx, by, bz) > ReachBlocks {
 		return fail("That's too far away.")
 	}
+	idx := g.W.PosAt(bx, by, bz)
+	if handled, err := g.collectAt(p, idx); handled {
+		return err
+	}
 	b := g.W.Get(bx, by, bz)
 	node := g.C.Nodes[b]
-	idx := g.W.PosAt(bx, by, bz)
 	if node == nil || g.placed[idx] != "" {
 		return fail("You can't gather that.")
 	}
@@ -403,17 +406,6 @@ func burnChance(r *content.Recipe, lvl int) float64 {
 // catch picks what a fishing spot yields: one of the catches the player's
 // level allows, picked at random.
 func (g *Game) catch(c *Character, n *content.Node) (string, int) {
-	lvl := c.Level(n.Skill)
-	var ok []content.Catch
-	for _, ct := range n.Catches {
-		if ct.Level <= lvl {
-			ok = append(ok, ct)
-		}
-	}
-	if len(ok) == 0 {
-		ct := n.Catches[0]
-		return ct.Item, ct.XP
-	}
-	ct := ok[g.rng.IntN(len(ok))]
+	ct := g.pickCatch(c.Level(n.Skill), n.Catches)
 	return ct.Item, ct.XP
 }

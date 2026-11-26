@@ -4,6 +4,7 @@ export const B = {
   COPPER: 10, GLOAMSTONE: 11, GLIMMER: 12, LANTERN: 13, ROOF: 14, FLOWERS: 15, ANVIL: 16, BEDROCK: 17,
   SIGN: 18, BERRY: 19, DEADWOOD: 20, MOSS: 21, SNOW: 22, ICE: 23,
   FISHSPOT: 24, CAMPFIRE: 25, RANGE: 26, ROWAN: 27, YEW: 28, TIN: 29, COAL: 30, IRON: 31,
+  SNARE: 32, SNARE_FULL: 33, SOIL: 34, SPROUT: 35, POTATOES: 36, OATS: 37, CABBAGES: 38, FEVERFEW: 39,
 };
 
 // Texture layer indices (see atlas.js TILE_NAMES order).
@@ -12,6 +13,7 @@ export const T = {
   cobble: 10, copper: 11, gloamstone: 12, glimmer: 13, lantern: 14, roof: 15, flowers: 16, anvil_top: 17, anvil_side: 18,
   bedrock: 19, sign: 20, berry: 21, dead_side: 22, dead_top: 23, moss_top: 24, moss_side: 25, snow_top: 26, snow_side: 27, ice: 28,
   fishspot: 29, fire: 30, range_top: 31, range_side: 32, rowan_side: 33, yew_side: 34, tin: 35, coal: 36, iron: 37,
+  snare: 38, snare_full: 39, soil_top: 40, sprout: 41, potatoes: 42, oats: 43, cabbages: 44, feverfew: 45,
 };
 
 // kind: 'cube' | 'water' | 'cross'. tiles: [top, side, bottom].
@@ -52,6 +54,17 @@ def(B.YEW, 'Yew Tree', [T.log_top, T.yew_side, T.log_top]);
 def(B.TIN, 'Tin Vein', T.tin);
 def(B.COAL, 'Coal Seam', T.coal);
 def(B.IRON, 'Iron Vein', T.iron);
+
+def(B.SNARE, 'Snare', T.snare, { kind: 'cross', solid: false, opaque: false });
+def(B.SNARE_FULL, 'Snare (caught something!)', T.snare_full, { kind: 'cross', solid: false, opaque: false });
+def(B.SOIL, 'Allotment Soil', [T.soil_top, T.dirt, T.dirt]);
+def(B.SPROUT, 'Growing Crop', T.sprout, { kind: 'cross', solid: false, opaque: false });
+def(B.POTATOES, 'Potatoes (ripe)', T.potatoes, { kind: 'cross', solid: false, opaque: false });
+def(B.OATS, 'Oats (ripe)', T.oats, { kind: 'cross', solid: false, opaque: false });
+def(B.CABBAGES, 'Cabbages (ripe)', T.cabbages, { kind: 'cross', solid: false, opaque: false });
+def(B.FEVERFEW, 'Feverfew (ripe)', T.feverfew, { kind: 'cross', solid: false, opaque: false });
+// Blocks you click to collect from (snares and crops), as well as gathering nodes.
+export const COLLECT = new Set([B.SNARE, B.SNARE_FULL, B.SPROUT, B.POTATOES, B.OATS, B.CABBAGES, B.FEVERFEW]);
 export const BLOCKS = defs;
 
 export const isSolid = (b) => defs[b] ? defs[b].solid : false;

@@ -59,6 +59,8 @@ var requestHandlers = map[string]requestHandler{
 	"break":         func(g *Game, p *Player, m *protocol.In) error { return g.Break(p, m.BX, m.BY, m.BZ) },
 	"light_fire":    func(g *Game, p *Player, m *protocol.In) error { return g.LightFire(p, m.BX, m.BY, m.BZ, m.Item) },
 	"cast":          func(g *Game, p *Player, m *protocol.In) error { return g.Cast(p, m.Charm) },
+	"set_trap":      func(g *Game, p *Player, m *protocol.In) error { return g.SetTrap(p, m.BX, m.BY, m.BZ, m.Item) },
+	"plant":         func(g *Game, p *Player, m *protocol.In) error { return g.Plant(p, m.BX, m.BY, m.BZ, m.Item) },
 	"attack":        func(g *Game, p *Player, m *protocol.In) error { return g.Attack(p, m.Target) },
 	"craft":         func(g *Game, p *Player, m *protocol.In) error { return g.Craft(p, m.Recipe) },
 	"eat":           func(g *Game, p *Player, m *protocol.In) error { return g.Eat(p, m.Item) },

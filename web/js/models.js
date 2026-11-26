@@ -169,6 +169,10 @@ export const ITEM_MODELS = {
     { c: 'main', p: [0, 0.22, 0], s: [0.04, 0.5, 0.04] },
     { c: 'glowtip', p: [0, 0.5, 0], s: [0.07, 0.07, 0.07], glow: true, always: true },
   ],
+  snare: [
+    { c: 'grip', p: [0, 0, 0], s: [0.05, 0.3, 0.05] },
+    { c: 'string', p: [0, 0.2, 0.08], s: [0.18, 0.02, 0.18] },
+  ],
   log: [
     { c: 'main', p: [0, 0, 0], s: [0.16, 0.4, 0.16] },
     { c: 'end', p: [0, 0.205, 0], s: [0.12, 0.01, 0.12] },
@@ -226,6 +230,9 @@ export function drawDropped(r, it, x, y, z, t, seed) {
 export const MOB_MODELS = {
   bramblet: { draw: drawBramblet, tag: 1.15 },
   wisp: { draw: drawWisp, tag: 1.7 },
+  hare: { draw: drawHare, tag: 0.95 },
+  grouse: { draw: drawGrouse, tag: 0.85 },
+  deer: { draw: drawDeer, tag: 2.4 },
 };
 
 // A projectile in flight (bow, sling or wand), from s.a to s.b, started at
@@ -251,4 +258,53 @@ export function drawShot(r, s, time, world) {
     box(r, x, y, z, yaw + time * 9, 0, 0, 0, 0.13, 0.13, 0.13, rgb(s.color || '#9aa3ad'));
   }
   return true;
+}
+
+// Game animals (they run from you). Boxes: oy is the top of each box.
+export function drawHare(r, e, t) {
+  const hop = e.moving ? Math.abs(Math.sin(t * 12 + e.id)) * 0.3 : 0;
+  const { x, z, yaw } = e, y = e.y + hop, f = e.flash > 0 ? 1 : 0;
+  const fur = [0.6, 0.45, 0.32], pale = [0.85, 0.78, 0.68];
+  box(r, x, y, z, yaw, 0, 0.36, -0.05, 0.28, 0.26, 0.46, fur, f);
+  box(r, x, y, z, yaw, 0, 0.46, 0.22, 0.2, 0.2, 0.2, fur, f);
+  box(r, x, y, z, yaw, -0.05, 0.74, 0.2, 0.05, 0.3, 0.06, fur, f);
+  box(r, x, y, z, yaw, 0.05, 0.74, 0.2, 0.05, 0.3, 0.06, fur, f);
+  box(r, x, y, z, yaw, 0, 0.36, -0.3, 0.1, 0.1, 0.06, pale, f);
+  box(r, x, y, z, yaw, -0.07, 0.4, 0.33, 0.04, 0.05, 0.02, EYE);
+  box(r, x, y, z, yaw, 0.07, 0.4, 0.33, 0.04, 0.05, 0.02, EYE);
+}
+
+export function drawGrouse(r, e, t) {
+  const bob = e.moving ? Math.abs(Math.sin(t * 10 + e.id)) * 0.08 : 0;
+  const { x, z, yaw } = e, y = e.y + bob, f = e.flash > 0 ? 1 : 0;
+  const body = [0.45, 0.22, 0.16];
+  box(r, x, y, z, yaw, 0, 0.42, 0, 0.3, 0.28, 0.4, body, f);
+  box(r, x, y, z, yaw, 0, 0.56, 0.2, 0.18, 0.18, 0.18, body, f);
+  box(r, x, y, z, yaw, 0, 0.6, 0.2, 0.2, 0.04, 0.12, [0.85, 0.15, 0.12], f); // red comb over the eye
+  box(r, x, y, z, yaw, 0, 0.5, 0.31, 0.06, 0.04, 0.06, [0.85, 0.7, 0.3], f);
+  box(r, x, y, z, yaw, 0, 0.44, -0.24, 0.24, 0.1, 0.12, [0.3, 0.15, 0.1], f);
+  box(r, x, y, z, yaw, -0.08, 0.14, 0, 0.04, 0.14, 0.04, [0.8, 0.75, 0.65], f);
+  box(r, x, y, z, yaw, 0.08, 0.14, 0, 0.04, 0.14, 0.04, [0.8, 0.75, 0.65], f);
+}
+
+export function drawDeer(r, e, t) {
+  const { x, z, yaw } = e, y = e.y, f = e.flash > 0 ? 1 : 0;
+  const coat = [0.55, 0.3, 0.18], dark = [0.35, 0.22, 0.14], legA = e.moving ? Math.sin(t * 11 + e.id) * 0.6 : 0;
+  box(r, x, y, z, yaw, 0, 1.25, 0, 0.42, 0.45, 0.95, coat, f);
+  box(r, x, y, z, yaw, 0, 1.55, 0.5, 0.2, 0.45, 0.2, coat, f, -0.4);
+  box(r, x, y, z, yaw, 0, 1.75, 0.64, 0.2, 0.2, 0.32, coat, f);
+  for (const [ox, oz, s] of [[-0.14, 0.36, 1], [0.14, 0.36, -1], [-0.14, -0.36, -1], [0.14, -0.36, 1]]) box(r, x, y, z, yaw, ox, 0.85, oz, 0.1, 0.85, 0.1, dark, f, legA * s);
+  // antlers
+  for (const s of [-1, 1]) {
+    box(r, x, y, z, yaw, s * 0.08, 2.15, 0.6, 0.04, 0.4, 0.04, [0.8, 0.72, 0.58], f);
+    box(r, x, y, z, yaw, s * 0.16, 2.15, 0.6, 0.16, 0.04, 0.04, [0.8, 0.72, 0.58], f);
+  }
+  box(r, x, y, z, yaw, 0, 1.3, -0.5, 0.14, 0.14, 0.06, [0.9, 0.85, 0.78], f);
+}
+
+// An agility checkpoint flag on a post. y is the ground under it.
+export function drawFlag(r, x, y, z, col, glow, t) {
+  box(r, x, y, z, 0, 0, 2.4, 0, 0.08, 2.4, 0.08, [0.4, 0.28, 0.18]);
+  const wave = Math.sin(t * 4 + x) * 0.15;
+  box(r, x, y, z, wave, 0.3, 2.35, 0, 0.55, 0.38, 0.03, col, glow ? 2 : 0);
 }

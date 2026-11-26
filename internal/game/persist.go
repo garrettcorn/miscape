@@ -26,6 +26,8 @@ type SaveData struct {
 	Placed     []PlacedBlock         `json:"placedBlocks"` // who placed each player-built block
 	Regrow     []regen               `json:"regrow"`
 	Fires      []fire                `json:"fires,omitempty"`
+	Traps      []plot                `json:"traps,omitempty"`
+	Crops      []plot                `json:"crops,omitempty"`
 	Invites    map[string]*Invite    `json:"invites"`
 	Bans       map[string]*Ban       `json:"bans"`
 	Drops      []*Drop               `json:"drops,omitempty"`
@@ -90,7 +92,7 @@ func (g *Game) Snapshot() *SaveData {
 	}
 	return &SaveData{
 		Version: SaveVersion, Realm: g.Realm, Level: g.W.Def.Level, Characters: chars, Edits: g.W.Edits(), Placed: placed,
-		Regrow: append([]regen(nil), g.regens...), Fires: append([]fire(nil), g.fires...), Invites: invites, Bans: bans, Drops: drops, SavedAt: g.Now,
+		Regrow: append([]regen(nil), g.regens...), Fires: append([]fire(nil), g.fires...), Traps: append([]plot(nil), g.traps...), Crops: append([]plot(nil), g.crops...), Invites: invites, Bans: bans, Drops: drops, SavedAt: g.Now,
 	}
 }
 
@@ -143,6 +145,7 @@ func Load(c *content.Content, cfg config.World, d *SaveData, out Outbox) (*Game,
 		}
 		g.regens = d.Regrow
 		g.fires = d.Fires
+		g.traps, g.crops = d.Traps, d.Crops
 		for _, dr := range d.Drops {
 			if dr == nil || dr.Count < 1 || dr.Item == "" {
 				continue
