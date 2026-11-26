@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.6.0] - 2026-11-26
+
+### Changed
+
+- Let range and magic weapons shoot up to their reach, checking line of sight and using up ammunition on the server ([`9fce5d9`](https://github.com/garrettcorn/miscape/commit/9fce5d9))
+- Show charms you know on the hotbar, and active charms as countdown chips by the health bar ([`9fce5d9`](https://github.com/garrettcorn/miscape/commit/9fce5d9))
+
+### Added
+
+- Add slings, rowan shortbows and yew longbows, with stones, copper arrows and iron arrows as ammunition ([`9fce5d9`](https://github.com/garrettcorn/miscape/commit/9fce5d9))
+- Add rowan wands and wisp-light staffs that throw will-light, spending salt ([`9fce5d9`](https://github.com/garrettcorn/miscape/commit/9fce5d9))
+- Add three charms: Hearth Charm (heal), Rowan Ward (less damage taken) and Boggart-bane (double damage against boggarts) ([`9fce5d9`](https://github.com/garrettcorn/miscape/commit/9fce5d9))
+- Add a bronze sword and recipes for slings, arrows, wands, bows and the staff ([`9fce5d9`](https://github.com/garrettcorn/miscape/commit/9fce5d9))
+- Add Nance Clegg the cunning-woman and her quest "Salt and Rowan" ([`9fce5d9`](https://github.com/garrettcorn/miscape/commit/9fce5d9))
+
 ## [0.5.0] - 2026-11-26
 
 _If you are upgrading: characters keep everything, and their combat XP becomes Melee XP. Update servers, join companions and browsers together (protocol 3)._
@@ -92,6 +107,8 @@ _If you are upgrading: browsers remember characters per address, so to keep play
 ## [0.1.0] - 2026-11-25
 
 _Initial release._
+
+[0.6.0]: https://github.com/garrettcorn/miscape/releases/tag/v0.6.0
 
 [0.5.0]: https://github.com/garrettcorn/miscape/releases/tag/v0.5.0
 
