@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.7.0] - 2026-11-26
+
+_If you are upgrading: saves carry over unchanged. Update servers, join companions and browsers together (protocol 4)._
+
+### Changed
+
+- **Breaking:** bump the protocol to version 4 for snares, crops and courses ([`5ec7fca`](https://github.com/garrettcorn/miscape/commit/5ec7fca))
+- Let every Agility level add 1% to sprint speed, allowed for by the server's speed check ([`5ec7fca`](https://github.com/garrettcorn/miscape/commit/5ec7fca))
+- Count creature loot toward "gather" quest steps ([`5ec7fca`](https://github.com/garrettcorn/miscape/commit/5ec7fca))
+
+### Added
+
+- Add hares, red grouse and red deer that run from players; kills train Hunting, and grouse and deer need Hunting levels ([`5ec7fca`](https://github.com/garrettcorn/miscape/commit/5ec7fca))
+- Add snares that catch hares, grouse and foxes on open ground while you wait ([`5ec7fca`](https://github.com/garrettcorn/miscape/commit/5ec7fca))
+- Add an allotment in Manchester where potatoes, oats, cabbages and feverfew grow in real time, even while you're offline ([`5ec7fca`](https://github.com/garrettcorn/miscape/commit/5ec7fca))
+- Add two agility courses, the Irk Valley Run and the Pennine Fell Race, run through checkpoint flags against the clock ([`5ec7fca`](https://github.com/garrettcorn/miscape/commit/5ec7fca))
+- Add game and garden cooking, including lobscouse, plus snares and feather-fletched arrows ([`5ec7fca`](https://github.com/garrettcorn/miscape/commit/5ec7fca))
+- Add Abel Fothergill the gamekeeper and Jonas Ogden the smallholder, with a quest each ([`5ec7fca`](https://github.com/garrettcorn/miscape/commit/5ec7fca))
+
 ## [0.6.0] - 2026-11-26
 
 ### Changed
@@ -107,6 +126,8 @@ _If you are upgrading: browsers remember characters per address, so to keep play
 ## [0.1.0] - 2026-11-25
 
 _Initial release._
+
+[0.7.0]: https://github.com/garrettcorn/miscape/releases/tag/v0.7.0
 
 [0.6.0]: https://github.com/garrettcorn/miscape/releases/tag/v0.6.0
 
