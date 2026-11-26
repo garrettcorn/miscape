@@ -22,7 +22,7 @@ with friends, and, if you dare, carry a lantern into **the Gloam**.
   join over a [Tailcat](https://github.com/tailscale/tailcat) tunnel.
 - **Controls:** gamepad first, plus keyboard/mouse (remappable) and touch.
 
-> Status: **vertical-slice prototype (v0.1.0)**. Everything listed in
+> Status: **vertical-slice prototype (v0.2.0)**. Everything listed in
 > [docs/SCOPE.md](docs/SCOPE.md) is implemented and tested, but it's a first
 > release: small content, no real account system, and only measured on the
 > devices listed in [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
