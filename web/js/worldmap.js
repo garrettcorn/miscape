@@ -25,6 +25,13 @@ export class WorldMap {
     this.img.onerror = () => { this.failed = true; this.draw(); };
     this.loaded = false;
     this.img.src = m.url;
+    // Optional relief + ocean-depth layer (grey, 128 = flat), blended on top.
+    this.relief = null;
+    if (m.relief) {
+      const r = new Image();
+      r.onload = () => { this.relief = r; this.draw(); };
+      r.src = m.relief;
+    }
   }
 
   html() {
@@ -130,6 +137,16 @@ export class WorldMap {
       let x0 = W / 2 - cx * z;
       x0 -= Math.ceil(x0 / iw) * iw; // first copy starting at or left of 0
       for (let x = x0; x < W; x += iw) ctx.drawImage(this.img, x, toY(0), iw, ih);
+      if (this.relief) {
+        // Overlay keeps the terrain colors but lightens ridges and shallow seas
+        // and darkens shadowed slopes and the deep ocean.
+        ctx.save();
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.globalAlpha = 0.9;
+        ctx.imageSmoothingEnabled = true;
+        for (let x = x0; x < W; x += iw) ctx.drawImage(this.relief, x, toY(0), iw, ih);
+        ctx.restore();
+      }
     } else {
       ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.font = `${14 * dpr}px system-ui, sans-serif`; ctx.textAlign = 'center';
       ctx.fillText(this.failed ? 'The map couldn’t be loaded.' : 'Loading map…', W / 2, H / 2);

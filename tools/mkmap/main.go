@@ -28,6 +28,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -41,6 +42,8 @@ func main() {
 	w := flag.Int("w", 3072, "output width")
 	h := flag.Int("h", 1536, "output height")
 	probe := flag.String("probe", "", "print source colors at space-separated lat,lon pairs and exit")
+	relief := flag.String("relief", "", "write a relief layer (grey PNG) from a shaded-relief + ocean-depth raster to this path, using -mask to tell land from sea")
+	mask := flag.String("mask", "maps/earth/terrain.png", "terrain image used as the land/sea mask for -relief")
 	flag.Parse()
 	log.SetFlags(0)
 	if *src == "" {
@@ -49,6 +52,12 @@ func main() {
 	img, err := readTIFF(*src)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if *relief != "" {
+		if err := makeRelief(img, *relief, *mask, *legendPath, *w, *h); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 	if *probe != "" {
 		for _, ll := range strings.Fields(*probe) {
@@ -158,7 +167,8 @@ func classify(r, g, b int, lat float64) world.Terrain {
 
 type rgbImage struct {
 	w, h int
-	pix  []byte // RGB
+	spp  int    // samples per pixel: 3 (RGB) or 1 (grey)
+	pix  []byte // RGB or grey
 }
 
 func (m *rgbImage) avg(x0, y0, x1, y1 int) (int, int, int) {
@@ -166,10 +176,10 @@ func (m *rgbImage) avg(x0, y0, x1, y1 int) (int, int, int) {
 	for y := max(y0, 0); y < min(y1, m.h); y++ {
 		for x := x0; x < x1; x++ {
 			xx := ((x % m.w) + m.w) % m.w
-			i := (y*m.w + xx) * 3
+			i := (y*m.w + xx) * m.spp
 			r += int(m.pix[i])
-			g += int(m.pix[i+1])
-			b += int(m.pix[i+2])
+			g += int(m.pix[i+(m.spp-1)/2])
+			b += int(m.pix[i+m.spp-1])
 			n++
 		}
 	}
@@ -179,7 +189,7 @@ func (m *rgbImage) avg(x0, y0, x1, y1 int) (int, int, int) {
 	return r / n, g / n, b / n
 }
 
-// readTIFF reads a little-endian, uncompressed, 8-bit RGB striped TIFF.
+// readTIFF reads a little-endian, uncompressed, 8-bit RGB or greyscale striped TIFF.
 func readTIFF(path string) (*rgbImage, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -223,14 +233,18 @@ func readTIFF(path string) (*rgbImage, error) {
 	if val(259) != 1 {
 		return nil, fmt.Errorf("compressed TIFF (compression %d) is not supported", val(259))
 	}
-	if spp := val(277); spp != 3 {
-		return nil, fmt.Errorf("need RGB (3 samples per pixel), got %d", spp)
+	spp := int(val(277))
+	if spp == 0 {
+		spp = 1 // the TIFF default
+	}
+	if spp != 3 && spp != 1 {
+		return nil, fmt.Errorf("need RGB or grey (3 or 1 samples per pixel), got %d", spp)
 	}
 	offsets, err := readArray(f, tags[273])
 	if err != nil {
 		return nil, err
 	}
-	m := &rgbImage{w: w, h: h, pix: make([]byte, 0, w*h*3)}
+	m := &rgbImage{w: w, h: h, spp: spp, pix: make([]byte, 0, w*h*spp)}
 	counts, err := readArray(f, tags[279])
 	if err != nil {
 		return nil, err
@@ -242,8 +256,8 @@ func readTIFF(path string) (*rgbImage, error) {
 		}
 		m.pix = append(m.pix, buf...)
 	}
-	if len(m.pix) < w*h*3 {
-		return nil, fmt.Errorf("TIFF data too short (%d of %d bytes)", len(m.pix), w*h*3)
+	if len(m.pix) < w*h*spp {
+		return nil, fmt.Errorf("TIFF data too short (%d of %d bytes)", len(m.pix), w*h*spp)
 	}
 	return m, nil
 }
@@ -276,4 +290,83 @@ func readArray(f *os.File, e struct {
 		}
 	}
 	return out, nil
+}
+
+// makeRelief writes a greyscale relief layer for the world map from a
+// shaded-relief raster with ocean-bottom shading (Natural Earth's
+// GRAY_50M_SR_OB). Land and sea are normalized separately so that typical
+// ground sits at neutral grey (128): the game blends the layer over the
+// terrain colors, lightening ridges and slopes facing the light, darkening
+// shadowed slopes and deep ocean.
+//
+//	go run ./tools/mkmap -src GRAY_50M_SR_OB.tif -relief maps/earth/relief.png
+func makeRelief(img *rgbImage, out, maskPath, legendPath string, w, h int) error {
+	lb, err := os.ReadFile(legendPath)
+	if err != nil {
+		return err
+	}
+	legend, err := world.ParseLegend(lb)
+	if err != nil {
+		return err
+	}
+	mb, err := os.ReadFile(maskPath)
+	if err != nil {
+		return err
+	}
+	tm, err := world.DecodeTerrain(mb, legend)
+	if err != nil {
+		return err
+	}
+	vals := make([]int, w*h)
+	sea := make([]bool, w*h)
+	var land, water []int
+	for y := 0; y < h; y++ {
+		sy0, sy1 := y*img.h/h, (y+1)*img.h/h
+		for x := 0; x < w; x++ {
+			sx0, sx1 := x*img.w/w, (x+1)*img.w/w
+			v, _, _ := img.avg(sx0, sy0, max(sx1, sx0+1), max(sy1, sy0+1))
+			i := y*w + x
+			vals[i] = v
+			sea[i] = tm.At(x*tm.W/w, y*tm.H/h).IsWater()
+			if sea[i] {
+				water = append(water, v)
+			} else {
+				land = append(land, v)
+			}
+		}
+	}
+	// Map each group's 3rd..97th percentile onto 40..216 around its median.
+	norm := func(s []int) func(int) uint8 {
+		sort.Ints(s)
+		lo, mid, hi := s[len(s)*3/100], s[len(s)/2], s[len(s)*97/100]
+		return func(v int) uint8 {
+			var t float64
+			if v < mid {
+				t = 128 - 88*float64(mid-v)/math.Max(1, float64(mid-lo))
+			} else {
+				t = 128 + 88*float64(v-mid)/math.Max(1, float64(hi-mid))
+			}
+			return uint8(math.Max(0, math.Min(255, t)))
+		}
+	}
+	nl, nw := norm(land), norm(water)
+	g := image.NewGray(image.Rect(0, 0, w, h))
+	for i, v := range vals {
+		if sea[i] {
+			g.Pix[i] = nw(v)
+		} else {
+			g.Pix[i] = nl(v)
+		}
+	}
+	f, err := os.Create(out)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if err := (&png.Encoder{CompressionLevel: png.BestCompression}).Encode(f, g); err != nil {
+		return err
+	}
+	st, _ := f.Stat()
+	fmt.Printf("wrote %s (%dx%d, %d KB)\n", out, w, h, st.Size()/1024)
+	return nil
 }

@@ -310,13 +310,15 @@ func TestInfoOffersSourceCode(t *testing.T) {
 // are not (only PNGs).
 func TestWorldMapImageIsServed(t *testing.T) {
 	_, ts := start(t, t.TempDir(), false)
-	r, err := http.Get(ts.URL + "/maps/earth/terrain.png")
-	if err != nil {
-		t.Fatal(err)
-	}
-	r.Body.Close()
-	if r.StatusCode != 200 || r.Header.Get("Content-Type") != "image/png" {
-		t.Fatalf("terrain.png: %d %s", r.StatusCode, r.Header.Get("Content-Type"))
+	for _, p := range []string{"/maps/earth/terrain.png", "/maps/earth/display/relief.png"} {
+		r, err := http.Get(ts.URL + p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.Body.Close()
+		if r.StatusCode != 200 || r.Header.Get("Content-Type") != "image/png" {
+			t.Fatalf("%s: %d %s", p, r.StatusCode, r.Header.Get("Content-Type"))
+		}
 	}
 	for _, p := range []string{"/maps/earth/level1.json", "/maps/", "/maps/../go.mod"} {
 		r, err := http.Get(ts.URL + p)

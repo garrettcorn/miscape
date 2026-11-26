@@ -188,9 +188,10 @@ over a network**, you must make your full source code available under the same
 license. Running a modified server? Set `LF_SOURCE_URL` to where your source is
 published. It's shown to players on the join screen and in `/api/info`.
 
-The Earth terrain map (`maps/earth/terrain.png`) is derived from
-[Natural Earth](https://www.naturalearthdata.com/) II raster data, which is in
-the public domain.
+The Earth terrain map and relief layer (`maps/earth/terrain.png`,
+`maps/earth/relief.png`) are derived from [Natural Earth](https://www.naturalearthdata.com/)
+raster data (Natural Earth II, and Gray Earth with Shaded Relief, Hypsography
+and Ocean Bottom), which is in the public domain.
 
 The AGPL does not grant rights to the **Lanternfall** name or logo. Please
 don't present a fork as the official game. Commercial licenses for uses the

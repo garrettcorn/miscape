@@ -21,20 +21,36 @@ function box(r, x, y, z, yaw, ox, oy, oz, w, h, d, col, a = 0, pitch = 0) {
 }
 
 // A friendly blocky person. Feet at y. Faces +Z in local space.
+// e.swim switches the walk cycle for a front-crawl stroke and a flutter kick.
 export function drawPerson(r, e) {
   const { x, y, z, yaw } = e;
   const col = rgb(e.color || '#4a90d9');
   const flash = e.flash > 0 ? 1 : 0;
-  const walk = Math.sin(e.walk || 0) * 0.7 * (e.moving ? 1 : 0);
+  const phase = e.walk || 0;
+  const walk = Math.sin(phase) * 0.7 * (e.moving ? 1 : 0);
   const swing = e.swing > 0 ? -Math.sin(e.swing * Math.PI) * 1.8 : 0;
+  let legL = walk, legR = -walk, armL = -walk * 0.8, armR = walk * 0.8 + swing;
+  if (e.swim) {
+    if (e.moving) {
+      // Front crawl: arms turn over in full circles, half a turn apart.
+      armL = -(phase * 0.8 % (Math.PI * 2));
+      armR = -((phase * 0.8 + Math.PI) % (Math.PI * 2)) + swing;
+      legL = Math.sin(phase * 2.2) * 0.35; legR = -legL;
+    } else {
+      // Treading water: arms sweep out front, legs paddle gently.
+      const t = Math.sin(phase * 0.6 + (e.id || 0));
+      armL = -1.1 + t * 0.35; armR = -1.1 - t * 0.35 + swing;
+      legL = t * 0.25; legR = -legL;
+    }
+  }
   // legs (pivot at hip)
-  box(r, x, y, z, yaw, -0.11, 0.72, 0, 0.2, 0.72, 0.22, darker(col, 0.55), flash, walk);
-  box(r, x, y, z, yaw, 0.11, 0.72, 0, 0.2, 0.72, 0.22, darker(col, 0.55), flash, -walk);
+  box(r, x, y, z, yaw, -0.11, 0.72, 0, 0.2, 0.72, 0.22, darker(col, 0.55), flash, legL);
+  box(r, x, y, z, yaw, 0.11, 0.72, 0, 0.2, 0.72, 0.22, darker(col, 0.55), flash, legR);
   // body
   box(r, x, y, z, yaw, 0, 1.32, 0, 0.5, 0.6, 0.3, col, flash);
   // arms (pivot at shoulder)
-  box(r, x, y, z, yaw, -0.34, 1.3, 0, 0.17, 0.58, 0.18, darker(col, 0.85), flash, -walk * 0.8);
-  box(r, x, y, z, yaw, 0.34, 1.3, 0, 0.17, 0.58, 0.18, darker(col, 0.85), flash, walk * 0.8 + swing);
+  box(r, x, y, z, yaw, -0.34, 1.3, 0, 0.17, 0.58, 0.18, darker(col, 0.85), flash, armL);
+  box(r, x, y, z, yaw, 0.34, 1.3, 0, 0.17, 0.58, 0.18, darker(col, 0.85), flash, armR);
   // head
   box(r, x, y, z, yaw, 0, 1.76, 0, 0.42, 0.42, 0.42, SKIN, flash);
   box(r, x, y, z, yaw, -0.09, 1.64, 0.212, 0.06, 0.08, 0.02, EYE, 0);
@@ -44,10 +60,16 @@ export function drawPerson(r, e) {
   else if (e.hat === 'helm') box(r, x, y, z, yaw, 0, 1.84, 0, 0.46, 0.18, 0.46, [0.55, 0.6, 0.66]);
   else if (e.hat === 'cap') box(r, x, y, z, yaw, 0, 1.82, 0.03, 0.46, 0.12, 0.5, [0.85, 0.75, 0.3]);
   else box(r, x, y, z, yaw, 0, 1.8, -0.02, 0.44, 0.1, 0.44, darker(col, 0.4));
-  // held item in the right hand (moves with the arm), lantern on the left hip
   const c = Math.cos(yaw), s = Math.sin(yaw);
-  if (e.held) drawHeld(r, e.held, x + c * 0.34, y + 1.3, z - s * 0.34, yaw, walk * 0.8 + swing);
-  if (e.lantern) drawHeld(r, LANTERN, x - c * 0.4 + s * 0.12, y + 0.7, z + s * 0.4 + c * 0.12, yaw, 0, 0, 0, 0);
+  // Held item in the right hand, moving with the arm.
+  if (e.held) drawHeld(r, e.held, x + c * 0.34, y + 1.3, z - s * 0.34, yaw, armR);
+  // The lantern hangs from the left hand: it follows the hand as the arm
+  // swings, but stays upright (with a little sway), like a real lantern.
+  if (e.lantern) {
+    const sx = x - c * 0.34, sz = z + s * 0.34;             // left shoulder
+    const fwd = -0.56 * Math.sin(armL), down = 0.56 * Math.cos(armL); // hand, in the body's frame
+    drawHeld(r, LANTERN, sx + s * fwd, y + 1.3 - down, sz + c * fwd, yaw, armL * 0.25, 0, 0.17, 0);
+  }
 }
 
 export function drawBramblet(r, e, t) {

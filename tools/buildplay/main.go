@@ -51,6 +51,9 @@ func main() {
 	// Terrain images for the world map (served at maps/<world>/<file>.png).
 	pngs, err := filepath.Glob("maps/*/*.png")
 	must(err)
+	shown, err := filepath.Glob("maps/*/display/*.png")
+	must(err)
+	pngs = append(pngs, shown...)
 	for _, p := range pngs {
 		dst := filepath.Join(out, p)
 		must(os.MkdirAll(filepath.Dir(dst), 0o755))

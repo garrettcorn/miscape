@@ -641,7 +641,7 @@ func (s *Server) checkAdmin(r *http.Request) bool {
 // mapHandler serves the world-map terrain images (only PNGs) for the in-game
 // world map. They're part of the game, so they cache well.
 func mapHandler() http.Handler {
-	fsrv := http.StripPrefix("/maps/", http.FileServerFS(maps.FS))
+	fsrv := http.StripPrefix("/maps/", http.FileServerFS(maps.Served()))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasSuffix(r.URL.Path, ".png") {
 			http.NotFound(w, r)

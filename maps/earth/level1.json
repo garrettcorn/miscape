@@ -3,6 +3,7 @@
   "level": 1,
   "map": "terrain.png",
   "legend": "legend.json",
+  "relief": "display/relief.png",
   "scale": 1,
   "groundY": 12,
   "seed": 20261125,

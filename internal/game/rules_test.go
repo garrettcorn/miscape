@@ -1,6 +1,7 @@
 package game
 
 import (
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -471,5 +472,73 @@ func TestMobsNeverStandOnCanopies(t *testing.T) {
 		if m.Y > 20 {
 			t.Fatalf("%s too high: %.1f", m.Def.ID, m.Y)
 		}
+	}
+}
+
+// A swimmer floating at the surface can climb out onto the bank (the client
+// pulls itself up when it swims into a ledge within reach).
+func TestClimbOutOfWater(t *testing.T) {
+	f := newFixture(t)
+	p := f.join("Swimmer")
+	clear(f.g.Mobs)
+	wx, wy, wz := f.wildSpot(0, 0)
+	x, z, g := int(wx)-1, int(wz), int(wy)-1 // dig a pool in the west column of the patch
+	for y := g - 3; y <= g; y++ {
+		f.g.W.Set(x, y, z, world.Water)
+	}
+	float := float64(g) + 1 - 1.25 // chest at the surface
+	f.at(p, float64(x)+0.5, float, wz)
+	p.lastMove = f.g.Now
+	f.advance(100 * time.Millisecond)
+	f.g.Handle(p.ID, &protocol.In{T: "move", X: float64(x) + 1.35, Y: wy, Z: wz})
+	if p.Char.Y != wy {
+		t.Fatalf("climbing out of the water was rejected: %v", f.out.last(p.ID, "correct"))
+	}
+}
+
+// Every NPC stands on dry ground (not over water), as do the town gate and
+// its warning sign — on every level.
+func TestNPCsAndGateStandOnDryLand(t *testing.T) {
+	f := newFixture(t)
+	w := f.g.W
+	dry := func(what string, x, z float64) {
+		t.Helper()
+		ix, iz := int(math.Floor(x)), int(math.Floor(z))
+		under := w.Get(ix, w.Def.GroundY, iz)
+		if under == world.Water || !world.Solid(under) {
+			t.Errorf("%s at %.1f,%.1f stands on block %d", what, x, z, under)
+		}
+	}
+	for id, n := range f.g.C.NPCs {
+		dry("npc "+id, n.X, n.Z)
+	}
+	g, err := w.Point("town:manchester:gate")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dry("gate", g.X, g.Z)
+	found := false
+	for dz := -30.0; dz <= 30 && !found; dz++ {
+		for dx := -30.0; dx <= 30; dx++ {
+			x, z := int(math.Floor(g.X+dx)), int(math.Floor(g.Z+dz))
+			if w.Get(x, w.Def.GroundY+1, z) == world.Sign {
+				dry("warning sign", float64(x)+0.5, float64(z)+0.5)
+				found = true
+				break
+			}
+		}
+	}
+	if !found {
+		t.Fatal("no warning sign near the gate")
+	}
+}
+
+// The welcome message tells the client which images to draw the world map from.
+func TestWelcomeNamesTheMapImages(t *testing.T) {
+	f := newFixture(t)
+	p := f.join("Cartographer")
+	m := f.g.Welcome(p.ID, "")["world"].(M)["map"].(M)
+	if m["url"] != "maps/earth/terrain.png" || m["relief"] != "maps/earth/display/relief.png" || m["scale"] != 1 {
+		t.Fatalf("map: %v", m)
 	}
 }

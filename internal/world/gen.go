@@ -45,6 +45,10 @@ func valueNoise(seed uint64, x, z, scale float64, period int) float64 {
 
 // ---------- terrain ----------
 
+// townLand is how far past a town's edge the ground is kept dry: its roads
+// run 6 blocks out and the gate (lamps, sign, watchman) stands about 4 out.
+const townLand = 7
+
 // terrainAt samples the map image for canonical column (x,z). Scaled-up
 // levels wobble the sample point so borders between terrain types aren't
 // blocky staircases.
@@ -53,9 +57,10 @@ func (w *World) terrainAt(x, z int) Terrain {
 		return TIce
 	}
 	fx, fz := float64(x)+0.5, float64(z)+0.5
-	// Towns always stand on open grassland, whatever the map says there.
+	// Towns always stand on open grassland, whatever the map says there,
+	// including their roads and gate (which reach townLand blocks past the edge).
 	for _, p := range w.Def.Places {
-		if p.Structure == "town" && w.Dist2(fx, fz, p.X, p.Z) <= (p.Radius+3)*(p.Radius+3) {
+		if p.Structure == "town" && w.Dist2(fx, fz, p.X, p.Z) <= (p.Radius+townLand)*(p.Radius+townLand) {
 			return TGrass
 		}
 	}

@@ -180,7 +180,17 @@ func (g *Game) worldView() M {
 		"sx": w.W, "sy": world.SizeY, "sz": w.H, "chunk": world.Chunk, "wrapX": true,
 		"groundY": w.Def.GroundY, "zones": zones,
 		// The terrain image for the world map: pixel = block / scale.
-		"map":   M{"url": "maps/" + w.Def.Dir + "/" + w.Def.Map, "scale": w.Def.Scale},
+		"map":   g.mapView(),
 		"spawn": []float64{sp.X, sp.Y, sp.Z}, "anvil": []float64{a.X, a.Y, a.Z},
 	}
+}
+
+// mapView says where the world-map images are (served under /maps/).
+func (g *Game) mapView() M {
+	d := g.W.Def
+	m := M{"url": "maps/" + d.Dir + "/" + d.Map, "scale": d.Scale}
+	if d.Relief != "" {
+		m["relief"] = "maps/" + d.Dir + "/" + d.Relief
+	}
+	return m
 }

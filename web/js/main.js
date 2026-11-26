@@ -292,6 +292,7 @@ class Game {
     step(this.world, this.body, vx, vz, !ui.open && inp.jump, dt);
     const moving = Math.hypot(vx, vz) > 0.1;
     if (moving) { this.walk += dt * (inp.sprint ? 13 : 10); this.bodyYaw = Math.atan2(vx, vz); }
+    else if (this.body.inWater) this.walk += dt * 4; // treading water
     this.moving = moving;
     if (this.bodyYaw === undefined) this.bodyYaw = this.yaw;
     // Send position at 20 Hz when changed.
@@ -487,7 +488,8 @@ class Game {
       if (e.tx === undefined) continue;
       const dx = this.world.dx(e.x, e.tx), dz = e.tz - e.z; // the short way across the date line
       e.moving = Math.hypot(dx, dz) > 0.02;
-      if (e.moving) e.walk = (e.walk || 0) + dt * 10;
+      e.swim = this.world.get(Math.floor(e.x), Math.floor(e.y + 0.4), Math.floor(e.z)) === B.WATER;
+      if (e.moving || e.swim) e.walk = (e.walk || 0) + dt * (e.moving ? 10 : 4);
       e.x = this.world.wrapX(e.x + dx * k); e.y += (e.ty - e.y) * k; e.z += dz * k;
       let dy = e.tyaw - e.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); e.yaw += dy * k;
       e.flash = Math.max(0, (e.flash || 0) - dt);
@@ -513,7 +515,7 @@ class Game {
     this.myFlash = Math.max(0, (this.myFlash || 0) - dt);
     const wpn = this.me && this.items[this.me.eq];
     const hasLantern = this.me && this.carriesLight(this.me.inv);
-    if (boom > 0.9 && !this.bench) drawPerson(r, { x: b.x, y: b.y, z: b.z, yaw: this.bodyYaw || 0, color: this.me.color || '#4a90d9', walk: this.walk, moving: this.moving, swing: this.swing, held: wpn || null, lantern: hasLantern, flash: this.myFlash });
+    if (boom > 0.9 && !this.bench) drawPerson(r, { x: b.x, y: b.y, z: b.z, yaw: this.bodyYaw || 0, color: this.me.color || '#4a90d9', walk: this.walk, moving: this.moving, swing: this.swing, held: wpn || null, lantern: hasLantern, flash: this.myFlash, swim: b.inWater });
     for (const p of this.others.values()) drawPerson(r, { ...p, held: p.weapon ? this.items[p.weapon] : null });
     for (const d of this.drops.values()) drawDropped(r, this.items[d.item] || { color: "#888888" }, d.x, d.y, d.z, this.time, d.id);
     for (const n of Object.values(this.npcs)) drawPerson(r, { x: n.x, y: n.y, z: n.z, yaw: n.yaw + Math.sin(this.time * 0.5 + n.x) * 0.2, color: n.color, hat: n.hat, moving: false });

@@ -21,6 +21,7 @@ type Def struct {
 	Inherits string    `json:"inherits,omitempty"` // file name of the parent level, e.g. "level1"
 	Map      string    `json:"map,omitempty"`      // terrain image (PNG), relative to the level file
 	Legend   string    `json:"legend,omitempty"`   // color -> terrain JSON
+	Relief   string    `json:"relief,omitempty"`   // optional grey relief + ocean-depth layer for the world map
 	Scale    int       `json:"scale"`              // blocks per map pixel
 	GroundY  int       `json:"groundY,omitempty"`  // y of the top ground block
 	Seed     uint64    `json:"seed,omitempty"`
@@ -141,7 +142,7 @@ func (d *Def) inherit(p *Def) {
 		d.Name = p.Name
 	}
 	if d.Map == "" {
-		d.Map, d.Legend = p.Map, p.Legend
+		d.Map, d.Legend, d.Relief = p.Map, p.Legend, p.Relief
 	}
 	if d.Scale == 0 {
 		d.Scale = p.Scale * 2

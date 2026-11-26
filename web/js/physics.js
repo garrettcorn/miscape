@@ -22,6 +22,19 @@ function feetBlocked(world, x, y, z) {
   return false;
 }
 
+// Swimming into a bank pulls you up onto it, if the ledge is within reach
+// (MAX_CLIMB, matching the server's MaxJumpRise) and there is room to stand.
+const MAX_CLIMB = 1.7;
+function climbOut(world, b, nx, nz) {
+  for (let top = Math.floor(b.y) + 1; top - b.y <= MAX_CLIMB; top++) {
+    if (!blocked(world, nx, top, nz) && !blocked(world, b.x, top, b.z) && feetBlocked(world, nx, top - 0.05, nz)) {
+      b.y = top; b.vy = 0; b.onGround = true; b.stepAnim = 1;
+      return true;
+    }
+  }
+  return false;
+}
+
 // Step the body by desired horizontal velocity (vx, vz) for dt seconds.
 export function step(world, b, vx, vz, jump, dt) {
   // Don't fall into unloaded terrain.
@@ -29,8 +42,11 @@ export function step(world, b, vx, vz, jump, dt) {
   const feet = world.get(Math.floor(b.x), Math.floor(b.y + 0.4), Math.floor(b.z));
   b.inWater = feet === B.WATER;
   if (b.inWater) {
-    b.vy = Math.max(b.vy - GRAVITY * 0.25 * dt, -2.5);
-    if (jump) b.vy = 3.2;
+    // Float: while the chest is under water you rise, above it you sink a
+    // little, so a swimmer bobs with their head out. Jump swims up faster.
+    const chest = world.get(Math.floor(b.x), Math.floor(b.y + 1.25), Math.floor(b.z)) === B.WATER;
+    b.vy = chest ? Math.min(b.vy + 9 * dt, 1.6) : Math.max(b.vy - GRAVITY * 0.25 * dt, -2.5);
+    if (jump) b.vy = Math.max(b.vy, 3.2);
     vx *= 0.6; vz *= 0.6;
   } else {
     b.vy -= GRAVITY * dt;
@@ -45,12 +61,14 @@ export function step(world, b, vx, vz, jump, dt) {
     let nx = b.x + vx * h;
     if (blocked(world, nx, b.y, b.z)) {
       if (b.onGround && !blocked(world, nx, b.y + 1.01, b.z) && !blocked(world, b.x, b.y + 1.01, b.z)) { b.y += 1.01; b.stepAnim = 1; b.x = nx; }
+      else if (b.inWater && climbOut(world, b, nx, b.z)) b.x = nx;
       else vx = 0;
     } else b.x = nx;
     // Z
     let nz = b.z + vz * h;
     if (blocked(world, b.x, b.y, nz)) {
       if (b.onGround && !blocked(world, b.x, b.y + 1.01, nz) && !blocked(world, b.x, b.y + 1.01, b.z)) { b.y += 1.01; b.stepAnim = 1; b.z = nz; }
+      else if (b.inWater && climbOut(world, b, b.x, nz)) b.z = nz;
       else vz = 0;
     } else b.z = nz;
     // Y. Falling checks the exact sole of the feet: blocked() samples 2 cm up
