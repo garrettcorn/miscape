@@ -33,6 +33,14 @@ const SHAPES = {
   block: (c, d) => `<path d="M13 3 L22 8 L13 13 L4 8 Z" fill="${shade(c, 1.2)}"/><path d="M4 8 L13 13 L13 23 L4 18 Z" fill="${c}"/>
     <path d="M22 8 L13 13 L13 23 L22 18 Z" fill="${d}"/>`,
   coin: (c, d) => `<circle cx="13" cy="13" r="8.5" fill="${c}" stroke="${d}" stroke-width="1.4"/><circle cx="13" cy="13" r="5" fill="none" stroke="${d}" stroke-width=".9"/>`,
+  rod: (c, d) => `<path d="M5 22 L21 3" stroke="${c}" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="18" r="2" fill="${DARK}"/>
+    <path d="M21 3 Q23 12 19 18" stroke="#e8e6dc" stroke-width=".8" fill="none"/><path d="M19 18 l-1 2 l2 0 z" fill="${d}"/>`,
+  fish: (c, d) => `<path d="M4 13 Q11 5 19 13 Q11 21 4 13 Z" fill="${c}" stroke="${d}" stroke-width="1"/>
+    <path d="M18 13 L24 8 L24 18 Z" fill="${d}"/><circle cx="8" cy="12" r="1.2" fill="${DARK}"/>`,
+  tinderbox: (c, d) => `<rect x="4" y="9" width="18" height="11" rx="2" fill="${c}" stroke="${d}"/><rect x="4" y="7" width="18" height="4" rx="1.5" fill="${d}"/>
+    <path d="M13 3 Q16 6 13 8 Q10 6 13 3" fill="#ff9a3a"/>`,
+  log: (c, d) => `<rect x="3" y="8" width="17" height="10" rx="2" fill="${c}" stroke="${d}"/><ellipse cx="20" cy="13" rx="3.5" ry="5" fill="#d8aa6a" stroke="${d}"/>
+    <ellipse cx="20" cy="13" rx="1.5" ry="2.4" fill="none" stroke="${d}" stroke-width=".7"/>`,
   bundle: (c, d) => `<rect x="4" y="6" width="18" height="6" rx="3" fill="${c}" stroke="${d}"/><rect x="4" y="14" width="18" height="6" rx="3" fill="${c}" stroke="${d}"/>
     <circle cx="20" cy="9" r="2" fill="${d}"/><circle cx="20" cy="17" r="2" fill="${d}"/>`,
 };

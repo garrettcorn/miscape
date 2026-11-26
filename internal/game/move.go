@@ -40,7 +40,7 @@ func (g *Game) supported(x, y, z float64) bool {
 		}
 	}
 	ix, iy, iz := int(math.Floor(x)), int(math.Floor(y+0.5)), int(math.Floor(z))
-	return g.W.Get(ix, iy, iz) == world.Water || g.W.Get(ix, iy-1, iz) == world.Water
+	return world.IsWater(g.W.Get(ix, iy, iz)) || world.IsWater(g.W.Get(ix, iy-1, iz))
 }
 
 func (g *Game) entityInCell(x, y, z int) bool {

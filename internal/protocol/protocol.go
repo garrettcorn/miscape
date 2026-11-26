@@ -92,7 +92,7 @@ type In struct {
 // Message types and whether they need a request id (state-changing).
 var types = map[string]bool{
 	"hello": false, "move": false, "chunks": false, "ping": false,
-	"gather": true, "attack": true, "place": true, "break": true,
+	"gather": true, "attack": true, "place": true, "break": true, "light_fire": true,
 	"craft": true, "eat": true, "equip": true, "drop": true,
 	"talk": true, "quest_accept": true, "quest_turnin": true,
 	"buy": true, "sell": true,
@@ -186,11 +186,11 @@ func Validate(m *In) error {
 		if m.Color != "" && !colorRe.MatchString(m.Color) {
 			return bad("color")
 		}
-	case "gather", "place", "break":
+	case "gather", "place", "break", "light_fire":
 		if m.BX < -MaxCoord || m.BX > MaxCoord || m.BY < 0 || m.BY > 255 || m.BZ < 0 || m.BZ > MaxCoord {
 			return bad("block")
 		}
-		if m.T == "place" && !validID(m.Item) {
+		if (m.T == "place" || m.T == "light_fire") && !validID(m.Item) {
 			return bad("item")
 		}
 	case "attack", "trade_request":

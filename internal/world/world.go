@@ -40,12 +40,23 @@ const (
 	GloamMoss  uint8 = 21
 	Snow       uint8 = 22
 	Ice        uint8 = 23
-	NumBlocks        = 24
+	FishSpot   uint8 = 24 // water with fish rising: a fishing node
+	Campfire   uint8 = 25 // lit by players; burns out
+	Range      uint8 = 26 // a town kitchen range (cooking station)
+	Rowan      uint8 = 27
+	Yew        uint8 = 28
+	TinOre     uint8 = 29
+	Coal       uint8 = 30
+	IronOre    uint8 = 31
+	NumBlocks        = 32
 )
+
+// IsWater reports whether a block is water (fishing spots are water too).
+func IsWater(b uint8) bool { return b == Water || b == FishSpot }
 
 // Solid reports whether a block blocks movement.
 func Solid(b uint8) bool {
-	return b != Air && b != Water && b != Flowers
+	return b != Air && b != Water && b != Flowers && b != FishSpot && b != Campfire
 }
 
 const (

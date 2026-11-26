@@ -3,7 +3,8 @@
 export const TILE = 16;
 export const TILE_NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'sand', 'water', 'log_side', 'log_top', 'leaves', 'plank',
   'cobble', 'copper', 'gloamstone', 'glimmer', 'lantern', 'roof', 'flowers', 'anvil_top', 'anvil_side', 'bedrock', 'sign',
-  'berry', 'dead_side', 'dead_top', 'moss_top', 'moss_side', 'snow_top', 'snow_side', 'ice'];
+  'berry', 'dead_side', 'dead_top', 'moss_top', 'moss_side', 'snow_top', 'snow_side', 'ice',
+  'fishspot', 'fire', 'range_top', 'range_side', 'rowan_side', 'yew_side', 'tin', 'coal', 'iron'];
 
 function rng(seed) {
   let s = seed >>> 0;
@@ -52,6 +53,15 @@ const painters = {
   snow_top: (t) => t.noise('#f3f6fb', 0.04).speck('#dfe8f3', 0.12).speck('#ffffff', 0.08),
   snow_side: (t) => { painters.dirt(t); for (let x = 0; x < 16; x++) t.rect(x, 0, 1, 3 + Math.floor(t.r() * 3), t.shade(hex('#f3f6fb'), 0.94 + t.r() * 0.06)); return t; },
   ice: (t) => { t.noise('#a9d8f2', 0.05); for (let i = 0; i < 5; i++) { const x = Math.floor(t.r() * 12), y = Math.floor(t.r() * 16); t.rect(x, y, 4, 1, '#e3f4fc'); } return t.speck('#7fbde0', 0.05); },
+  fishspot: (t) => { painters.water(t); for (let r = 2; r <= 6; r += 2) for (let a = 0; a < 40; a++) t.px(Math.round(7.5 + Math.cos(a / 40 * 6.283) * r), Math.round(7.5 + Math.sin(a / 40 * 6.283) * r * 0.7), hex('#d8f0ff'), 220); t.rect(10, 3, 2, 1, '#c0d6e4').rect(4, 12, 2, 1, '#c0d6e4'); return t; },
+  fire: (t) => { t.clear(); for (let x = 2; x < 14; x++) { const h = 6 + Math.floor(Math.sin(x * 1.7) * 3 + t.r() * 4); t.rect(x, 14 - h, 1, h, x % 3 ? '#ff8a2a' : '#ffb347'); t.rect(x, 15 - Math.ceil(h / 2), 1, Math.ceil(h / 3), '#ffe28a'); } t.rect(1, 14, 14, 2, '#6b4324').rect(3, 13, 4, 1, '#8a5a32').rect(9, 13, 4, 1, '#8a5a32'); return t; },
+  range_top: (t) => { t.noise('#2f3236', 0.06); t.rect(2, 2, 5, 5, '#1d1f22').rect(9, 9, 5, 5, '#1d1f22'); t.rect(3, 3, 3, 3, '#ff7a2a').rect(10, 10, 3, 3, '#ff9a3a'); return t; },
+  range_side: (t) => { t.noise('#3a3d42', 0.06); t.rect(0, 0, 16, 2, '#565a60').rect(3, 5, 10, 7, '#1d1f22').rect(4, 7, 8, 4, '#ff8a2a').rect(5, 9, 6, 2, '#ffd27a'); t.rect(0, 14, 16, 2, '#24262a'); return t; },
+  rowan_side: (t) => { t.noise('#9a8a7a', 0.08); for (let y = 1; y < 16; y += 4) t.rect(0, y, 16, 1, '#7a6a5c'); return t.speck('#b8a898', 0.06).speck('#d9342b', 0.012); },
+  yew_side: (t) => { t.noise('#7a3f2c', 0.1); for (let x = 0; x < 16; x += 2) t.rect(x, 0, 1, 16, t.shade(hex('#5a2a1c'), 0.9 + t.r() * 0.3)); return t.speck('#a85a3c', 0.05); },
+  tin: (t) => { painters.stone(t); for (let i = 0; i < 6; i++) { const x = 1 + Math.floor(t.r() * 13), y = 1 + Math.floor(t.r() * 13); t.rect(x, y, 2, 2, '#d8dee2').px(x, y, hex('#ffffff')); } return t; },
+  coal: (t) => { painters.stone(t); for (let i = 0; i < 7; i++) { const x = 1 + Math.floor(t.r() * 12), y = 1 + Math.floor(t.r() * 13); t.rect(x, y, 3, 2, '#1e1c1c').px(x + 1, y, hex('#4a4646')); } return t; },
+  iron: (t) => { painters.stone(t); for (let i = 0; i < 6; i++) { const x = 1 + Math.floor(t.r() * 13), y = 1 + Math.floor(t.r() * 13); t.rect(x, y, 2, 2, '#c46a45').px(x + 1, y + 1, hex('#e8b08a')); } return t; },
 };
 
 // Returns RGBA bytes for all layers stacked: TILE x TILE x N.

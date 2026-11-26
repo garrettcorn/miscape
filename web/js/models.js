@@ -102,7 +102,7 @@ export function drawWisp(r, e, t) {
 // Each model is a list of boxes in item space: +Y runs from the grip toward
 // the tip, the grip is at the origin. Colors: 'main' is the item's color;
 // the rest are fixed materials. Add a model here and to content.Models.
-const MAT = { grip: [0.36, 0.23, 0.13], dark: [0.22, 0.2, 0.2], metal: [0.62, 0.64, 0.68], leaf: [0.3, 0.6, 0.25] };
+const MAT = { grip: [0.36, 0.23, 0.13], dark: [0.22, 0.2, 0.2], metal: [0.62, 0.64, 0.68], leaf: [0.3, 0.6, 0.25], string: [0.9, 0.9, 0.85], end: [0.84, 0.66, 0.42] };
 export const ITEM_MODELS = {
   sword: [
     { c: 'grip', p: [0, 0, 0], s: [0.06, 0.22, 0.06] },
@@ -136,6 +136,24 @@ export const ITEM_MODELS = {
   ],
   block: [{ c: 'main', p: [0, 0, 0], s: [0.3, 0.3, 0.3] }],
   coin: [{ c: 'main', p: [0, 0, 0], s: [0.24, 0.24, 0.05], glow: true }],
+  rod: [
+    { c: 'main', p: [0, 0.45, 0], s: [0.04, 1.0, 0.04] },
+    { c: 'dark', p: [0.05, 0.12, 0], s: [0.08, 0.08, 0.08] },
+    { c: 'string', p: [0.02, 0.6, 0.03], s: [0.01, 0.8, 0.01] },
+  ],
+  fish: [
+    { c: 'main', p: [0, 0, 0], s: [0.1, 0.32, 0.06] },
+    { c: 'shade', p: [0, -0.2, 0], s: [0.14, 0.08, 0.04] },
+    { c: 'dark', p: [0.03, 0.12, 0.03], s: [0.02, 0.02, 0.01] },
+  ],
+  tinderbox: [
+    { c: 'main', p: [0, 0, 0], s: [0.22, 0.12, 0.16] },
+    { c: 'shade', p: [0, 0.07, 0], s: [0.23, 0.03, 0.17] },
+  ],
+  log: [
+    { c: 'main', p: [0, 0, 0], s: [0.16, 0.4, 0.16] },
+    { c: 'end', p: [0, 0.205, 0], s: [0.12, 0.01, 0.12] },
+  ],
   bundle: [
     { c: 'main', p: [-0.07, 0, 0], s: [0.12, 0.36, 0.12] },
     { c: 'main', p: [0.07, 0, 0], s: [0.12, 0.36, 0.12] },
@@ -143,7 +161,7 @@ export const ITEM_MODELS = {
   ],
 };
 // Center of each model, so dropped items spin around their middle.
-const CENTER = { sword: 0.4, axe: 0.3, pickaxe: 0.35, club: 0.3 };
+const CENTER = { sword: 0.4, axe: 0.3, pickaxe: 0.35, club: 0.3, rod: 0.45 };
 
 export function modelFor(it) {
   if (!it) return 'bundle';

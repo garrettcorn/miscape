@@ -11,7 +11,10 @@ import { project } from './mat.js';
 import { showJoin } from './join.js';
 import { MiniMap } from './minimap.js';
 import { WorldMap } from './worldmap.js';
-import { B, BLOCKS } from './blocks.js';
+import { B, BLOCKS, isWater } from './blocks.js';
+
+// Station blocks (must match game.stationBlocks).
+const STATIONS = { anvil: [B.ANVIL], fire: [B.CAMPFIRE, B.RANGE] };
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -330,7 +333,12 @@ class Game {
     if ((inp.use || inp.pressed.has('use')) && tnow > this.nextUse) {
       const sel = ui.hotSel, it = sel && this.items[sel];
       if (it && it.kind === 'food' && inp.pressed.has('use')) { this.nextUse = tnow + 400; this.net.request({ t: 'eat', item: sel }).then((r) => { if (!r.ok) ui.toast(r.err, 'warn'); }); }
-      else if (it && it.kind === 'block' && this.targetBlock) {
+      else if (it && it.burn && this.targetBlock && inp.pressed.has('use')) {
+        const tb = this.targetBlock, px = tb.x + tb.face[0], py = tb.y + tb.face[1], pz = tb.z + tb.face[2];
+        this.nextUse = tnow + 600;
+        this.swing = 1;
+        this.net.request({ t: 'light_fire', bx: px, by: py, bz: pz, item: sel }).then((r) => { if (!r.ok) ui.toast(r.err, 'warn'); });
+      }       else if (it && it.kind === 'block' && this.targetBlock) {
         const tb = this.targetBlock, px = tb.x + tb.face[0], py = tb.y + tb.face[1], pz = tb.z + tb.face[2];
         this.nextUse = tnow + 250;
         this.swing = 1;
@@ -345,7 +353,19 @@ class Game {
 
   eye() { return [this.body.x, this.body.y + 1.55, this.body.z]; }
 
-  nearAnvil() { return !!this.anvil && this.world.dist(this.body.x, this.body.z, this.anvil[0] + 0.5, this.anvil[2] + 0.5) <= 4.5; }
+  nearAnvil() { return this.nearStation('anvil'); }
+
+  // nearStation mirrors the server's check (game.nearStation): a station block
+  // within 4.5 blocks across, a few above or below.
+  nearStation(st) {
+    const blocks = STATIONS[st];
+    if (!blocks || !this.body) return false;
+    const cx = Math.floor(this.body.x), cy = Math.floor(this.body.y), cz = Math.floor(this.body.z);
+    for (let dy = -2; dy <= 3; dy++) for (let dz = -5; dz <= 5; dz++) for (let dx = -5; dx <= 5; dx++) {
+      if (blocks.includes(this.world.get(cx + dx, cy + dy, cz + dz)) && Math.hypot(cx + dx + 0.5 - this.body.x, cz + dz + 0.5 - this.body.z) <= 4.5) return true;
+    }
+    return false;
+  }
 
   // The nearest danger zone ([x, z, radius]) to the camera, for darkness and fog.
   nearestDanger(x, z) {
@@ -490,7 +510,7 @@ class Game {
       if (e.tx === undefined) continue;
       const dx = this.world.dx(e.x, e.tx), dz = e.tz - e.z; // the short way across the date line
       e.moving = Math.hypot(dx, dz) > 0.02;
-      e.swim = this.world.get(Math.floor(e.x), Math.floor(e.y + 0.4), Math.floor(e.z)) === B.WATER;
+      e.swim = isWater(this.world.get(Math.floor(e.x), Math.floor(e.y + 0.4), Math.floor(e.z)));
       if (e.moving || e.swim) e.walk = (e.walk || 0) + dt * (e.moving ? 10 : 4);
       e.x = this.world.wrapX(e.x + dx * k); e.y += (e.ty - e.y) * k; e.z += dz * k;
       let dy = e.tyaw - e.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); e.yaw += dy * k;

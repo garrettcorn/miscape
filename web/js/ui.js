@@ -5,6 +5,7 @@ import { itemIcon } from './icons.js';
 const $ = (s) => document.querySelector(s);
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const KIND_LABEL = { weapon: 'Weapon', food: 'Food', block: 'Building block', material: 'Material', tool: 'Tool', currency: 'Currency', missing: 'Unknown item' };
+const STATION_LABEL = { anvil: '⚒ at the Anvil', fire: '🔥 at a campfire or range' };
 
 // ---------- extension points ----------
 // Menu tabs, in order. To add a screen, push {id, label, render(ui) → html}.
@@ -49,6 +50,8 @@ export function itemFacts(it) {
   if (it.kind === 'food') f.push(`❤ restores ${it.heal} health`);
   if (it.light) f.push('🏮 lights your way in the Gloam while you carry it');
   if (it.kind === 'block') f.push('🧱 pick it on the hotbar to place it');
+  if (it.burn) f.push(`🔥 burns for ${it.burn.sec}s on a campfire (Firemaking ${it.burn.level}); pick it on the hotbar and use it on the ground`);
+  if (it.kindle) f.push('🔥 lights campfires while you carry it');
   if (it.value > 0) f.push(`🪙 sells for ${it.value}`);
   if (it.kind !== 'missing' && !it.tradeable) f.push('🔒 can’t be traded or dropped');
   if (it.stack > 1 && it.kind !== 'currency') f.push(`stacks to ${it.stack}`);
@@ -178,7 +181,7 @@ export class UI {
   }
 
   hotItems(me) {
-    return Object.keys(me.inv).filter((id) => { const k = this.item(id).kind; return k === 'block' || k === 'food'; }).sort();
+    return Object.keys(me.inv).filter((id) => { const k = this.item(id).kind; const it = this.item(id); return k === 'block' || k === 'food' || !!it.burn; }).sort();
   }
 
   renderHotbar(me) {
@@ -502,18 +505,19 @@ export class UI {
     const rows = this.g.recipes.map((r) => {
       const missing = Object.entries(r.inputs).some(([k, v]) => (me.inv[k] || 0) < v);
       const sk = r.skill || 'crafting', needs = Object.entries(r.needs || {});
-      const lvOK = lvl(sk) >= r.level && needs.every(([k, v]) => lvl(k) >= v), stOK = r.station !== 'anvil' || this.g.nearAnvil();
+      const lvOK = lvl(sk) >= r.level && needs.every(([k, v]) => lvl(k) >= v), stOK = !r.station || this.g.nearStation(r.station);
       return { r, can: !missing && lvOK && stOK, lvOK, stOK };
     }).sort((a, b) => b.can - a.can || a.r.level - b.r.level);
     const shown = this.craftOnly ? rows.filter((x) => x.can) : rows;
     const list = shown.map(({ r, can, lvOK, stOK }) => {
       const out = this.item(r.output);
       const req = Object.entries(r.inputs).map(([k, v]) => `<span class="${(me.inv[k] || 0) < v ? 'miss' : ''}">${this.icon(k)}${v}× ${esc(this.item(k).name)} <small>(have ${me.inv[k] || 0})</small></span>`).join('');
-      const st = r.station === 'anvil' ? `<span class="${stOK ? '' : 'miss'}">⚒ at the Anvil</span>` : '';
+      const st = r.station ? `<span class="${stOK ? '' : 'miss'}">${STATION_LABEL[r.station] || esc(r.station)}</span>` : '';
+      const burn = r.safeAt && lvl(sk) < r.safeAt ? `<span class="miss">may burn until ${esc(this.skillName(sk))} ${r.safeAt}</span>` : '';
       const fact = itemFacts(out)[0];
       return `<div class="recipe ${can ? 'can' : ''}">${itemIcon(out)}<div class="info"><b>${esc(out.name)}${r.count > 1 ? ' ×' + r.count : ''}</b>${fact ? ` <span class="note">· ${esc(fact)}</span>` : ''}
-        <div class="req">${req}${st}<span class="${lvl(r.skill || 'crafting') >= r.level ? '' : 'miss'}">${esc(this.skillName(r.skill || 'crafting'))} ${r.level}</span>${Object.entries(r.needs || {}).map(([k, v]) => `<span class="${lvl(k) >= v ? '' : 'miss'}">${esc(this.skillName(k))} ${v}</span>`).join('')}<span>+${r.xp} ${esc(this.skillName(r.skill || 'crafting'))} XP</span></div></div>
-        <button class="btn ${can ? 'primary' : ''}" data-do="craft" data-arg="${esc(r.id)}" data-fid="c-${esc(r.id)}" ${can ? '' : 'aria-disabled="true"'}>Craft</button></div>`;
+        <div class="req">${req}${st}${burn}<span class="${lvl(r.skill || 'crafting') >= r.level ? '' : 'miss'}">${esc(this.skillName(r.skill || 'crafting'))} ${r.level}</span>${Object.entries(r.needs || {}).map(([k, v]) => `<span class="${lvl(k) >= v ? '' : 'miss'}">${esc(this.skillName(k))} ${v}</span>`).join('')}<span>+${r.xp} ${esc(this.skillName(r.skill || 'crafting'))} XP</span></div></div>
+        <button class="btn ${can ? 'primary' : ''}" data-do="craft" data-arg="${esc(r.id)}" data-fid="c-${esc(r.id)}" ${can ? '' : 'aria-disabled="true"'}>${sk === 'cooking' ? 'Cook' : 'Craft'}</button></div>`;
     }).join('');
     return `<div class="row"><span class="note">Crafting level ${lvl('crafting')}</span><span class="grow"></span>
       <label class="toggle"><input type="checkbox" ${this.craftOnly ? 'checked' : ''} data-do="craftOnly" data-fid="co"> Only what I can make now</label></div>

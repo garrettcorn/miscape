@@ -3,8 +3,10 @@ package game
 import (
 	"fmt"
 	"math"
+	"slices"
 	"time"
 
+	"lanternfall/internal/content"
 	"lanternfall/internal/world"
 )
 
@@ -54,12 +56,19 @@ func (g *Game) Gather(p *Player, bx, by, bz int) error {
 	if err := g.meets(p.Char, node.Needs); err != nil {
 		return err
 	}
+	if node.Tool != "" && p.Char.Inv[node.Tool] < 1 {
+		return fail("You need a %s for that.", g.itemName(node.Tool))
+	}
 	if g.Now.Before(p.nextGather) {
 		return fail("Steady now…")
 	}
 	p.nextGather = g.Now.Add(GatherCooldown)
 	// Check space before spending effort.
-	probe, _ := applyDelta(p.Char.Inv, nil, map[string]int{node.Item: 1})
+	item, xp := node.Item, node.XP
+	if len(node.Catches) > 0 {
+		item, xp = g.catch(p.Char, node)
+	}
+	probe, _ := applyDelta(p.Char.Inv, nil, map[string]int{item: 1})
 	if !g.fits(probe) {
 		return fail("Your pack is full.")
 	}
@@ -71,20 +80,22 @@ func (g *Game) Gather(p *Player, bx, by, bz int) error {
 	}
 	delete(g.nodeHits, idx)
 	n := g.yield()
-	got := map[string]int{node.Item: n}
+	got := map[string]int{item: n}
 	if !g.grant(p, got) {
-		got[node.Item] = 1
+		got[item] = 1
 		if !g.grant(p, got) {
 			return fail("Your pack is full.")
 		}
 		n = 1
 	}
-	g.addXP(p, node.Skill, node.XP)
-	g.progress(p, "gather", node.Item, n)
-	g.setBlock(bx, by, bz, world.Air)
-	regrow := time.Duration(float64(node.RegrowSec)*g.C.Rules.RegrowMultiplier) * time.Second
-	g.regens = append(g.regens, regen{P: idx, Block: b, At: g.Now.Add(regrow)})
-	g.toast(p, fmt.Sprintf("+%d %s", n, g.itemName(node.Item)), "item")
+	g.addXP(p, node.Skill, xp)
+	g.progress(p, "gather", item, n)
+	if !node.Keep {
+		g.setBlock(bx, by, bz, world.Air)
+		regrow := time.Duration(float64(node.RegrowSec)*g.C.Rules.RegrowMultiplier) * time.Second
+		g.regens = append(g.regens, regen{P: idx, Block: b, At: g.Now.Add(regrow)})
+	}
+	g.toast(p, fmt.Sprintf("+%d %s", n, g.itemName(item)), "item")
 	return nil
 }
 
@@ -183,15 +194,18 @@ func (g *Game) Break(p *Player, bx, by, bz int) error {
 
 // Stations are blocks you must stand near to use some recipes. Each content
 // station name (content.Stations) maps to the block that provides it.
-var stationBlocks = map[string]uint8{"anvil": world.Anvil}
+var stationBlocks = map[string][]uint8{
+	"anvil": {world.Anvil},
+	"fire":  {world.Campfire, world.Range},
+}
 
 func stationName(s string) string {
-	return map[string]string{"anvil": "an anvil"}[s]
+	return map[string]string{"anvil": "an anvil", "fire": "a campfire or kitchen range"}[s]
 }
 
 // nearStation reports whether a station block is within reach of p.
 func (g *Game) nearStation(p *Player, station string) bool {
-	b, ok := stationBlocks[station]
+	blocks, ok := stationBlocks[station]
 	if !ok {
 		return false
 	}
@@ -201,7 +215,7 @@ func (g *Game) nearStation(p *Player, station string) bool {
 	for dy := -2; dy <= 3; dy++ {
 		for dz := -r; dz <= r; dz++ {
 			for dx := -r; dx <= r; dx++ {
-				if g.W.Get(cx+dx, cy+dy, cz+dz) == b && math.Hypot(float64(dx)+0.5-(c.X-float64(cx)), float64(dz)+0.5-(c.Z-float64(cz))) <= AnvilRange {
+				if slices.Contains(blocks, g.W.Get(cx+dx, cy+dy, cz+dz)) && math.Hypot(float64(dx)+0.5-(c.X-float64(cx)), float64(dz)+0.5-(c.Z-float64(cz))) <= AnvilRange {
 					return true
 				}
 			}
@@ -231,7 +245,11 @@ func (g *Game) Craft(p *Player, recipe string) error {
 	if !has(p.Char.Inv, r.Inputs) {
 		return fail("You're missing materials.")
 	}
-	n, ok := applyDelta(p.Char.Inv, r.Inputs, map[string]int{r.Output: r.Count})
+	out, burnt := r.Output, false
+	if g.rng.Float64() < burnChance(r, p.Char.Level(r.Skill)) {
+		out, burnt = r.Burnt, true
+	}
+	n, ok := applyDelta(p.Char.Inv, r.Inputs, map[string]int{out: r.Count})
 	if !ok || !g.fits(n) {
 		return fail("Your pack is full.")
 	}
@@ -239,6 +257,10 @@ func (g *Game) Craft(p *Player, recipe string) error {
 	g.ensureEquip(p.Char)
 	p.dirtyMe = true
 	g.Dirty = true
+	if burnt {
+		g.toast(p, fmt.Sprintf("You burnt the %s.", g.itemName(r.Output)), "warn")
+		return nil
+	}
 	g.addXP(p, r.Skill, r.XP)
 	g.progress(p, "craft", r.Output, r.Count)
 	if r.Level >= 3 {
@@ -367,4 +389,31 @@ func (g *Game) Hearth(p *Player) error {
 	p.hearthX, p.hearthZ = p.Char.X, p.Char.Z
 	p.dirtyMe = true
 	return nil
+}
+
+// burnChance is the chance a cooking recipe burns: up to 30% at the recipe's
+// level, falling to nothing at its SafeAt level.
+func burnChance(r *content.Recipe, lvl int) float64 {
+	if r.SafeAt == 0 || r.Burnt == "" || lvl >= r.SafeAt {
+		return 0
+	}
+	return 0.3 * float64(r.SafeAt-lvl) / float64(r.SafeAt-r.Level)
+}
+
+// catch picks what a fishing spot yields: one of the catches the player's
+// level allows, picked at random.
+func (g *Game) catch(c *Character, n *content.Node) (string, int) {
+	lvl := c.Level(n.Skill)
+	var ok []content.Catch
+	for _, ct := range n.Catches {
+		if ct.Level <= lvl {
+			ok = append(ok, ct)
+		}
+	}
+	if len(ok) == 0 {
+		ct := n.Catches[0]
+		return ct.Item, ct.XP
+	}
+	ct := ok[g.rng.IntN(len(ok))]
+	return ct.Item, ct.XP
 }

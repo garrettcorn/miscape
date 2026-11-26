@@ -1,4 +1,4 @@
-import { B, isSolid } from './blocks.js';
+import { B, isSolid, LIGHT_COLORS } from './blocks.js';
 
 // Client copy of the voxel world: only the chunks near the player, streamed
 // from the server and dropped again when far away. The world wraps east–west
@@ -65,7 +65,7 @@ export class World {
     cx = this.wrapC(cx);
     for (let i = 0; i < c.length; i++) {
       const b = c[i];
-      if (b === B.LANTERN || b === B.GLIMMER) {
+      if (LIGHT_COLORS[b]) {
         const x = i % cs, z = Math.floor(i / cs) % cs, y = Math.floor(i / (cs * cs));
         list.push([cx * cs + x + 0.5, y + 0.5, cz * cs + z + 0.5, b]);
       }

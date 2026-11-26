@@ -115,6 +115,8 @@ func (b *builder) town(id string, r int, gate [2]int) {
 	// Anvil by the lamplighter's workshop.
 	b.set(-6, g, 3, Cobble)
 	b.set(-6, g+1, 3, Anvil)
+	// A kitchen range across the plaza, for cooking.
+	b.set(5, g+1, -3, Range)
 	// Lantern posts and a warning sign where the road toward danger leaves town.
 	gx, gz := gate[0]*(r+2), gate[1]*(r+2)
 	sx, sz := gate[1], gate[0] // sideways
@@ -127,6 +129,7 @@ func (b *builder) town(id string, r int, gate [2]int) {
 		w.Points[name] = Point{w.WrapX(float64(b.ox) + dx), float64(g + 1), float64(b.oz) + dz}
 	}
 	pt("anvil", -6, 3)
+	pt("range", 5, -3)
 	pt("town:"+id+":spawn", 0.5, 6.5)
 	if _, ok := w.Points["spawn"]; !ok && w.Def.Spawn == id {
 		pt("spawn", 0.5, 6.5)

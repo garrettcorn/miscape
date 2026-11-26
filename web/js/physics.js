@@ -1,4 +1,4 @@
-import { B, BLOCKS } from './blocks.js';
+import { B, BLOCKS, isWater } from './blocks.js';
 
 // Shared with internal/game/move.go — keep in sync.
 export const WALK = 4.6, SPRINT = 6.8, HALF = 0.3, HEIGHT = 1.7;
@@ -40,11 +40,11 @@ export function step(world, b, vx, vz, jump, dt) {
   // Don't fall into unloaded terrain.
   if (!world.columnLoaded(b.x, b.z)) return;
   const feet = world.get(Math.floor(b.x), Math.floor(b.y + 0.4), Math.floor(b.z));
-  b.inWater = feet === B.WATER;
+  b.inWater = isWater(feet);
   if (b.inWater) {
     // Float: while the chest is under water you rise, above it you sink a
     // little, so a swimmer bobs with their head out. Jump swims up faster.
-    const chest = world.get(Math.floor(b.x), Math.floor(b.y + 1.25), Math.floor(b.z)) === B.WATER;
+    const chest = isWater(world.get(Math.floor(b.x), Math.floor(b.y + 1.25), Math.floor(b.z)));
     b.vy = chest ? Math.min(b.vy + 9 * dt, 1.6) : Math.max(b.vy - GRAVITY * 0.25 * dt, -2.5);
     if (jump) b.vy = Math.max(b.vy, 3.2);
     vx *= 0.6; vz *= 0.6;

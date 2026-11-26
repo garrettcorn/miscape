@@ -114,6 +114,9 @@ func (w *World) column(c []uint8, lx, lz, x, z int) {
 		for y := floor + 1; y <= g; y++ {
 			set(y, Water)
 		}
+		if h < 0.08 && w.coastal(x, z) {
+			set(g, FishSpot)
+		}
 		return
 	case TIce:
 		for y := 1; y <= g-3; y++ {
@@ -171,6 +174,8 @@ const (
 	fBoulder
 	fDeadwood
 	fGlimmer
+	fRowan
+	fYew
 )
 
 func (w *World) featureAt(gx, gz int) (x, z int, f feature, h float64) {
@@ -183,16 +188,24 @@ func (w *World) featureAt(gx, gz int) (x, z int, f feature, h float64) {
 	h = float64(u>>40%1000) / 1000
 	switch w.terrainAt(x, z) {
 	case TForest:
-		if r < 0.7 {
+		if r < 0.66 {
 			f = fTree
-		} else if r < 0.74 {
+		} else if r < 0.7 {
 			f = fBerry
+		} else if r < 0.74 {
+			f = fYew
 		}
 	case TGrass:
 		if r < 0.1 {
 			f = fTree
 		} else if r < 0.15 {
 			f = fBerry
+		} else if r < 0.18 {
+			f = fBoulder
+		} else if r < 0.195 {
+			f = fRowan
+		} else if r < 0.202 {
+			f = fYew
 		}
 	case TTundra, TSnow:
 		if r < 0.04 {
@@ -207,6 +220,10 @@ func (w *World) featureAt(gx, gz int) (x, z int, f feature, h float64) {
 			f = fDeadwood
 		} else if r < 0.42 {
 			f = fGlimmer
+		} else if r < 0.45 {
+			f = fRowan
+		} else if r < 0.47 {
+			f = fBoulder
 		}
 	}
 	return x, z, f, h
@@ -228,10 +245,16 @@ func (w *World) stamp(c []uint8, x0, z0 int, fx, fz int, f feature, h float64) {
 		c[i] = b
 	}
 	switch f {
-	case fTree:
-		hgt := 4 + int(h*2)
+	case fTree, fRowan, fYew:
+		trunk, hgt := Log, 4+int(h*2)
+		switch f {
+		case fRowan:
+			trunk, hgt = Rowan, 3+int(h*2)
+		case fYew:
+			trunk, hgt = Yew, 4
+		}
 		for i := 0; i < hgt; i++ {
-			set(0, g+i, 0, Log, false)
+			set(0, g+i, 0, trunk, false)
 		}
 		top := g + hgt
 		for dy := -2; dy <= 1; dy++ {
@@ -252,7 +275,7 @@ func (w *World) stamp(c []uint8, x0, z0 int, fx, fz int, f feature, h float64) {
 	case fBerry:
 		set(0, g, 0, BerryBush, false)
 	case fBoulder:
-		set(0, g, 0, CopperOre, false)
+		set(0, g, 0, w.ore(fx, fz), false)
 		set(1, g, 0, Stone, false)
 		if h < 0.5 {
 			set(0, g, 1, Stone, false)
@@ -328,4 +351,35 @@ func (w *World) cleared(x, z float64) bool {
 		}
 	}
 	return false
+}
+
+// coastal reports whether a water column touches land, where fish gather.
+func (w *World) coastal(x, z int) bool {
+	for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+		if t := w.terrainAt(wrapI(x+d[0], w.W), z+d[1]); !t.IsWater() && t != TIce {
+			return true
+		}
+	}
+	return false
+}
+
+// ore picks what an outcrop holds: copper is common, iron is rare, and the
+// moors are coal country.
+func (w *World) ore(x, z int) uint8 {
+	r := hash2(w.seed+53, x, z)
+	if w.terrainAt(x, z) == TMoor {
+		if r < 0.6 {
+			return Coal
+		}
+		return IronOre
+	}
+	switch {
+	case r < 0.4:
+		return CopperOre
+	case r < 0.65:
+		return TinOre
+	case r < 0.85:
+		return Coal
+	}
+	return IronOre
 }

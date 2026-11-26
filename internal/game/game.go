@@ -60,6 +60,7 @@ type Game struct {
 	nextID  uint32
 
 	regens   []regen
+	fires    []fire
 	nodeHits map[world.Pos]int
 	placed   map[world.Pos]string // block -> placer char id
 	Trades   map[uint32]*Trade

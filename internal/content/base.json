@@ -17,7 +17,7 @@
   ],
   "items": [
     {"id": "coin", "name": "Coin", "desc": "A copper cartwheel penny, stamped with King George III.", "kind": "currency", "tradeable": true, "stack": 999, "color": "#f2c14e"},
-    {"id": "log", "name": "Log", "desc": "Good Lancashire timber.", "kind": "material", "tradeable": true, "stack": 64, "value": 1, "color": "#9a6b3f"},
+    {"id": "log", "name": "Log", "desc": "Good Lancashire oak. Burns steadily on a campfire.", "kind": "material", "model": "log", "burn": {"level": 1, "xp": 12, "sec": 60}, "tradeable": true, "stack": 64, "value": 1, "color": "#9a6b3f"},
     {"id": "plank", "name": "Plank", "desc": "Sawn smooth, ready for building.", "kind": "block", "block": 8, "tradeable": true, "stack": 64, "color": "#d9a066"},
     {"id": "stone", "name": "Stone", "desc": "A sturdy building block.", "kind": "block", "block": 9, "tradeable": true, "stack": 64, "value": 1, "color": "#9aa3ad"},
     {"id": "copper_ore", "name": "Copper Ore", "desc": "Green-flecked and promising.", "kind": "material", "model": "gem", "tradeable": true, "stack": 64, "value": 3, "color": "#d9824b"},
@@ -27,19 +27,43 @@
     {"id": "copper_sword", "name": "Copper Sword", "desc": "Bright and dependable, from a Manchester anvil.", "kind": "weapon", "model": "sword", "damage": 5, "cooldownMs": 600, "tradeable": true, "stack": 1, "value": 10, "color": "#e09060"},
     {"id": "glimmer_blade", "glow": true, "name": "Wisp-light Blade", "desc": "Copper quenched in wisp-light. It never quite stops glowing.", "kind": "weapon", "model": "sword", "damage": 9, "cooldownMs": 550, "tradeable": true, "stack": 1, "value": 40, "color": "#c9a8ff"},
     {"id": "lantern", "glow": true, "name": "Lantern", "desc": "Carried lanterns keep the darkness of the moors at bay.", "kind": "tool", "model": "lantern", "light": true, "tradeable": true, "stack": 1, "value": 6, "color": "#ffd27a"},
-    {"id": "warden_token", "name": "Watchman's Token", "desc": "Proof that Ottiwell the watchman trusts you. Not tradeable.", "kind": "material", "model": "gem", "tradeable": false, "stack": 1, "color": "#7fd1c7"}
+    {"id": "warden_token", "name": "Watchman's Token", "desc": "Proof that Ottiwell the watchman trusts you. Not tradeable.", "kind": "material", "model": "gem", "tradeable": false, "stack": 1, "color": "#7fd1c7"},
+    {"id": "rowan_log", "name": "Rowan Log", "desc": "Rowan, the witch-wood: folk hang sprigs over doors against boggarts. Burns bright.", "kind": "material", "model": "log", "burn": {"level": 4, "xp": 24, "sec": 90}, "tradeable": true, "stack": 64, "value": 3, "color": "#b5764a"},
+    {"id": "yew_log", "name": "Yew Log", "desc": "Dense churchyard yew, prized by bowyers.", "kind": "material", "model": "log", "burn": {"level": 8, "xp": 40, "sec": 120}, "tradeable": true, "stack": 64, "value": 6, "color": "#7a3f2c"},
+    {"id": "tin_ore", "name": "Tin Ore", "desc": "Dull grey ore. Copper's partner in bronze.", "kind": "material", "model": "gem", "tradeable": true, "stack": 64, "value": 4, "color": "#b9c0c4"},
+    {"id": "coal", "name": "Coal", "desc": "Lancashire coal: the fuel of every mill in Manchester. Burns long on a campfire.", "kind": "material", "model": "gem", "burn": {"level": 6, "xp": 20, "sec": 180}, "tradeable": true, "stack": 64, "value": 4, "color": "#2e2b2b"},
+    {"id": "iron_ore", "name": "Iron Ore", "desc": "Rust-red and heavy.", "kind": "material", "model": "gem", "tradeable": true, "stack": 64, "value": 7, "color": "#a3553a"},
+    {"id": "iron_sword", "name": "Iron Sword", "desc": "A proper blade, the kind the militia carry.", "kind": "weapon", "model": "sword", "damage": 7, "cooldownMs": 600, "needs": {"melee": 5}, "tradeable": true, "stack": 1, "value": 22, "color": "#aeb6bf"},
+    {"id": "fishing_rod", "name": "Fishing Rod", "desc": "A rowan rod with a horsehair line. Carry it to fish where the water ripples.", "kind": "tool", "model": "rod", "tradeable": true, "stack": 1, "value": 3, "color": "#a0703f"},
+    {"id": "tinderbox", "name": "Tinderbox", "desc": "Flint, steel and charred linen in a tin. Select a log and use it on the ground to light a campfire.", "kind": "tool", "model": "tinderbox", "kindle": true, "tradeable": true, "stack": 1, "value": 3, "color": "#8d8f93"},
+    {"id": "raw_herring", "name": "Raw Herring", "desc": "Silver darlings from the Irish Sea. Cook it at a fire or range.", "kind": "material", "model": "fish", "tradeable": true, "stack": 32, "value": 2, "color": "#a9bcc9"},
+    {"id": "raw_trout", "name": "Raw Trout", "desc": "A speckled sea trout. Cook it at a fire or range.", "kind": "material", "model": "fish", "tradeable": true, "stack": 32, "value": 4, "color": "#9aa87a"},
+    {"id": "raw_salmon", "name": "Raw Salmon", "desc": "Bound up the Mersey to spawn. Cook it at a fire or range.", "kind": "material", "model": "fish", "tradeable": true, "stack": 32, "value": 7, "color": "#e39a85"},
+    {"id": "raw_cod", "name": "Raw Cod", "desc": "A heavy cod from deeper water. Cook it at a fire or range.", "kind": "material", "model": "fish", "tradeable": true, "stack": 32, "value": 10, "color": "#b8a98a"},
+    {"id": "herring", "name": "Kippered Herring", "desc": "Restores 5 health.", "kind": "food", "model": "fish", "heal": 5, "tradeable": true, "stack": 32, "value": 3, "color": "#c98a4b"},
+    {"id": "trout", "name": "Baked Trout", "desc": "Restores 8 health.", "kind": "food", "model": "fish", "heal": 8, "tradeable": true, "stack": 32, "value": 6, "color": "#c9a35b"},
+    {"id": "salmon", "name": "Poached Salmon", "desc": "Restores 11 health.", "kind": "food", "model": "fish", "heal": 11, "tradeable": true, "stack": 32, "value": 10, "color": "#f0a080"},
+    {"id": "cod", "name": "Fried Cod", "desc": "Restores 14 health.", "kind": "food", "model": "fish", "heal": 14, "tradeable": true, "stack": 32, "value": 14, "color": "#e2c27a"},
+    {"id": "burnt_fish", "name": "Burnt Fish", "desc": "Charcoal with fins. Nobody wants this.", "kind": "material", "model": "fish", "tradeable": true, "stack": 32, "color": "#3a2a20"}
   ],
   "recipes": [
     {"id": "planks", "output": "plank", "count": 4, "inputs": {"log": 1}, "level": 1, "xp": 4},
     {"id": "wooden_sword", "output": "wooden_sword", "count": 1, "inputs": {"plank": 3}, "level": 1, "xp": 12},
     {"id": "lantern", "output": "lantern", "count": 1, "inputs": {"copper_ore": 2, "plank": 1}, "level": 2, "xp": 20},
     {"id": "copper_sword", "output": "copper_sword", "count": 1, "inputs": {"copper_ore": 3, "plank": 2}, "level": 3, "xp": 35, "station": "anvil"},
-    {"id": "glimmer_blade", "output": "glimmer_blade", "count": 1, "inputs": {"copper_sword": 1, "glimmer_shard": 4}, "level": 5, "xp": 90, "station": "anvil"}
+    {"id": "glimmer_blade", "output": "glimmer_blade", "count": 1, "inputs": {"copper_sword": 1, "glimmer_shard": 4}, "level": 5, "xp": 90, "station": "anvil"},
+    {"id": "iron_sword", "output": "iron_sword", "count": 1, "inputs": {"iron_ore": 3, "plank": 1}, "level": 6, "xp": 60, "station": "anvil"},
+    {"id": "fishing_rod", "output": "fishing_rod", "count": 1, "inputs": {"plank": 2}, "level": 1, "xp": 8},
+    {"id": "tinderbox", "output": "tinderbox", "count": 1, "inputs": {"stone": 1, "copper_ore": 1}, "level": 2, "xp": 15},
+    {"id": "cook_herring", "output": "herring", "count": 1, "inputs": {"raw_herring": 1}, "skill": "cooking", "level": 1, "xp": 12, "station": "fire", "burnt": "burnt_fish", "safeAt": 5},
+    {"id": "cook_trout", "output": "trout", "count": 1, "inputs": {"raw_trout": 1}, "skill": "cooking", "level": 4, "xp": 24, "station": "fire", "burnt": "burnt_fish", "safeAt": 8},
+    {"id": "cook_salmon", "output": "salmon", "count": 1, "inputs": {"raw_salmon": 1}, "skill": "cooking", "level": 7, "xp": 40, "station": "fire", "burnt": "burnt_fish", "safeAt": 11},
+    {"id": "cook_cod", "output": "cod", "count": 1, "inputs": {"raw_cod": 1}, "skill": "cooking", "level": 10, "xp": 55, "station": "fire", "burnt": "burnt_fish", "safeAt": 14}
   ],
   "mobs": [
     {"id": "bramblet", "name": "Boggart", "model": "bramblet", "hp": 8, "damage": 1, "cooldownMs": 1400, "speed": 2.2, "aggro": 5, "xp": 15,
      "drops": [{"item": "berry", "min": 1, "max": 2, "chance": 0.6}, {"item": "coin", "min": 1, "max": 3, "chance": 0.8}]},
-    {"id": "gloamwisp", "name": "Will-o'-the-Wisp", "model": "wisp", "hp": 28, "damage": 4, "cooldownMs": 1200, "speed": 3.0, "aggro": 9, "xp": 45,
+    {"id": "gloamwisp", "name": "Will-o'-the-Wisp", "model": "wisp", "hp": 28, "damage": 4, "cooldownMs": 1200, "speed": 3.0, "aggro": 9, "xp": 45, "fearsFire": true,
      "drops": [{"item": "glimmer_shard", "min": 1, "max": 2, "chance": 0.7}, {"item": "coin", "min": 4, "max": 9, "chance": 1}]}
   ],
   "spawns": [
@@ -54,7 +78,14 @@
     {"block": 19, "name": "Bilberry Bush", "item": "berry", "skill": "woodcutting", "level": 1, "xp": 3, "hits": 1, "regrowSec": 40},
     {"block": 3, "name": "Rock", "item": "stone", "skill": "mining", "level": 1, "xp": 6, "hits": 2, "regrowSec": 60},
     {"block": 10, "name": "Copper Vein", "item": "copper_ore", "skill": "mining", "level": 2, "xp": 18, "hits": 3, "regrowSec": 50},
-    {"block": 12, "name": "Wisp-light Crystal", "item": "glimmer_shard", "skill": "mining", "level": 4, "xp": 40, "hits": 4, "regrowSec": 90}
+    {"block": 12, "name": "Wisp-light Crystal", "item": "glimmer_shard", "skill": "mining", "level": 4, "xp": 40, "hits": 4, "regrowSec": 90},
+    {"block": 29, "name": "Tin Vein", "item": "tin_ore", "skill": "mining", "level": 3, "xp": 22, "hits": 3, "regrowSec": 50},
+    {"block": 30, "name": "Coal Seam", "item": "coal", "skill": "mining", "level": 5, "xp": 30, "hits": 3, "regrowSec": 60},
+    {"block": 31, "name": "Iron Vein", "item": "iron_ore", "skill": "mining", "level": 7, "xp": 45, "hits": 4, "regrowSec": 75},
+    {"block": 27, "name": "Rowan Tree", "item": "rowan_log", "skill": "woodcutting", "level": 5, "xp": 30, "hits": 4, "regrowSec": 60},
+    {"block": 28, "name": "Yew Tree", "item": "yew_log", "skill": "woodcutting", "level": 8, "xp": 55, "hits": 5, "regrowSec": 90},
+    {"block": 24, "name": "Fishing Spot", "skill": "fishing", "level": 1, "hits": 3, "keep": true, "tool": "fishing_rod",
+     "catches": [{"item": "raw_herring", "level": 1, "xp": 10}, {"item": "raw_trout", "level": 4, "xp": 22}, {"item": "raw_salmon", "level": 7, "xp": 36}, {"item": "raw_cod", "level": 10, "xp": 50}]}
   ],
   "quests": [
     {"id": "lights_for_wickhollow", "name": "Lights for Manchester", "giver": "mabel",
@@ -72,12 +103,25 @@
      "steps": [
        {"kind": "deliver", "target": "glimmer_shard", "count": 3, "text": "Bring 3 wisp-light shards to Ottiwell"}
      ],
-     "reward": {"coins": 80, "items": {"warden_token": 1}, "xp": {"mining": 60, "melee": 60}}}
+     "reward": {"coins": 80, "items": {"warden_token": 1}, "xp": {"mining": 60, "melee": 60}}},
+    {"id": "supper_for_the_mill", "name": "Supper for the Mill Hands", "giver": "hannah",
+     "intro": "The mill hands work fourteen hours and come out starving, and I've nothing on the griddle. Take this rod and tinderbox. There's herring rising off the coast west of town: catch some, get a fire going, and cook them up. My range by the market will do if the wind's against you.",
+     "outro": "Lovely, and hardly burnt at all. Here's a few coppers for your trouble.",
+     "steps": [
+       {"kind": "gather", "target": "raw_herring", "count": 3, "text": "Catch 3 herring off the coast"},
+       {"kind": "burn", "target": "log", "count": 1, "text": "Light a campfire with a log"},
+       {"kind": "craft", "target": "herring", "count": 3, "text": "Cook 3 herring"}
+     ],
+     "start": {"fishing_rod": 1, "tinderbox": 1},
+     "reward": {"coins": 20, "items": {"herring": 3}, "xp": {"fishing": 40, "cooking": 40, "firemaking": 30}}}
   ],
   "shop": [
     {"npc": "bertram", "item": "berry", "price": 2},
     {"npc": "bertram", "item": "plank", "price": 1},
-    {"npc": "bertram", "item": "lantern", "price": 30}
+    {"npc": "bertram", "item": "lantern", "price": 30},
+    {"npc": "hannah", "item": "fishing_rod", "price": 6},
+    {"npc": "hannah", "item": "tinderbox", "price": 6},
+    {"npc": "hannah", "item": "herring", "price": 6}
   ],
   "npcs": [
     {"id": "mabel", "name": "Mabel Hartley, Lamplighter", "at": "manchester", "dx": -4, "dz": -3, "yaw": 0.6, "color": "#e8a33d", "hat": "tall",
@@ -86,6 +130,9 @@
     {"id": "bertram", "name": "Bertram Oakes, Shudehill Market", "at": "manchester", "dx": 5, "dz": 3, "yaw": 3.8, "color": "#6aa84f", "hat": "cap",
      "lines": ["Bilberries! Planks! Lanterns for the moors! I buy logs and ore too.",
                "Coal's been cheap since the Duke of Bridgewater's canal opened in 1761. Barges bring it in from Worsley."]},
+    {"id": "hannah", "name": "Hannah Leigh, Fishwife", "at": "range", "dx": -1.5, "dz": -1.5, "yaw": 0.8, "color": "#8fa9c9", "hat": "cap",
+     "lines": ["Herring off the coast, salmon when they run up the Mersey, and cod if you go deep enough. A rod and patience, that's all.",
+               "They say the Liverpool boats bring in more herring in a morning than Manchester eats in a week."]},
     {"id": "ott", "name": "Ottiwell Kershaw, Watchman", "at": "town:manchester:gate", "dx": 2, "dz": 0, "yaw": 1.57, "color": "#5b8fb9", "hat": "helm",
      "lines": ["The moors are no shame to avoid, friend. Nobody will think less of you for staying by the fire.",
                "Shakespeare had Puck do what the wisps do: \"Mislead night-wanderers, laughing at their harm.\""]}

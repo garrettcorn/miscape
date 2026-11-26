@@ -29,7 +29,7 @@ const (
 
 // Models are the shapes the client knows how to draw for held and dropped
 // items. An empty model picks a default from the item kind.
-var Models = map[string]bool{"sword": true, "axe": true, "pickaxe": true, "club": true, "lantern": true, "gem": true, "food": true, "block": true, "bundle": true, "coin": true}
+var Models = map[string]bool{"sword": true, "axe": true, "pickaxe": true, "club": true, "lantern": true, "gem": true, "food": true, "block": true, "bundle": true, "coin": true, "rod": true, "fish": true, "tinderbox": true, "log": true}
 
 // MobModels and NPCHats are the creature models and NPC hats the client can
 // draw (web/js/models.js). Add a drawing there before adding a name here.
@@ -49,13 +49,23 @@ type Item struct {
 	Block     uint8          `json:"block,omitempty"`      // placeable block id
 	Tradeable bool           `json:"tradeable"`
 	Stack     int            `json:"stack"`
-	Value     int            `json:"value,omitempty"` // shop sell price
-	Color     string         `json:"color"`           // UI icon tint
-	Light     bool           `json:"light,omitempty"` // lantern: widens Gloam vision
-	Model     string         `json:"model,omitempty"` // how it looks when held or dropped (see Models)
-	Glow      bool           `json:"glow,omitempty"`  // drawn glowing
-	Style     string         `json:"style,omitempty"` // weapons: melee (default), range or magic — the skill it trains
-	Needs     map[string]int `json:"needs,omitempty"` // skill levels needed to equip or use it
+	Value     int            `json:"value,omitempty"`  // shop sell price
+	Color     string         `json:"color"`            // UI icon tint
+	Light     bool           `json:"light,omitempty"`  // lantern: widens Gloam vision
+	Model     string         `json:"model,omitempty"`  // how it looks when held or dropped (see Models)
+	Glow      bool           `json:"glow,omitempty"`   // drawn glowing
+	Style     string         `json:"style,omitempty"`  // weapons: melee (default), range or magic — the skill it trains
+	Needs     map[string]int `json:"needs,omitempty"`  // skill levels needed to equip or use it
+	Burn      *Burn          `json:"burn,omitempty"`   // fuel: can be lit as a campfire
+	Kindle    bool           `json:"kindle,omitempty"` // lights fires (a tinderbox)
+}
+
+// Burn describes an item as campfire fuel: the firemaking level to light it,
+// the XP for doing so, and how long the fire lasts.
+type Burn struct {
+	Level int `json:"level"`
+	XP    int `json:"xp"`
+	Sec   int `json:"sec"`
 }
 
 type Recipe struct {
@@ -66,8 +76,12 @@ type Recipe struct {
 	Skill   string         `json:"skill,omitempty"` // the skill it uses and trains (default crafting)
 	Level   int            `json:"level"`           // level needed in that skill
 	XP      int            `json:"xp"`
-	Station string         `json:"station,omitempty"` // a station block to stand near: "anvil", or ""
+	Station string         `json:"station,omitempty"` // a station block to stand near: "anvil", "fire", or ""
 	Needs   map[string]int `json:"needs,omitempty"`   // other skill levels needed
+	// Cooking: below SafeAt there's a chance of getting Burnt instead of
+	// Output (falling as the skill rises); at SafeAt and above, never.
+	Burnt  string `json:"burnt,omitempty"`
+	SafeAt int    `json:"safeAt,omitempty"`
 }
 
 type Drop struct {
@@ -88,6 +102,7 @@ type Mob struct {
 	Aggro      float64 `json:"aggro"`
 	XP         int     `json:"xp"`
 	Drops      []Drop  `json:"drops"`
+	FearsFire  bool    `json:"fearsFire,omitempty"` // won't come near a campfire
 }
 
 // Spawn is a group of creatures wandering around a point. Positions are
@@ -113,7 +128,18 @@ type Node struct {
 	XP        int            `json:"xp"`
 	Hits      int            `json:"hits"`
 	RegrowSec int            `json:"regrowSec"`
-	Needs     map[string]int `json:"needs,omitempty"` // other skill levels needed
+	Needs     map[string]int `json:"needs,omitempty"`   // other skill levels needed
+	Tool      string         `json:"tool,omitempty"`    // an item you must carry (a fishing rod)
+	Keep      bool           `json:"keep,omitempty"`    // the block stays when gathered (fishing spots)
+	Catches   []Catch        `json:"catches,omitempty"` // what it yields by level, instead of Item
+}
+
+// Catch is one possible yield of a node: a random catch among those your
+// level allows.
+type Catch struct {
+	Item  string `json:"item"`
+	Level int    `json:"level"`
+	XP    int    `json:"xp"`
 }
 
 // Quest step kinds.
@@ -122,6 +148,7 @@ const (
 	StepCraft   = "craft"   // craft N of item
 	StepKill    = "kill"    // defeat N of mob
 	StepDeliver = "deliver" // hand in N of item at turn-in (consumed)
+	StepBurn    = "burn"    // light N campfires of item
 )
 
 type Step struct {
@@ -147,6 +174,7 @@ type Quest struct {
 	Reward   Reward         `json:"reward"`
 	Requires string         `json:"requires,omitempty"` // prerequisite quest id
 	Needs    map[string]int `json:"needs,omitempty"`    // skill levels needed to start it
+	Start    map[string]int `json:"start,omitempty"`    // items handed over when you accept it
 }
 
 type ShopEntry struct {
@@ -374,6 +402,9 @@ func (c *Content) Validate() error {
 		if it.Model != "" && !Models[it.Model] {
 			return fmt.Errorf("item %s: unknown model %q", id, it.Model)
 		}
+		if b := it.Burn; b != nil && (b.Level < 1 || b.Level > 100 || b.Sec < 5 || b.Sec > 3600 || b.XP < 0) {
+			return fmt.Errorf("item %s: bad burn stats", id)
+		}
 		if it.Kind == KindWeapon && (it.Cooldown < 200 || it.Cooldown > 5000) {
 			return fmt.Errorf("item %s: weapon cooldown out of range", id)
 		}
@@ -398,6 +429,12 @@ func (c *Content) Validate() error {
 		}
 		if r.Station != "" && !slices.Contains(Stations, r.Station) {
 			return fmt.Errorf("recipe %s: unknown station %q", id, r.Station)
+		}
+		if r.Burnt != "" && c.Items[r.Burnt] == nil {
+			return fmt.Errorf("recipe %s: unknown burnt item %q", id, r.Burnt)
+		}
+		if r.SafeAt != 0 && (r.Burnt == "" || r.SafeAt <= r.Level) {
+			return fmt.Errorf("recipe %s: safeAt needs a burnt item and must be above the level", id)
 		}
 	}
 	for id, m := range c.Mobs {
@@ -424,11 +461,19 @@ func (c *Content) Validate() error {
 		}
 	}
 	for b, n := range c.Nodes {
-		if c.Items[n.Item] == nil || n.Hits < 1 || !c.validSkill(n.Skill) {
+		if (c.Items[n.Item] == nil && len(n.Catches) == 0) || n.Hits < 1 || !c.validSkill(n.Skill) {
 			return fmt.Errorf("node %d: bad item/hits/skill", b)
 		}
 		if err := c.checkNeeds("node "+n.Name, n.Needs); err != nil {
 			return err
+		}
+		if n.Tool != "" && c.Items[n.Tool] == nil {
+			return fmt.Errorf("node %s: unknown tool %q", n.Name, n.Tool)
+		}
+		for _, ct := range n.Catches {
+			if c.Items[ct.Item] == nil || ct.Level < 1 || ct.Level > 100 || ct.XP < 0 {
+				return fmt.Errorf("node %s: bad catch %q", n.Name, ct.Item)
+			}
 		}
 	}
 	for id, q := range c.Quests {
@@ -449,7 +494,7 @@ func (c *Content) Validate() error {
 				return fmt.Errorf("quest %s: bad step count", id)
 			}
 			switch s.Kind {
-			case StepGather, StepCraft, StepDeliver:
+			case StepGather, StepCraft, StepDeliver, StepBurn:
 				if c.Items[s.Target] == nil {
 					return fmt.Errorf("quest %s: unknown item %q", id, s.Target)
 				}
@@ -459,6 +504,11 @@ func (c *Content) Validate() error {
 				}
 			default:
 				return fmt.Errorf("quest %s: bad step kind %q", id, s.Kind)
+			}
+		}
+		for it, n := range q.Start {
+			if c.Items[it] == nil || n < 1 || n > 64 {
+				return fmt.Errorf("quest %s: bad start item %q", id, it)
 			}
 		}
 		for it := range q.Reward.Items {
@@ -497,7 +547,7 @@ var SkillGroups = []string{"combat", "gathering", "production", "support"}
 
 // Stations are the work stations recipes can require (each is a block in the
 // world; see game.stationBlocks).
-var Stations = []string{"anvil"}
+var Stations = []string{"anvil", "fire"}
 
 // CombatStyles are the skills a weapon can train (Item.Style).
 var CombatStyles = []string{"melee", "range", "magic"}

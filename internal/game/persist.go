@@ -25,6 +25,7 @@ type SaveData struct {
 	Edits      [][4]int              `json:"edits"`        // [x, y, z, block] changes to the generated world
 	Placed     []PlacedBlock         `json:"placedBlocks"` // who placed each player-built block
 	Regrow     []regen               `json:"regrow"`
+	Fires      []fire                `json:"fires,omitempty"`
 	Invites    map[string]*Invite    `json:"invites"`
 	Bans       map[string]*Ban       `json:"bans"`
 	Drops      []*Drop               `json:"drops,omitempty"`
@@ -89,7 +90,7 @@ func (g *Game) Snapshot() *SaveData {
 	}
 	return &SaveData{
 		Version: SaveVersion, Realm: g.Realm, Level: g.W.Def.Level, Characters: chars, Edits: g.W.Edits(), Placed: placed,
-		Regrow: append([]regen(nil), g.regens...), Invites: invites, Bans: bans, Drops: drops, SavedAt: g.Now,
+		Regrow: append([]regen(nil), g.regens...), Fires: append([]fire(nil), g.fires...), Invites: invites, Bans: bans, Drops: drops, SavedAt: g.Now,
 	}
 }
 
@@ -141,6 +142,7 @@ func Load(c *content.Content, cfg config.World, d *SaveData, out Outbox) (*Game,
 			g.placed[g.W.PosAt(int(pb.X), int(pb.Y), int(pb.Z))] = pb.Char
 		}
 		g.regens = d.Regrow
+		g.fires = d.Fires
 		for _, dr := range d.Drops {
 			if dr == nil || dr.Count < 1 || dr.Item == "" {
 				continue

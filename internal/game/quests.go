@@ -71,6 +71,9 @@ func (g *Game) AcceptQuest(p *Player, id string) error {
 			return fail("Finish \"%s\" first.", g.C.Quests[q.Requires].Name)
 		}
 	}
+	if len(q.Start) > 0 && !g.grant(p, q.Start) {
+		return fail("Make some room in your pack first.")
+	}
 	p.Char.Quests[id] = &QuestState{Status: "active", Progress: make([]int, len(q.Steps))}
 	p.dirtyMe, g.Dirty = true, true
 	g.toast(p, "Quest started: "+q.Name, "quest")

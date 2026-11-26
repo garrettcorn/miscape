@@ -1,4 +1,4 @@
-import { B, BLOCKS } from './blocks.js';
+import { B, BLOCKS, isWater } from './blocks.js';
 
 // Vertex format: 8 bytes.
 //   a0 = [x*4, y*4, z*4, light]   chunk-local position in quarter-block units, light 0..255
@@ -57,7 +57,7 @@ export function meshChunk(world, cx, cz, { ao = true } = {}) {
     if (b === B.AIR) continue;
     const d = BLOCKS[b];
     if (!d) continue;
-    if (d.kind === 'cross') { cross(opaqueBuf, lx, y, lz, d.side); continue; }
+    if (d.kind === 'cross') { cross(opaqueBuf, lx, y, lz, d.side, d.emissive ? FLAG_EMISSIVE : 0); continue; }
     const isWater = d.kind === 'water';
     for (const f of FACES) {
       const nb = get(x + f.n[0], y + f.n[1], z + f.n[2]);
@@ -100,7 +100,7 @@ export function meshChunk(world, cx, cz, { ao = true } = {}) {
   return { opaque: opaqueBuf.take(), water: waterBuf.take() };
 }
 
-function cross(out, x, y, z, layer) {
+function cross(out, x, y, z, layer, extra = 0) {
   const quads = [
     [[0, 0, 0], [0, 1, 0], [1, 1, 1], [1, 0, 1]],
     [[1, 0, 1], [1, 1, 1], [0, 1, 0], [0, 0, 0]],
@@ -110,7 +110,7 @@ function cross(out, x, y, z, layer) {
   const uv = [[0, 1], [0, 0], [1, 0], [1, 1]];
   for (const q of quads) for (let i = 0; i < 4; i++) {
     const c = q[i];
-    out.push8((x + c[0]) * 4, (y + c[1]) * 4, (z + c[2]) * 4, 230, uv[i][0] * 4, uv[i][1] * 4, layer, FLAG_CUTOUT | FLAG_SWAY);
+    out.push8((x + c[0]) * 4, (y + c[1]) * 4, (z + c[2]) * 4, 230, uv[i][0] * 4, uv[i][1] * 4, layer, FLAG_CUTOUT | FLAG_SWAY | extra);
   }
 }
 
@@ -130,7 +130,7 @@ export function meshChunkLOD(world, cx, cz) {
     for (let dy = 1; dy >= 0 && rep === B.AIR; dy--) for (let dz = 0; dz < 2 && rep === B.AIR; dz++) for (let dx = 0; dx < 2; dx++) {
       const b = world.get(bx + dx, by + dy, bz + dz);
       if (opaqueCube(b)) { rep = b; break; }
-      if (b === B.WATER) water = true;
+      if (isWater(b)) water = true;
     }
     grid[gi(gx, gy, gz)] = rep !== B.AIR ? rep : (water ? B.WATER : B.AIR);
   }

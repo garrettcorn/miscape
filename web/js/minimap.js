@@ -2,7 +2,7 @@
 // chunks the client already has: each chunk becomes a cached 16x16 image of
 // its top blocks, colored from the game's own block textures, so it costs
 // nothing extra to download.
-import { BLOCKS, B } from './blocks.js';
+import { BLOCKS, B, isWater } from './blocks.js';
 import { TILE } from './atlas.js';
 
 // Average color of each block's top texture (water and leaves tuned so the
@@ -21,7 +21,7 @@ export function blockColors(atlasData) {
     }
     out[b] = n ? [r / n, g / n, bl / n] : [128, 128, 128];
   }
-  out[B.WATER] = [52, 118, 196];
+  out[B.WATER] = out[B.FISHSPOT] = [52, 118, 196];
   return out;
 }
 
@@ -58,7 +58,7 @@ export class MiniMap {
       for (; y >= 0; y--) { b = data[(y * cs + z) * cs + x]; if (b !== B.AIR && b !== B.FLOWERS) break; }
       const c = this.colors[b] || [0, 0, 0];
       // Higher things (trees, walls) are lighter, lower (sea bed) darker.
-      const k2 = b === B.WATER ? 1 : Math.max(0.6, Math.min(1.35, 1 + (y - ground) * 0.06));
+      const k2 = isWater(b) ? 1 : Math.max(0.6, Math.min(1.35, 1 + (y - ground) * 0.06));
       const i = (z * cs + x) * 4;
       img.data[i] = c[0] * k2; img.data[i + 1] = c[1] * k2; img.data[i + 2] = c[2] * k2; img.data[i + 3] = 255;
     }

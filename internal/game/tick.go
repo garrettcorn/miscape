@@ -15,6 +15,7 @@ func (g *Game) Tick(now time.Time) {
 	g.tick++
 	g.tickMobs()
 	g.tickRegen()
+	g.tickFires()
 	g.tickPlayers()
 	g.tickDrops()
 	g.tickTrades()

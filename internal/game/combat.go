@@ -189,14 +189,15 @@ func (g *Game) tickMobs() {
 		if m.target != 0 {
 			tp = g.Players[m.target]
 			if tp == nil || tp.dead || g.W.ZoneAt(tp.Char.X, tp.Char.Z) == world.ZoneTown ||
-				g.W.Dist(tp.Char.X, tp.Char.Z, m.Spawn.X, m.Spawn.Z) > MobLeash+m.Spawn.R {
+				g.W.Dist(tp.Char.X, tp.Char.Z, m.Spawn.X, m.Spawn.Z) > MobLeash+m.Spawn.R ||
+				g.warded(m, tp.Char.X, tp.Char.Y, tp.Char.Z, FireWard) {
 				m.target, tp = 0, nil
 			}
 		}
 		if tp == nil {
 			best := m.Def.Aggro
 			for id, p := range g.Players {
-				if p.dead || g.W.ZoneAt(p.Char.X, p.Char.Z) == world.ZoneTown {
+				if p.dead || g.W.ZoneAt(p.Char.X, p.Char.Z) == world.ZoneTown || g.warded(m, p.Char.X, p.Char.Y, p.Char.Z, FireWard) {
 					continue
 				}
 				if d := g.W.Dist(m.X, m.Z, p.Char.X, p.Char.Z); d < best && math.Abs(p.Char.Y-m.Y) < 4 {
@@ -239,6 +240,9 @@ func (g *Game) tickMobs() {
 			if g.W.ZoneAt(nx, nz) == world.ZoneTown {
 				continue // creatures never enter towns
 			}
+			if g.warded(m, nx, m.Y, nz, FireWard-1) {
+				continue // and fire-fearing ones keep clear of campfires
+			}
 			// Creatures of a danger zone stay in it, and others stay out.
 			if (g.W.ZoneAt(nx, nz) == world.ZoneDanger) != (g.W.ZoneAt(m.Spawn.X, m.Spawn.Z) == world.ZoneDanger) {
 				continue
@@ -256,5 +260,5 @@ func (g *Game) tickMobs() {
 
 // wet reports whether column (x,z) is open water (creatures don't swim).
 func (g *Game) wet(x, z int) bool {
-	return g.W.Get(x, g.W.Def.GroundY, z) == world.Water
+	return world.IsWater(g.W.Get(x, g.W.Def.GroundY, z))
 }
