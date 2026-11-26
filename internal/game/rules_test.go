@@ -11,11 +11,11 @@ import (
 )
 
 func TestXPCurve(t *testing.T) {
-	if LevelFor(0) != 1 || LevelFor(49) != 1 || LevelFor(50) != 2 || LevelFor(150) != 3 {
-		t.Fatalf("curve wrong: %d %d %d %d", LevelFor(0), LevelFor(49), LevelFor(50), LevelFor(150))
+	if LevelFor(0, 10) != 1 || LevelFor(49, 10) != 1 || LevelFor(50, 10) != 2 || LevelFor(150, 10) != 3 {
+		t.Fatalf("curve wrong: %d %d %d %d", LevelFor(0, 10), LevelFor(49, 10), LevelFor(50, 10), LevelFor(150, 10))
 	}
-	if LevelFor(1_000_000) != MaxSkillLevel {
-		t.Fatal("level must cap")
+	if LevelFor(1_000_000, 10) != 10 || LevelFor(1_000_000, 20) != 20 {
+		t.Fatal("level must stop at the cap")
 	}
 }
 
@@ -163,8 +163,8 @@ func TestCombatKillsGiveXPLootAndQuestProgress(t *testing.T) {
 	if m.HP > 0 {
 		t.Fatal("mob never died")
 	}
-	if p.Char.XP["combat"] != m.Def.XP {
-		t.Fatalf("combat xp %d", p.Char.XP["combat"])
+	if p.Char.XP["melee"] != m.Def.XP {
+		t.Fatalf("melee xp %d", p.Char.XP["melee"])
 	}
 	if p.Char.Quests["lights_for_wickhollow"].Progress[2] != 1 {
 		t.Fatalf("kill progress not counted: %v", p.Char.Quests["lights_for_wickhollow"].Progress)

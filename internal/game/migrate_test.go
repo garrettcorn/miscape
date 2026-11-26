@@ -17,7 +17,7 @@ func TestVersion1SaveMigrates(t *testing.T) {
 	  "realm": {"id": "r1", "kind": "private", "created": "2026-11-20T10:00:00Z"},
 	  "characters": {"c1": {"id": "c1", "realm": "r1", "name": "Oldtimer", "tokenHash": "abc", "color": "#4a90d9",
 	    "x": 64.5, "y": 13, "z": 70.5, "hp": 20, "inv": {"log": 9, "coin": 31, "wooden_sword": 1}, "equipped": "wooden_sword",
-	    "xp": {"woodcutting": 120}, "placed": 3,
+	    "xp": {"woodcutting": 120, "combat": 300}, "placed": 3,
 	    "quests": {"lights_for_wickhollow": {"status": "done", "progress": [10, 1, 3]},
 	               "a_quest_that_was_removed": {"status": "active", "progress": [1]}}}},
 	  "blocks": [[5000, 8], [6000, 0]],
@@ -40,6 +40,9 @@ func TestVersion1SaveMigrates(t *testing.T) {
 	sp := g.W.Spawn()
 	if c == nil || c.X != sp.X || c.Z != sp.Z || c.Placed != 0 {
 		t.Fatalf("character not moved to the spawn town: %+v", c)
+	}
+	if c.XP["melee"] != 300 || c.XP["combat"] != 0 {
+		t.Fatalf("combat XP should become melee XP: %v", c.XP)
 	}
 	if c.Inv["log"] != 9 || c.Inv["coin"] != 31 || c.XP["woodcutting"] != 120 || c.Equipped != "wooden_sword" {
 		t.Fatalf("progress lost: %+v", c)

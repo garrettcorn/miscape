@@ -23,10 +23,19 @@ func (g *Game) weapon(c *Character) (dmg int, cd time.Duration) {
 	return FistDamage, FistCooldown
 }
 
-// PlayerDamage is the damage a character deals per hit.
+// weaponStyle is the combat skill the equipped weapon uses (melee for fists).
+func (g *Game) weaponStyle(c *Character) string {
+	if it := g.C.Items[c.Equipped]; it != nil && it.Kind == "weapon" && c.Inv[c.Equipped] > 0 {
+		return styleOf(it)
+	}
+	return "melee"
+}
+
+// PlayerDamage is the damage a character deals per hit: the weapon, plus
+// half the level of the skill it uses.
 func (g *Game) PlayerDamage(c *Character) int {
 	d, _ := g.weapon(c)
-	return d + c.Level("combat")/2
+	return d + c.Level(g.weaponStyle(c))/2
 }
 
 func (g *Game) broadcastNear(x, z float64, msg M) {
@@ -47,7 +56,7 @@ func (g *Game) Attack(p *Player, target uint32) error {
 	}
 	c := p.Char
 	dmg, cd := g.weapon(c)
-	dmg += c.Level("combat") / 2
+	dmg += c.Level(g.weaponStyle(c)) / 2
 	if m := g.Mobs[target]; m != nil {
 		if m.HP <= 0 {
 			return fail("It's already gone.")
@@ -93,7 +102,7 @@ func (g *Game) killMob(m *Mob, killer *Player) {
 	m.deadUntil = g.Now.Add(MobRespawn)
 	m.target = 0
 	g.broadcastNear(m.X, m.Z, M{"t": "die", "id": m.ID, "mob": true})
-	g.addXP(killer, "combat", m.Def.XP)
+	g.addXP(killer, g.weaponStyle(killer.Char), m.Def.XP)
 	g.progress(killer, "kill", m.Def.ID, 1)
 	loot := map[string]int{}
 	for _, d := range m.Def.Drops {

@@ -10,9 +10,11 @@ import (
 	"lanternfall/internal/world"
 )
 
-// SaveVersion 2 stores block edits by position on a world level. Version 1
-// (the original 128x128 map) is migrated on load: see migrateV1.
-const SaveVersion = 2
+// SaveVersion 3 splits the old combat skill into melee, range and magic
+// (combat XP becomes melee XP). Version 2 stored block edits by position on a
+// world level; version 1 (the original 128x128 map) is migrated on load: see
+// migrateV1.
+const SaveVersion = 3
 
 // SaveData is the full persistent state of one world (one realm).
 type SaveData struct {
@@ -94,14 +96,14 @@ func (g *Game) Snapshot() *SaveData {
 // Load builds a game from saved data. Characters from another realm are
 // refused, so progress can never cross between worlds.
 func Load(c *content.Content, cfg config.World, d *SaveData, out Outbox) (*Game, error) {
-	if d.Version != SaveVersion && d.Version != 1 {
+	if d.Version < 1 || d.Version > SaveVersion {
 		return nil, fmt.Errorf("unsupported save version %d", d.Version)
 	}
 	if d.Realm.ID == "" {
 		return nil, fmt.Errorf("save has no realm id")
 	}
 	g := New(c, cfg, d.Realm.Kind, out)
-	if d.Version == SaveVersion && d.Level != g.W.Def.Level {
+	if d.Version >= 2 && d.Level != g.W.Def.Level {
 		return nil, fmt.Errorf("this save is from level %d of the world, but the server runs level %d", d.Level, g.W.Def.Level)
 	}
 	g.Realm = d.Realm
@@ -118,6 +120,11 @@ func Load(c *content.Content, cfg config.World, d *SaveData, out Outbox) (*Game,
 		}
 		if ch.Quests == nil {
 			ch.Quests = map[string]*QuestState{}
+		}
+		// Version 3: "combat" split into melee, range and magic.
+		if xp, ok := ch.XP["combat"]; ok {
+			ch.XP["melee"] += xp
+			delete(ch.XP, "combat")
 		}
 		ch.ID = id
 		g.addChar(ch)

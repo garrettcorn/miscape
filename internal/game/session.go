@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strings"
 
-	"lanternfall/internal/content"
 	"lanternfall/internal/protocol"
 	"lanternfall/internal/world"
 )
@@ -98,6 +97,7 @@ func (g *Game) Join(s Session, h *protocol.In) (pid uint32, token string, err er
 }
 
 func (g *Game) addChar(c *Character) {
+	c.levelCap = g.LevelCap()
 	g.Chars[c.ID] = c
 	g.tokens[c.TokenHash] = c.ID
 	g.names[strings.ToLower(c.Name)] = c.ID
@@ -136,17 +136,12 @@ func (g *Game) Welcome(pid uint32, token string) M {
 
 func (g *Game) meMsg(p *Player) M {
 	c := p.Char
-	skills := M{}
-	for _, s := range content.Skills {
-		l := c.Level(s)
-		next := XPForLevel(min(l+1, MaxSkillLevel))
-		skills[s] = M{"xp": c.XP[s], "lvl": l, "cur": XPForLevel(l), "next": next}
-	}
+	skills := g.skillsView(c)
 	var hearth float64
 	if !p.hearthStart.IsZero() {
 		hearth = g.Now.Sub(p.hearthStart).Seconds() / HearthSeconds
 	}
-	return M{"t": "me", "name": c.Name, "color": c.Color, "hp": c.HP, "mhp": c.MaxHP(), "inv": c.Inv, "eq": c.Equipped, "skills": skills,
+	return M{"t": "me", "name": c.Name, "color": c.Color, "hp": c.HP, "mhp": c.MaxHP(), "inv": c.Inv, "eq": c.Equipped, "skills": skills, "cap": g.LevelCap(), "combat": c.CombatLevel(),
 		"quests": c.Quests, "slots": g.slotsUsed(c.Inv), "maxSlots": InventorySlots,
 		"zone": g.W.ZoneAt(c.X, c.Z), "zoneName": g.W.ZoneName(c.X, c.Z), "sea": g.atSea(c), "hearth": hearth, "trade": g.tradeView(p)}
 }

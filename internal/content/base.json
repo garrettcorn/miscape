@@ -1,4 +1,20 @@
 {
+  "skills": [
+    {"id": "melee", "name": "Melee", "icon": "⚔", "group": "combat", "desc": "Fighting up close with swords, cudgels and pikes."},
+    {"id": "range", "name": "Range", "icon": "🏹", "group": "combat", "desc": "Slings and bows, from a safe distance."},
+    {"id": "magic", "name": "Magic", "icon": "✨", "group": "combat", "desc": "Cunning-folk charms and wards, worked with rowan, salt and wisp-light."},
+    {"id": "slaying", "name": "Slaying", "icon": "📜", "group": "combat", "desc": "Bounty warrants from the magistrate, against the creatures troubling the county."},
+    {"id": "mining", "name": "Mining", "icon": "⛏", "group": "gathering", "desc": "Stone, ore and coal from the ground."},
+    {"id": "woodcutting", "name": "Woodcutting", "icon": "🪓", "group": "gathering", "desc": "Timber for building, fires and bows."},
+    {"id": "fishing", "name": "Fishing", "icon": "🎣", "group": "gathering", "desc": "Rods and nets on rivers and coasts."},
+    {"id": "hunting", "name": "Hunting", "icon": "🐾", "group": "gathering", "desc": "Snares and traps for hares and grouse."},
+    {"id": "farming", "name": "Farming", "icon": "🌱", "group": "gathering", "desc": "Allotments that grow while you're away."},
+    {"id": "crafting", "name": "Crafting", "icon": "🔨", "group": "production", "desc": "Smithing, bows, leather and tools at the bench and anvil."},
+    {"id": "cooking", "name": "Cooking", "icon": "🍳", "group": "production", "desc": "Turning raw catches and crops into proper meals."},
+    {"id": "firemaking", "name": "Firemaking", "icon": "🔥", "group": "production", "desc": "Campfires to cook on, and to keep the dark at bay."},
+    {"id": "agility", "name": "Agility", "icon": "🏃", "group": "support", "desc": "Towpaths, rooftops and stepping stones: shortcuts and a quicker stride."},
+    {"id": "thieving", "name": "Thieving", "icon": "🎩", "group": "support", "desc": "Light fingers in the market. The watchman is never far away."}
+  ],
   "items": [
     {"id": "coin", "name": "Coin", "desc": "A copper cartwheel penny, stamped with King George III.", "kind": "currency", "tradeable": true, "stack": 999, "color": "#f2c14e"},
     {"id": "log", "name": "Log", "desc": "Good Lancashire timber.", "kind": "material", "tradeable": true, "stack": 64, "value": 1, "color": "#9a6b3f"},
@@ -49,14 +65,14 @@
        {"kind": "craft", "target": "wooden_sword", "count": 1, "text": "Craft a Wooden Sword"},
        {"kind": "kill", "target": "bramblet", "count": 3, "text": "See off 3 boggarts"}
      ],
-     "reward": {"coins": 25, "items": {"copper_ore": 2, "berry": 3}, "xp": {"combat": 40, "crafting": 30}}},
+     "reward": {"coins": 25, "items": {"copper_ore": 2, "berry": 3}, "xp": {"melee": 40, "crafting": 30}}},
     {"id": "what_glimmers_below", "name": "Lights on the Moors", "giver": "ott", "requires": "lights_for_wickhollow",
      "intro": "North of here the road runs up to the Highland moors. Lights dance there at night: will-o'-the-wisps, leading travellers into the bogs. Bring me 3 wisp-light shards and I'll know you can look after yourself. Carry a lantern, and if it goes badly, your Hearth Lantern will bring you home.",
      "outro": "Back in one piece, and with your pockets glowing. Take this token, and my thanks.",
      "steps": [
        {"kind": "deliver", "target": "glimmer_shard", "count": 3, "text": "Bring 3 wisp-light shards to Ottiwell"}
      ],
-     "reward": {"coins": 80, "items": {"warden_token": 1}, "xp": {"mining": 60, "combat": 60}}}
+     "reward": {"coins": 80, "items": {"warden_token": 1}, "xp": {"mining": 60, "melee": 60}}}
   ],
   "shop": [
     {"npc": "bertram", "item": "berry", "price": 2},

@@ -4,8 +4,6 @@ import { itemIcon } from './icons.js';
 
 const $ = (s) => document.querySelector(s);
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const SKILL_LABEL = { woodcutting: 'Woodcutting', mining: 'Mining', crafting: 'Crafting', combat: 'Combat' };
-const SKILL_ICON = { woodcutting: '🪓', mining: '⛏', crafting: '🔨', combat: '⚔' };
 const KIND_LABEL = { weapon: 'Weapon', food: 'Food', block: 'Building block', material: 'Material', tool: 'Tool', currency: 'Currency', missing: 'Unknown item' };
 
 // ---------- extension points ----------
@@ -500,10 +498,11 @@ export class UI {
   }
 
   tab_craft() {
-    const me = this.g.me, lvl = me.skills.crafting.lvl;
+    const me = this.g.me, lvl = (s) => (me.skills[s] || { lvl: 1 }).lvl;
     const rows = this.g.recipes.map((r) => {
       const missing = Object.entries(r.inputs).some(([k, v]) => (me.inv[k] || 0) < v);
-      const lvOK = lvl >= r.level, stOK = r.station !== 'anvil' || this.g.nearAnvil();
+      const sk = r.skill || 'crafting', needs = Object.entries(r.needs || {});
+      const lvOK = lvl(sk) >= r.level && needs.every(([k, v]) => lvl(k) >= v), stOK = r.station !== 'anvil' || this.g.nearAnvil();
       return { r, can: !missing && lvOK && stOK, lvOK, stOK };
     }).sort((a, b) => b.can - a.can || a.r.level - b.r.level);
     const shown = this.craftOnly ? rows.filter((x) => x.can) : rows;
@@ -513,23 +512,65 @@ export class UI {
       const st = r.station === 'anvil' ? `<span class="${stOK ? '' : 'miss'}">⚒ at the Anvil</span>` : '';
       const fact = itemFacts(out)[0];
       return `<div class="recipe ${can ? 'can' : ''}">${itemIcon(out)}<div class="info"><b>${esc(out.name)}${r.count > 1 ? ' ×' + r.count : ''}</b>${fact ? ` <span class="note">· ${esc(fact)}</span>` : ''}
-        <div class="req">${req}${st}<span class="${lvOK ? '' : 'miss'}">Crafting ${r.level}</span><span>+${r.xp} XP</span></div></div>
+        <div class="req">${req}${st}<span class="${lvl(r.skill || 'crafting') >= r.level ? '' : 'miss'}">${esc(this.skillName(r.skill || 'crafting'))} ${r.level}</span>${Object.entries(r.needs || {}).map(([k, v]) => `<span class="${lvl(k) >= v ? '' : 'miss'}">${esc(this.skillName(k))} ${v}</span>`).join('')}<span>+${r.xp} ${esc(this.skillName(r.skill || 'crafting'))} XP</span></div></div>
         <button class="btn ${can ? 'primary' : ''}" data-do="craft" data-arg="${esc(r.id)}" data-fid="c-${esc(r.id)}" ${can ? '' : 'aria-disabled="true"'}>Craft</button></div>`;
     }).join('');
-    return `<div class="row"><span class="note">Crafting level ${lvl}</span><span class="grow"></span>
+    return `<div class="row"><span class="note">Crafting level ${lvl('crafting')}</span><span class="grow"></span>
       <label class="toggle"><input type="checkbox" ${this.craftOnly ? 'checked' : ''} data-do="craftOnly" data-fid="co"> Only what I can make now</label></div>
       ${list || '<p class="note">Nothing you can make right now. Gather more materials, or untick the filter to see every recipe.</p>'}`;
   }
 
-  tab_skills() {
-    const me = this.g.me;
-    return Object.entries(me.skills).map(([s, v]) => {
-      const pct = v.lvl >= 10 ? 100 : ((v.xp - v.cur) / Math.max(1, v.next - v.cur)) * 100;
-      return `<div class="skill" tabindex="0" data-fid="s-${s}"><b>${SKILL_ICON[s] || ''} ${SKILL_LABEL[s] || s}</b> — level ${v.lvl}${v.lvl >= 10 ? ' (max)' : ''}
-        <span class="note">${v.xp} XP${v.lvl < 10 ? ` · ${v.next - v.xp} to next` : ''}</span><div class="xp"><div style="width:${pct}%"></div></div></div>`;
-    }).join('') + `<p class="note">Combat level raises your max health and damage. Higher Mining unlocks Copper (2) and Glimmer (4); Woodcutting 3 lets you chop Gloam Deadwood.</p>`;
+  // Skills come from content: grouped, with progress toward the next level,
+  // the world's cap, and what the next level unlocks.
+  skillName(id) { const s = (this.g.skills || []).find((k) => k.id === id); return s ? s.name : id; }
+
+  nextUnlock(skill, lvl) {
+    const g = this.g, found = [];
+    const add = (level, name) => { if (level > lvl) found.push([level, name]); };
+    for (const r of g.recipes || []) { if ((r.skill || 'crafting') === skill) add(r.level, this.item(r.output).name); if (r.needs && r.needs[skill]) add(r.needs[skill], this.item(r.output).name); }
+    for (const n of Object.values(g.nodes || {})) { if (n.skill === skill) add(n.level, n.name); if (n.needs && n.needs[skill]) add(n.needs[skill], n.name); }
+    for (const it of Object.values(g.items || {})) if (it.needs && it.needs[skill]) add(it.needs[skill], it.name);
+    for (const q of Object.values(g.quests || {})) if (q.needs && q.needs[skill]) add(q.needs[skill], q.name);
+    if (!found.length) return '';
+    const next = Math.min(...found.map((f) => f[0]));
+    return `Level ${next}: ${[...new Set(found.filter((f) => f[0] === next).map((f) => f[1]))].join(', ')}`;
   }
 
+  tab_skills() {
+    const me = this.g.me, cap = me.cap || 10;
+    const groups = { combat: '⚔ Combat', gathering: '🌿 Gathering', production: '🔨 Production', support: '🧭 Support' };
+    const total = Object.values(me.skills).reduce((a, v) => a + v.lvl, 0);
+    let html = `<div class="row"><b>Combat level ${me.combat || 1}</b><span class="note">· total level ${total} · skills go up to <b>${cap}</b> in this world; the next world raises the cap</span></div>`;
+    for (const [gid, gname] of Object.entries(groups)) {
+      const list = (this.g.skills || []).filter((s) => s.group === gid);
+      if (!list.length) continue;
+      html += `<h4 class="skillgroup">${gname}</h4><div class="skills">`;
+      for (const s of list) {
+        const v = me.skills[s.id] || { xp: 0, lvl: 1, cur: 0, next: 50 };
+        const atCap = v.lvl >= cap;
+        const pct = atCap ? 100 : ((v.xp - v.cur) / Math.max(1, v.next - v.cur)) * 100;
+        const unlock = atCap ? '' : this.nextUnlock(s.id, v.lvl);
+        html += `<div class="skill ${atCap ? 'capped' : ''}" tabindex="0" data-fid="s-${esc(s.id)}" title="${esc(s.desc)}">
+          <div class="srow"><span class="sicon">${esc(s.icon)}</span><b>${esc(s.name)}</b><span class="grow"></span><span class="slvl">${v.lvl}<small>/${cap}</small></span></div>
+          <div class="xp"><div style="width:${pct}%"></div></div>
+          <div class="note">${atCap ? 'At this world’s cap' : `${v.next - v.xp} XP to level ${v.lvl + 1}`}${unlock ? ` · next: ${esc(unlock)}` : ''}</div></div>`;
+      }
+      html += '</div>';
+    }
+    return html;
+  }
+
+  // A small "+18 Mining" that floats up near the top of the screen.
+  xpPopup(m) {
+    const s = (this.g.skills || []).find((k) => k.id === m.skill);
+    const el = document.createElement('div');
+    el.className = 'xpdrop';
+    el.textContent = `${s ? s.icon + ' ' : ''}+${m.amount} ${s ? s.name : m.skill}`;
+    const box = $('#xpdrops');
+    box.appendChild(el);
+    while (box.children.length > 5) box.firstChild.remove();
+    setTimeout(() => el.remove(), 1800);
+  }
   tab_quests() {
     const me = this.g.me;
     const order = (q) => { const st = me.quests[q.id]; return !st ? 1 : st.status === 'done' ? 2 : 0; };
@@ -543,7 +584,7 @@ export class UI {
       const giver = this.g.npcs[q.giver];
       return `<div class="quest ${st ? st.status : 'new'}" tabindex="0" data-fid="q-${esc(q.id)}"><h4>${esc(q.name)} <span class="note">— ${status}</span></h4>
         <div class="note">From ${esc(giver ? giver.name : q.giver)}${q.requires ? ' · after ' + esc(this.g.quests[q.requires]?.name) : ''}</div>${st && st.status === 'done' ? '' : `<ul>${steps}</ul>`}
-        <div class="note">Reward: ${q.reward.coins} coins${Object.entries(q.reward.items || {}).map(([k, v]) => `, ${v}× ${esc(this.item(k).name)}`).join('')}${Object.entries(q.reward.xp || {}).map(([k, v]) => `, ${v} ${SKILL_LABEL[k] || k} XP`).join('')}</div></div>`;
+        <div class="note">Reward: ${q.reward.coins} coins${Object.entries(q.reward.items || {}).map(([k, v]) => `, ${v}× ${esc(this.item(k).name)}`).join('')}${Object.entries(q.reward.xp || {}).map(([k, v]) => `, ${v} ${esc(this.skillName(k))} XP`).join('')}</div></div>`;
     }).join('');
   }
 

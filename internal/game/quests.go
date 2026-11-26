@@ -63,6 +63,9 @@ func (g *Game) AcceptQuest(p *Player, id string) error {
 	if p.Char.Quests[id] != nil {
 		return fail("You've already started that.")
 	}
+	if err := g.meets(p.Char, q.Needs); err != nil {
+		return err
+	}
 	if q.Requires != "" {
 		if pre := p.Char.Quests[q.Requires]; pre == nil || pre.Status != "done" {
 			return fail("Finish \"%s\" first.", g.C.Quests[q.Requires].Name)

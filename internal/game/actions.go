@@ -49,7 +49,10 @@ func (g *Game) Gather(p *Player, bx, by, bz int) error {
 		return fail("The folk of %s would rather you didn't chop up the town.", g.W.ZoneName(float64(bx)+0.5, float64(bz)+0.5))
 	}
 	if lvl := p.Char.Level(node.Skill); lvl < node.Level {
-		return fail("You need %s level %d for %s (you have %d).", title(node.Skill), node.Level, node.Name, lvl)
+		return fail("You need %s level %d for %s (you have %d).", g.skillName(node.Skill), node.Level, node.Name, lvl)
+	}
+	if err := g.meets(p.Char, node.Needs); err != nil {
+		return err
 	}
 	if g.Now.Before(p.nextGather) {
 		return fail("Steady now…")
@@ -178,10 +181,33 @@ func (g *Game) Break(p *Player, bx, by, bz int) error {
 	return nil
 }
 
-func (g *Game) nearAnvil(p *Player) bool {
+// Stations are blocks you must stand near to use some recipes. Each content
+// station name (content.Stations) maps to the block that provides it.
+var stationBlocks = map[string]uint8{"anvil": world.Anvil}
+
+func stationName(s string) string {
+	return map[string]string{"anvil": "an anvil"}[s]
+}
+
+// nearStation reports whether a station block is within reach of p.
+func (g *Game) nearStation(p *Player, station string) bool {
+	b, ok := stationBlocks[station]
+	if !ok {
+		return false
+	}
 	c := p.Char
-	a, err := g.W.Point("anvil")
-	return err == nil && g.W.Dist(c.X, c.Z, a.X+0.5, a.Z+0.5) <= AnvilRange
+	r := int(math.Ceil(AnvilRange))
+	cx, cy, cz := int(math.Floor(c.X)), int(math.Floor(c.Y)), int(math.Floor(c.Z))
+	for dy := -2; dy <= 3; dy++ {
+		for dz := -r; dz <= r; dz++ {
+			for dx := -r; dx <= r; dx++ {
+				if g.W.Get(cx+dx, cy+dy, cz+dz) == b && math.Hypot(float64(dx)+0.5-(c.X-float64(cx)), float64(dz)+0.5-(c.Z-float64(cz))) <= AnvilRange {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // Craft turns inputs into an output if the player meets the requirements.
@@ -193,11 +219,14 @@ func (g *Game) Craft(p *Player, recipe string) error {
 	if r == nil {
 		return fail("Unknown recipe.")
 	}
-	if lvl := p.Char.Level("crafting"); lvl < r.Level {
-		return fail("You need Crafting level %d (you have %d).", r.Level, lvl)
+	if lvl := p.Char.Level(r.Skill); lvl < r.Level {
+		return fail("You need %s level %d (you have %d).", g.skillName(r.Skill), r.Level, lvl)
 	}
-	if r.Station == "anvil" && !g.nearAnvil(p) {
-		return fail("You need to be at the anvil in %s.", g.W.ZoneName(g.W.Spawn().X, g.W.Spawn().Z))
+	if err := g.meets(p.Char, r.Needs); err != nil {
+		return err
+	}
+	if r.Station != "" && !g.nearStation(p, r.Station) {
+		return fail("You need to be at %s.", stationName(r.Station))
 	}
 	if !has(p.Char.Inv, r.Inputs) {
 		return fail("You're missing materials.")
@@ -210,7 +239,7 @@ func (g *Game) Craft(p *Player, recipe string) error {
 	g.ensureEquip(p.Char)
 	p.dirtyMe = true
 	g.Dirty = true
-	g.addXP(p, "crafting", r.XP)
+	g.addXP(p, r.Skill, r.XP)
 	g.progress(p, "craft", r.Output, r.Count)
 	if r.Level >= 3 {
 		g.SaveSoon = true
@@ -256,6 +285,9 @@ func (g *Game) Equip(p *Player, item string) error {
 	it := g.C.Items[item]
 	if it == nil || it.Kind != "weapon" {
 		return fail("That isn't a weapon.")
+	}
+	if err := g.meets(p.Char, it.Needs); err != nil {
+		return err
 	}
 	if p.Char.Inv[item] < 1 {
 		return fail("You don't have that.")

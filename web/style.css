@@ -331,3 +331,20 @@ body.touch { --mm: 6.5em; }
 @media (max-width: 560px) {
   :root { --mm: 7em; }
 }
+
+/* ---------- Skills ---------- */
+.skillgroup { margin: .9em 0 .4em; color: var(--accent); }
+.skills { display: grid; grid-template-columns: repeat(auto-fill, minmax(14em, 1fr)); gap: .5em; }
+.skill { background: var(--glass-inner); border: 1px solid rgba(255,255,255,.12); border-radius: var(--r-md); padding: .55em .75em; margin: 0; }
+.skill .srow { display: flex; align-items: center; gap: .45em; }
+.skill .sicon { width: 1.4em; text-align: center; }
+.skill .slvl { font-weight: 800; font-size: 1.1em; font-variant-numeric: tabular-nums; }
+.skill .slvl small { color: var(--muted); font-weight: 600; font-size: .7em; }
+.skill .xp { margin: .35em 0 .25em; }
+.skill .note { font-size: .78em; }
+.skill.capped { border-color: rgba(255, 207, 107, .45); }
+.skill.capped .xp > div { background: linear-gradient(90deg, #ffcf6b, #ffe9b0); }
+#xpdrops { position: absolute; top: 4.2em; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: .2em; pointer-events: none; }
+.xpdrop { font-weight: 800; font-size: .95em; color: #fff3c4; text-shadow: 0 1px 3px rgba(0,0,0,.8); animation: xpdrop 1.8s ease-out forwards; }
+.reduce-motion .xpdrop { animation: dmgstill 1.8s forwards; }
+@keyframes xpdrop { 0% { opacity: 0; transform: translateY(8px); } 15% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px); } }

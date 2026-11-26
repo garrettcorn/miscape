@@ -31,6 +31,8 @@ type Character struct {
 	Placed    int                    `json:"placed"`
 	Created   time.Time              `json:"created"`
 	LastSeen  time.Time              `json:"lastSeen"`
+
+	levelCap int // the world's skill level cap (set when added to a game)
 }
 
 // Player is the runtime state of an online character.

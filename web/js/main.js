@@ -124,6 +124,7 @@ class Game {
     this.npcs = Object.fromEntries(c.npcs.map((n) => [n.id, n]));
     this.mobDefs = Object.fromEntries(c.mobs.map((m) => [m.id, m]));
     this.nodes = Object.fromEntries(c.nodes.map((n) => [n.block, n]));
+    this.skills = c.skills || [];
     this.body = new Body(w.pos[0], w.pos[1], w.pos[2]);
     this.yaw = w.pos[3] || 0;
     $('#screen-join').hidden = true;
@@ -178,7 +179,8 @@ class Game {
     n.on('toast', (m) => ui.toast(m.text, m.kind));
     n.on('pickup', (m) => ui.toast(`+${m.count} ${ui.item(m.item).name}`, 'good'));
     n.on('chat', (m) => ui.chat(m));
-    n.on('levelup', () => { });
+    n.on('levelup', () => { }); // the server also sends a toast naming what it unlocks
+    n.on('xp', (m) => ui.xpPopup(m));
     n.on('dialog', (m) => ui.showDialog(m));
     n.on('quest_done', (m) => ui.toast(m.text, 'quest'));
     n.on('trade_end', (m) => ui.toast(m.text, m.ok ? 'good' : 'warn'));

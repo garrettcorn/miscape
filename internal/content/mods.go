@@ -180,7 +180,7 @@ func (c *Content) Apply(m *Manifest) error {
 
 func (c *Content) clone() *Content {
 	n := &Content{
-		Items: map[string]*Item{}, Recipes: map[string]*Recipe{}, Mobs: c.Mobs, Nodes: c.Nodes,
+		Skills: c.Skills, Items: map[string]*Item{}, Recipes: map[string]*Recipe{}, Mobs: c.Mobs, Nodes: c.Nodes,
 		Quests: map[string]*Quest{}, NPCs: c.NPCs, Rules: c.Rules,
 		Spawns: c.Spawns, Shop: append([]ShopEntry(nil), c.Shop...), Mods: append([]string(nil), c.Mods...), ModRules: append([]ModRules(nil), c.ModRules...),
 	}

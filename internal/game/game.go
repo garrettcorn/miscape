@@ -22,18 +22,18 @@ import (
 )
 
 const (
-	TickRate              = 20
-	SnapshotEvery         = 2 // ticks (10 Hz)
-	InventorySlots        = 24
-	InterestRadius        = 56.0
-	BlockUpdateRadius     = 160.0 // beyond the farthest render distance (8 chunks)
-	ReachBlocks           = 5.2
-	MeleeRange            = 3.3
-	NPCRange              = 4.5
-	AnvilRange            = 4.5
-	TradeRange            = 10.0
-	HearthSeconds         = 5.0
-	MaxSkillLevel         = 10
+	TickRate          = 20
+	SnapshotEvery     = 2 // ticks (10 Hz)
+	InventorySlots    = 24
+	InterestRadius    = 56.0
+	BlockUpdateRadius = 160.0 // beyond the farthest render distance (8 chunks)
+	ReachBlocks       = 5.2
+	MeleeRange        = 3.3
+	NPCRange          = 4.5
+	AnvilRange        = 4.5
+	TradeRange        = 10.0
+	HearthSeconds     = 5.0
+
 	MaxPlacedPerCharacter = 500
 )
 

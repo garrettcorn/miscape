@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"slices"
 	"sort"
 )
 
@@ -37,21 +39,23 @@ var (
 )
 
 type Item struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Desc      string `json:"desc,omitempty"`
-	Kind      string `json:"kind"`
-	Damage    int    `json:"damage,omitempty"`     // weapons
-	Cooldown  int    `json:"cooldownMs,omitempty"` // weapons
-	Heal      int    `json:"heal,omitempty"`       // food
-	Block     uint8  `json:"block,omitempty"`      // placeable block id
-	Tradeable bool   `json:"tradeable"`
-	Stack     int    `json:"stack"`
-	Value     int    `json:"value,omitempty"` // shop sell price
-	Color     string `json:"color"`           // UI icon tint
-	Light     bool   `json:"light,omitempty"` // lantern: widens Gloam vision
-	Model     string `json:"model,omitempty"` // how it looks when held or dropped (see Models)
-	Glow      bool   `json:"glow,omitempty"`  // drawn glowing
+	ID        string         `json:"id"`
+	Name      string         `json:"name"`
+	Desc      string         `json:"desc,omitempty"`
+	Kind      string         `json:"kind"`
+	Damage    int            `json:"damage,omitempty"`     // weapons
+	Cooldown  int            `json:"cooldownMs,omitempty"` // weapons
+	Heal      int            `json:"heal,omitempty"`       // food
+	Block     uint8          `json:"block,omitempty"`      // placeable block id
+	Tradeable bool           `json:"tradeable"`
+	Stack     int            `json:"stack"`
+	Value     int            `json:"value,omitempty"` // shop sell price
+	Color     string         `json:"color"`           // UI icon tint
+	Light     bool           `json:"light,omitempty"` // lantern: widens Gloam vision
+	Model     string         `json:"model,omitempty"` // how it looks when held or dropped (see Models)
+	Glow      bool           `json:"glow,omitempty"`  // drawn glowing
+	Style     string         `json:"style,omitempty"` // weapons: melee (default), range or magic — the skill it trains
+	Needs     map[string]int `json:"needs,omitempty"` // skill levels needed to equip or use it
 }
 
 type Recipe struct {
@@ -59,9 +63,11 @@ type Recipe struct {
 	Output  string         `json:"output"`
 	Count   int            `json:"count"`
 	Inputs  map[string]int `json:"inputs"`
-	Level   int            `json:"level"` // Crafting level required
+	Skill   string         `json:"skill,omitempty"` // the skill it uses and trains (default crafting)
+	Level   int            `json:"level"`           // level needed in that skill
 	XP      int            `json:"xp"`
-	Station string         `json:"station,omitempty"` // "anvil" or ""
+	Station string         `json:"station,omitempty"` // a station block to stand near: "anvil", or ""
+	Needs   map[string]int `json:"needs,omitempty"`   // other skill levels needed
 }
 
 type Drop struct {
@@ -99,14 +105,15 @@ type Spawn struct {
 }
 
 type Node struct {
-	Block     uint8  `json:"block"`
-	Name      string `json:"name"`
-	Item      string `json:"item"`
-	Skill     string `json:"skill"`
-	Level     int    `json:"level"`
-	XP        int    `json:"xp"`
-	Hits      int    `json:"hits"`
-	RegrowSec int    `json:"regrowSec"`
+	Block     uint8          `json:"block"`
+	Name      string         `json:"name"`
+	Item      string         `json:"item"`
+	Skill     string         `json:"skill"`
+	Level     int            `json:"level"`
+	XP        int            `json:"xp"`
+	Hits      int            `json:"hits"`
+	RegrowSec int            `json:"regrowSec"`
+	Needs     map[string]int `json:"needs,omitempty"` // other skill levels needed
 }
 
 // Quest step kinds.
@@ -131,14 +138,15 @@ type Reward struct {
 }
 
 type Quest struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Giver    string `json:"giver"`
-	Intro    string `json:"intro"`
-	Outro    string `json:"outro"`
-	Steps    []Step `json:"steps"`
-	Reward   Reward `json:"reward"`
-	Requires string `json:"requires,omitempty"` // prerequisite quest id
+	ID       string         `json:"id"`
+	Name     string         `json:"name"`
+	Giver    string         `json:"giver"`
+	Intro    string         `json:"intro"`
+	Outro    string         `json:"outro"`
+	Steps    []Step         `json:"steps"`
+	Reward   Reward         `json:"reward"`
+	Requires string         `json:"requires,omitempty"` // prerequisite quest id
+	Needs    map[string]int `json:"needs,omitempty"`    // skill levels needed to start it
 }
 
 type ShopEntry struct {
@@ -207,6 +215,7 @@ func (r Rules) Clamp() Rules {
 
 // Pack is the on-disk/JSON form of content.
 type Pack struct {
+	Skills  []Skill     `json:"skills,omitempty"`
 	Items   []Item      `json:"items"`
 	Recipes []Recipe    `json:"recipes"`
 	Mobs    []Mob       `json:"mobs"`
@@ -219,6 +228,7 @@ type Pack struct {
 
 // Content is the resolved, indexed content used by the game.
 type Content struct {
+	Skills   []*Skill // in display order
 	Items    map[string]*Item
 	Recipes  map[string]*Recipe
 	Mobs     map[string]*Mob
@@ -264,10 +274,25 @@ func MustBase() *Content {
 }
 
 func (c *Content) merge(p *Pack, ns string) error {
+	if len(p.Skills) > 0 {
+		if ns != "" {
+			return fmt.Errorf("mods can't add skills in mod API 1")
+		}
+		for i := range p.Skills {
+			s := p.Skills[i]
+			if c.Skill(s.ID) != nil {
+				return fmt.Errorf("duplicate skill %q", s.ID)
+			}
+			c.Skills = append(c.Skills, &s)
+		}
+	}
 	for i := range p.Items {
 		it := p.Items[i]
 		if _, dup := c.Items[it.ID]; dup {
 			return fmt.Errorf("duplicate item %q", it.ID)
+		}
+		if it.Kind == KindWeapon && it.Style == "" {
+			it.Style = "melee"
 		}
 		c.Items[it.ID] = &it
 	}
@@ -275,6 +300,9 @@ func (c *Content) merge(p *Pack, ns string) error {
 		r := p.Recipes[i]
 		if _, dup := c.Recipes[r.ID]; dup {
 			return fmt.Errorf("duplicate recipe %q", r.ID)
+		}
+		if r.Skill == "" {
+			r.Skill = "crafting"
 		}
 		c.Recipes[r.ID] = &r
 	}
@@ -295,6 +323,11 @@ func (c *Content) merge(p *Pack, ns string) error {
 		if _, dup := c.Quests[q.ID]; dup {
 			return fmt.Errorf("duplicate quest %q", q.ID)
 		}
+		// "combat" was one skill before it split into melee, range and magic.
+		if xp, ok := q.Reward.XP["combat"]; ok {
+			q.Reward.XP["melee"] += xp
+			delete(q.Reward.XP, "combat")
+		}
 		c.Quests[q.ID] = &q
 	}
 	c.Shop = append(c.Shop, p.Shop...)
@@ -307,6 +340,19 @@ func (c *Content) merge(p *Pack, ns string) error {
 
 // Validate checks referential integrity of the whole content set.
 func (c *Content) Validate() error {
+	if len(c.Skills) == 0 {
+		return fmt.Errorf("no skills defined")
+	}
+	for _, s := range c.Skills {
+		if !skillIDRe.MatchString(s.ID) || s.Name == "" || !slices.Contains(SkillGroups, s.Group) {
+			return fmt.Errorf("skill %q: bad id, name or group %q", s.ID, s.Group)
+		}
+	}
+	for _, st := range CombatStyles {
+		if !c.validSkill(st) {
+			return fmt.Errorf("combat style %q has no skill", st)
+		}
+	}
 	for id, it := range c.Items {
 		if it.Stack < 1 || it.Stack > 999 {
 			return fmt.Errorf("item %s: bad stack %d", id, it.Stack)
@@ -319,6 +365,12 @@ func (c *Content) Validate() error {
 		if it.Damage < 0 || it.Damage > 100 || it.Heal < 0 || it.Heal > 100 {
 			return fmt.Errorf("item %s: stats out of range", id)
 		}
+		if it.Kind == KindWeapon && !slices.Contains(CombatStyles, it.Style) {
+			return fmt.Errorf("item %s: unknown weapon style %q", id, it.Style)
+		}
+		if err := c.checkNeeds("item "+id, it.Needs); err != nil {
+			return err
+		}
 		if it.Model != "" && !Models[it.Model] {
 			return fmt.Errorf("item %s: unknown model %q", id, it.Model)
 		}
@@ -330,15 +382,21 @@ func (c *Content) Validate() error {
 		if c.Items[r.Output] == nil {
 			return fmt.Errorf("recipe %s: unknown output %q", id, r.Output)
 		}
-		if r.Count < 1 || r.Count > 64 || len(r.Inputs) == 0 || r.Level < 1 || r.Level > 10 {
+		if r.Count < 1 || r.Count > 64 || len(r.Inputs) == 0 || r.Level < 1 || r.Level > 100 {
 			return fmt.Errorf("recipe %s: bad count/inputs/level", id)
+		}
+		if !c.validSkill(r.Skill) {
+			return fmt.Errorf("recipe %s: unknown skill %q", id, r.Skill)
+		}
+		if err := c.checkNeeds("recipe "+id, r.Needs); err != nil {
+			return err
 		}
 		for in, n := range r.Inputs {
 			if c.Items[in] == nil || n < 1 || n > 64 {
 				return fmt.Errorf("recipe %s: bad input %q", id, in)
 			}
 		}
-		if r.Station != "" && r.Station != "anvil" {
+		if r.Station != "" && !slices.Contains(Stations, r.Station) {
 			return fmt.Errorf("recipe %s: unknown station %q", id, r.Station)
 		}
 	}
@@ -366,8 +424,11 @@ func (c *Content) Validate() error {
 		}
 	}
 	for b, n := range c.Nodes {
-		if c.Items[n.Item] == nil || n.Hits < 1 || !validSkill(n.Skill) {
+		if c.Items[n.Item] == nil || n.Hits < 1 || !c.validSkill(n.Skill) {
 			return fmt.Errorf("node %d: bad item/hits/skill", b)
+		}
+		if err := c.checkNeeds("node "+n.Name, n.Needs); err != nil {
+			return err
 		}
 	}
 	for id, q := range c.Quests {
@@ -376,6 +437,9 @@ func (c *Content) Validate() error {
 		}
 		if q.Requires != "" && c.Quests[q.Requires] == nil {
 			return fmt.Errorf("quest %s: unknown prerequisite %q", id, q.Requires)
+		}
+		if err := c.checkNeeds("quest "+id, q.Needs); err != nil {
+			return err
 		}
 		if len(q.Steps) == 0 || len(q.Steps) > 8 {
 			return fmt.Errorf("quest %s: needs 1-8 steps", id)
@@ -403,7 +467,7 @@ func (c *Content) Validate() error {
 			}
 		}
 		for sk := range q.Reward.XP {
-			if !validSkill(sk) {
+			if !c.validSkill(sk) {
 				return fmt.Errorf("quest %s: unknown skill %q", id, sk)
 			}
 		}
@@ -416,21 +480,56 @@ func (c *Content) Validate() error {
 	return nil
 }
 
-// Skills is the fixed skill list for v1.
-var Skills = []string{"woodcutting", "mining", "crafting", "combat"}
+// Skill is a trainable skill. Skills are content (base.json), so adding one
+// is data plus whatever new actions train it; mods can't add skills in API 1.
+type Skill struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Icon  string `json:"icon"`
+	Group string `json:"group"` // combat | gathering | production | support
+	Desc  string `json:"desc"`
+}
 
-func validSkill(s string) bool {
-	for _, k := range Skills {
-		if k == s {
-			return true
+var skillIDRe = regexp.MustCompile(`^[a-z][a-z0-9_]{1,23}$`)
+
+// SkillGroups lists the groups in display order.
+var SkillGroups = []string{"combat", "gathering", "production", "support"}
+
+// Stations are the work stations recipes can require (each is a block in the
+// world; see game.stationBlocks).
+var Stations = []string{"anvil"}
+
+// CombatStyles are the skills a weapon can train (Item.Style).
+var CombatStyles = []string{"melee", "range", "magic"}
+
+// Skill looks up a skill by id.
+func (c *Content) Skill(id string) *Skill {
+	for _, s := range c.Skills {
+		if s.ID == id {
+			return s
 		}
 	}
-	return false
+	return nil
+}
+
+func (c *Content) validSkill(s string) bool { return c.Skill(s) != nil }
+
+// checkNeeds validates a needs map.
+func (c *Content) checkNeeds(what string, needs map[string]int) error {
+	for sk, lv := range needs {
+		if !c.validSkill(sk) || lv < 1 || lv > 100 {
+			return fmt.Errorf("%s: bad need %s %d", what, sk, lv)
+		}
+	}
+	return nil
 }
 
 func (c *Content) rehash() {
 	h := sha256.New()
 	ids := make([]string, 0, len(c.Items)+len(c.Recipes)+len(c.Quests))
+	for _, s := range c.Skills {
+		ids = append(ids, "s:"+s.ID)
+	}
 	for k := range c.Items {
 		ids = append(ids, "i:"+k)
 	}
@@ -455,6 +554,7 @@ func (c *Content) rehash() {
 
 // ClientView is the subset of content shipped to clients for UI.
 type ClientView struct {
+	Skills  []*Skill    `json:"skills"`
 	Items   []*Item     `json:"items"`
 	Recipes []*Recipe   `json:"recipes"`
 	Mobs    []ClientMob `json:"mobs"`
@@ -472,7 +572,7 @@ type ClientMob struct {
 }
 
 func (c *Content) View() ClientView {
-	v := ClientView{Shop: c.Shop}
+	v := ClientView{Shop: c.Shop, Skills: c.Skills}
 	for _, k := range sortedKeys(c.Items) {
 		v.Items = append(v.Items, c.Items[k])
 	}
