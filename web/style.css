@@ -348,3 +348,12 @@ body.touch { --mm: 6.5em; }
 .xpdrop { font-weight: 800; font-size: .95em; color: #fff3c4; text-shadow: 0 1px 3px rgba(0,0,0,.8); animation: xpdrop 1.8s ease-out forwards; }
 .reduce-motion .xpdrop { animation: dmgstill 1.8s forwards; }
 @keyframes xpdrop { 0% { opacity: 0; transform: translateY(8px); } 15% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px); } }
+
+/* Charms: active effects by the health bar, and charm slots on the hotbar. */
+#fx { display: flex; gap: 6px; flex-wrap: wrap; }
+#fx:empty { display: none; }
+.fxchip { padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  background: rgba(122, 92, 143, 0.55); color: #fff; border: 1px solid rgba(255, 255, 255, 0.25); backdrop-filter: blur(8px); }
+.slot .charmic { font-size: 22px; line-height: 1; filter: drop-shadow(0 0 4px rgba(255, 220, 150, 0.7)); }
+.slot.charm { background: rgba(122, 92, 143, 0.35); }
+.slot.dim .charmic { opacity: 0.4; filter: grayscale(1); }

@@ -80,6 +80,7 @@ type In struct {
 	Target uint32 `json:"target,omitempty"`
 
 	Recipe string         `json:"recipe,omitempty"`
+	Charm  string         `json:"charm,omitempty"`
 	Item   string         `json:"item,omitempty"`
 	Count  int            `json:"count,omitempty"`
 	NPC    string         `json:"npc,omitempty"`
@@ -95,7 +96,7 @@ type In struct {
 var types = map[string]bool{
 	"hello": false, "move": false, "chunks": false, "ping": false,
 	"gather": true, "attack": true, "place": true, "break": true, "light_fire": true,
-	"craft": true, "eat": true, "equip": true, "drop": true,
+	"craft": true, "eat": true, "equip": true, "drop": true, "cast": true,
 	"talk": true, "quest_accept": true, "quest_turnin": true,
 	"buy": true, "sell": true,
 	"trade_request": true, "trade_respond": true, "trade_offer": true,
@@ -202,6 +203,10 @@ func Validate(m *In) error {
 	case "craft":
 		if !validID(m.Recipe) {
 			return bad("recipe")
+		}
+	case "cast":
+		if !validID(m.Charm) {
+			return bad("charm")
 		}
 	case "eat", "equip":
 		if m.T == "equip" && m.Item == "" {

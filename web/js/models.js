@@ -102,7 +102,7 @@ export function drawWisp(r, e, t) {
 // Each model is a list of boxes in item space: +Y runs from the grip toward
 // the tip, the grip is at the origin. Colors: 'main' is the item's color;
 // the rest are fixed materials. Add a model here and to content.Models.
-const MAT = { grip: [0.36, 0.23, 0.13], dark: [0.22, 0.2, 0.2], metal: [0.62, 0.64, 0.68], leaf: [0.3, 0.6, 0.25], string: [0.9, 0.9, 0.85], end: [0.84, 0.66, 0.42] };
+const MAT = { grip: [0.36, 0.23, 0.13], dark: [0.22, 0.2, 0.2], metal: [0.62, 0.64, 0.68], leaf: [0.3, 0.6, 0.25], string: [0.9, 0.9, 0.85], end: [0.84, 0.66, 0.42], glowtip: [1.0, 0.92, 0.6] };
 export const ITEM_MODELS = {
   sword: [
     { c: 'grip', p: [0, 0, 0], s: [0.06, 0.22, 0.06] },
@@ -150,6 +150,25 @@ export const ITEM_MODELS = {
     { c: 'main', p: [0, 0, 0], s: [0.22, 0.12, 0.16] },
     { c: 'shade', p: [0, 0.07, 0], s: [0.23, 0.03, 0.17] },
   ],
+  sling: [
+    { c: 'grip', p: [0, 0.2, 0], s: [0.02, 0.4, 0.02] },
+    { c: 'main', p: [0, 0.42, 0], s: [0.1, 0.06, 0.08] },
+  ],
+  bow: [
+    { c: 'main', p: [0, 0.3, 0], s: [0.05, 0.3, 0.05] },
+    { c: 'main', p: [0, 0.0, 0], s: [0.06, 0.3, 0.06] },
+    { c: 'main', p: [0, -0.3, 0], s: [0.05, 0.3, 0.05] },
+    { c: 'string', p: [0, 0, 0.12], s: [0.01, 0.9, 0.01] },
+  ],
+  arrow: [
+    { c: 'grip', p: [0, 0.1, 0], s: [0.025, 0.5, 0.025] },
+    { c: 'main', p: [0, 0.38, 0], s: [0.06, 0.08, 0.03], glow: true },
+    { c: 'string', p: [0, -0.14, 0], s: [0.07, 0.08, 0.01] },
+  ],
+  wand: [
+    { c: 'main', p: [0, 0.22, 0], s: [0.04, 0.5, 0.04] },
+    { c: 'glowtip', p: [0, 0.5, 0], s: [0.07, 0.07, 0.07], glow: true, always: true },
+  ],
   log: [
     { c: 'main', p: [0, 0, 0], s: [0.16, 0.4, 0.16] },
     { c: 'end', p: [0, 0.205, 0], s: [0.12, 0.01, 0.12] },
@@ -161,7 +180,7 @@ export const ITEM_MODELS = {
   ],
 };
 // Center of each model, so dropped items spin around their middle.
-const CENTER = { sword: 0.4, axe: 0.3, pickaxe: 0.35, club: 0.3, rod: 0.45 };
+const CENTER = { sword: 0.4, axe: 0.3, pickaxe: 0.35, club: 0.3, rod: 0.45, wand: 0.25, arrow: 0.1 };
 
 export function modelFor(it) {
   if (!it) return 'bundle';
@@ -208,3 +227,28 @@ export const MOB_MODELS = {
   bramblet: { draw: drawBramblet, tag: 1.15 },
   wisp: { draw: drawWisp, tag: 1.7 },
 };
+
+// A projectile in flight (bow, sling or wand), from s.a to s.b, started at
+// s.t0. Returns false once it has landed, so callers can drop it.
+export function drawShot(r, s, time, world) {
+  const dx = world.dx(s.a[0], s.b[0]), dy = s.b[1] - s.a[1], dz = s.b[2] - s.a[2];
+  const dist = Math.hypot(dx, dy, dz), dur = Math.min(0.5, Math.max(0.12, dist / 28));
+  const k = (time - s.t0) / dur;
+  if (k >= 1 || k < 0) return k < 0;
+  const arc = s.kind === 'salt' ? 0 : Math.sin(k * Math.PI) * dist * 0.06;
+  const x = s.a[0] + dx * k, y = s.a[1] + dy * k + arc, z = s.a[2] + dz * k;
+  const yaw = Math.atan2(dx, dz), pitch = -Math.atan2(dy + Math.cos(k * Math.PI) * dist * 0.06 * Math.PI, Math.hypot(dx, dz));
+  if (s.kind === 'arrow') {
+    box(r, x, y, z, yaw, 0, 0, 0, 0.035, 0.035, 0.55, rgb('#6b4423'), 0, pitch);
+    box(r, x, y, z, yaw, 0, 0, 0.3, 0.07, 0.07, 0.08, rgb(s.color || '#e09060'), 0, pitch);
+  } else if (s.kind === 'salt') {
+    // Will-light: a glowing mote with a short trail.
+    for (let i = 0; i < 3; i++) {
+      const kk = Math.max(0, k - i * 0.08), sz = 0.2 - i * 0.05;
+      box(r, s.a[0] + dx * kk, s.a[1] + dy * kk, s.a[2] + dz * kk, yaw, 0, 0, 0, sz, sz, sz, [1.0, 0.9 - i * 0.1, 0.55], 2);
+    }
+  } else {
+    box(r, x, y, z, yaw + time * 9, 0, 0, 0, 0.13, 0.13, 0.13, rgb(s.color || '#9aa3ad'));
+  }
+  return true;
+}

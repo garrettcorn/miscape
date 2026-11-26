@@ -29,7 +29,7 @@ const (
 
 // Models are the shapes the client knows how to draw for held and dropped
 // items. An empty model picks a default from the item kind.
-var Models = map[string]bool{"sword": true, "axe": true, "pickaxe": true, "club": true, "lantern": true, "gem": true, "food": true, "block": true, "bundle": true, "coin": true, "rod": true, "fish": true, "tinderbox": true, "log": true}
+var Models = map[string]bool{"sword": true, "axe": true, "pickaxe": true, "club": true, "lantern": true, "gem": true, "food": true, "block": true, "bundle": true, "coin": true, "rod": true, "fish": true, "tinderbox": true, "log": true, "sling": true, "bow": true, "arrow": true, "wand": true}
 
 // MobModels and NPCHats are the creature models and NPC hats the client can
 // draw (web/js/models.js). Add a drawing there before adding a name here.
@@ -49,15 +49,24 @@ type Item struct {
 	Block     uint8          `json:"block,omitempty"`      // placeable block id
 	Tradeable bool           `json:"tradeable"`
 	Stack     int            `json:"stack"`
-	Value     int            `json:"value,omitempty"`  // shop sell price
-	Color     string         `json:"color"`            // UI icon tint
-	Light     bool           `json:"light,omitempty"`  // lantern: widens Gloam vision
-	Model     string         `json:"model,omitempty"`  // how it looks when held or dropped (see Models)
-	Glow      bool           `json:"glow,omitempty"`   // drawn glowing
-	Style     string         `json:"style,omitempty"`  // weapons: melee (default), range or magic — the skill it trains
-	Needs     map[string]int `json:"needs,omitempty"`  // skill levels needed to equip or use it
-	Burn      *Burn          `json:"burn,omitempty"`   // fuel: can be lit as a campfire
-	Kindle    bool           `json:"kindle,omitempty"` // lights fires (a tinderbox)
+	Value     int            `json:"value,omitempty"`    // shop sell price
+	Color     string         `json:"color"`              // UI icon tint
+	Light     bool           `json:"light,omitempty"`    // lantern: widens Gloam vision
+	Model     string         `json:"model,omitempty"`    // how it looks when held or dropped (see Models)
+	Glow      bool           `json:"glow,omitempty"`     // drawn glowing
+	Style     string         `json:"style,omitempty"`    // weapons: melee (default), range or magic — the skill it trains
+	Needs     map[string]int `json:"needs,omitempty"`    // skill levels needed to equip or use it
+	Burn      *Burn          `json:"burn,omitempty"`     // fuel: can be lit as a campfire
+	Kindle    bool           `json:"kindle,omitempty"`   // lights fires (a tinderbox)
+	Reach     float64        `json:"reach,omitempty"`    // range and magic weapons: how far they shoot
+	AmmoKind  string         `json:"ammoKind,omitempty"` // range and magic weapons: what they use up (arrow, shot, salt)
+	Ammo      *Ammo          `json:"ammo,omitempty"`     // ammunition for weapons with this AmmoKind
+}
+
+// Ammo makes an item ammunition: one is used per shot, adding Damage.
+type Ammo struct {
+	Kind   string `json:"kind"`
+	Damage int    `json:"damage"`
 }
 
 // Burn describes an item as campfire fuel: the firemaking level to light it,
@@ -149,6 +158,7 @@ const (
 	StepKill    = "kill"    // defeat N of mob
 	StepDeliver = "deliver" // hand in N of item at turn-in (consumed)
 	StepBurn    = "burn"    // light N campfires of item
+	StepCast    = "cast"    // cast N of a charm
 )
 
 type Step struct {
@@ -244,6 +254,7 @@ func (r Rules) Clamp() Rules {
 // Pack is the on-disk/JSON form of content.
 type Pack struct {
 	Skills  []Skill     `json:"skills,omitempty"`
+	Charms  []Charm     `json:"charms,omitempty"`
 	Items   []Item      `json:"items"`
 	Recipes []Recipe    `json:"recipes"`
 	Mobs    []Mob       `json:"mobs"`
@@ -257,6 +268,7 @@ type Pack struct {
 // Content is the resolved, indexed content used by the game.
 type Content struct {
 	Skills   []*Skill // in display order
+	Charms   []*Charm // in display order
 	Items    map[string]*Item
 	Recipes  map[string]*Recipe
 	Mobs     map[string]*Mob
@@ -312,6 +324,18 @@ func (c *Content) merge(p *Pack, ns string) error {
 				return fmt.Errorf("duplicate skill %q", s.ID)
 			}
 			c.Skills = append(c.Skills, &s)
+		}
+	}
+	if len(p.Charms) > 0 {
+		if ns != "" {
+			return fmt.Errorf("mods can't add charms in mod API 1")
+		}
+		for i := range p.Charms {
+			ch := p.Charms[i]
+			if c.Charm(ch.ID) != nil {
+				return fmt.Errorf("duplicate charm %q", ch.ID)
+			}
+			c.Charms = append(c.Charms, &ch)
 		}
 	}
 	for i := range p.Items {
@@ -376,6 +400,22 @@ func (c *Content) Validate() error {
 			return fmt.Errorf("skill %q: bad id, name or group %q", s.ID, s.Group)
 		}
 	}
+	for _, ch := range c.Charms {
+		if !skillIDRe.MatchString(ch.ID) || ch.Name == "" || !slices.Contains(CharmEffects, ch.Effect) || ch.Level < 1 || ch.Level > 100 || ch.Power < 0 || ch.Sec < 0 || ch.Sec > 600 || ch.CooldownMs < 0 {
+			return fmt.Errorf("charm %q: bad id, name, effect or numbers", ch.ID)
+		}
+		if len(ch.Reagents) == 0 {
+			return fmt.Errorf("charm %s: needs reagents", ch.ID)
+		}
+		for it, n := range ch.Reagents {
+			if c.Items[it] == nil || n < 1 || n > 64 {
+				return fmt.Errorf("charm %s: bad reagent %q", ch.ID, it)
+			}
+		}
+		if ch.Effect == "bane" && c.Mobs[ch.Against] == nil {
+			return fmt.Errorf("charm %s: unknown creature %q", ch.ID, ch.Against)
+		}
+	}
 	for _, st := range CombatStyles {
 		if !c.validSkill(st) {
 			return fmt.Errorf("combat style %q has no skill", st)
@@ -395,6 +435,21 @@ func (c *Content) Validate() error {
 		}
 		if it.Kind == KindWeapon && !slices.Contains(CombatStyles, it.Style) {
 			return fmt.Errorf("item %s: unknown weapon style %q", id, it.Style)
+		}
+		if it.Kind == KindWeapon && it.Style != "melee" {
+			if it.Reach < 2 || it.Reach > 30 || it.AmmoKind == "" {
+				return fmt.Errorf("item %s: %s weapons need a reach (2-30) and an ammoKind", id, it.Style)
+			}
+			found := false
+			for _, a := range c.Items {
+				found = found || (a.Ammo != nil && a.Ammo.Kind == it.AmmoKind)
+			}
+			if !found {
+				return fmt.Errorf("item %s: no ammunition of kind %q", id, it.AmmoKind)
+			}
+		}
+		if a := it.Ammo; a != nil && (!skillIDRe.MatchString(a.Kind) || a.Damage < 0 || a.Damage > 50) {
+			return fmt.Errorf("item %s: bad ammo", id)
 		}
 		if err := c.checkNeeds("item "+id, it.Needs); err != nil {
 			return err
@@ -498,6 +553,10 @@ func (c *Content) Validate() error {
 				if c.Items[s.Target] == nil {
 					return fmt.Errorf("quest %s: unknown item %q", id, s.Target)
 				}
+			case StepCast:
+				if c.Charm(s.Target) == nil {
+					return fmt.Errorf("quest %s: unknown charm %q", id, s.Target)
+				}
 			case StepKill:
 				if c.Mobs[s.Target] == nil {
 					return fmt.Errorf("quest %s: unknown mob %q", id, s.Target)
@@ -580,6 +639,9 @@ func (c *Content) rehash() {
 	for _, s := range c.Skills {
 		ids = append(ids, "s:"+s.ID)
 	}
+	for _, ch := range c.Charms {
+		ids = append(ids, "c:"+ch.ID)
+	}
 	for k := range c.Items {
 		ids = append(ids, "i:"+k)
 	}
@@ -605,6 +667,7 @@ func (c *Content) rehash() {
 // ClientView is the subset of content shipped to clients for UI.
 type ClientView struct {
 	Skills  []*Skill    `json:"skills"`
+	Charms  []*Charm    `json:"charms"`
 	Items   []*Item     `json:"items"`
 	Recipes []*Recipe   `json:"recipes"`
 	Mobs    []ClientMob `json:"mobs"`
@@ -622,7 +685,7 @@ type ClientMob struct {
 }
 
 func (c *Content) View() ClientView {
-	v := ClientView{Shop: c.Shop, Skills: c.Skills}
+	v := ClientView{Shop: c.Shop, Skills: c.Skills, Charms: c.Charms}
 	for _, k := range sortedKeys(c.Items) {
 		v.Items = append(v.Items, c.Items[k])
 	}
@@ -684,4 +747,37 @@ func (c *Content) Resolve(at Locator, wrapX func(float64) float64) (*Content, er
 		cp.Spawns[i] = s
 	}
 	return &cp, nil
+}
+
+// Charm is a cunning-folk charm: cast with reagents, it trains Magic.
+// Effects: "ward" cuts damage taken by Power percent for Sec seconds; "heal"
+// restores Power health; "bane" doubles damage against the creature Against
+// for Sec seconds. Attacking with magic is done with a wand (a magic weapon).
+type Charm struct {
+	ID         string         `json:"id"`
+	Name       string         `json:"name"`
+	Icon       string         `json:"icon"`
+	Desc       string         `json:"desc"`
+	Words      string         `json:"words,omitempty"` // spoken when cast
+	Level      int            `json:"level"`
+	XP         int            `json:"xp"`
+	Reagents   map[string]int `json:"reagents"`
+	Effect     string         `json:"effect"`
+	Power      int            `json:"power,omitempty"`
+	Sec        int            `json:"sec,omitempty"`
+	Against    string         `json:"against,omitempty"`
+	CooldownMs int            `json:"cooldownMs,omitempty"`
+}
+
+// CharmEffects are the effects a charm can have.
+var CharmEffects = []string{"ward", "heal", "bane"}
+
+// Charm looks up a charm by id.
+func (c *Content) Charm(id string) *Charm {
+	for _, ch := range c.Charms {
+		if ch.ID == id {
+			return ch
+		}
+	}
+	return nil
 }

@@ -13,14 +13,15 @@ Mods can add the same kinds of entries (see [MODS.md](MODS.md)).
 
 | Add | Where | Notes |
 |---|---|---|
-| Item | `items` | Pick a `kind` (material, weapon, food, tool, block). Use `model` to choose how it looks held, dropped and as an icon, `glow` to make it shine, and `light` to make it light dark places while carried. `burn` makes it campfire fuel (firemaking level, XP, seconds); `kindle` makes it a fire starter. Weapons take a `style` (`melee`, `range` or `magic`), which picks the skill they train and draw their damage bonus from. `needs` gates equipping. |
+| Item | `items` | Pick a `kind` (material, weapon, food, tool, block). Use `model` to choose how it looks held, dropped and as an icon, `glow` to make it shine, and `light` to make it light dark places while carried. `burn` makes it campfire fuel (firemaking level, XP, seconds); `kindle` makes it a fire starter. Weapons take a `style` (`melee`, `range` or `magic`), which picks the skill they train and draw their damage bonus from. Range and magic weapons also need a `reach` (how far they shoot, with the server checking line of sight) and an `ammoKind`; any item with `"ammo": {"kind", "damage"}` of that kind is used up one per shot, strongest first. `needs` gates equipping. |
 | Recipe | `recipes` | `skill` (default `crafting`) and `level` say which skill makes it and how good you must be. `station: "anvil"` requires standing at one (stations are listed in `content.Stations`). Cooking recipes can set `burnt` and `safeAt`: below `safeAt` there's a chance of getting the burnt item instead. |
-| Quest | `quests` | Steps are `gather`, `kill`, `craft`, `deliver` or `burn` (light a campfire of an item). `requires` chains quests; `needs` asks for skill levels; `start` hands the player items when they accept. The HUD hint points players at the next available giver automatically. |
+| Quest | `quests` | Steps are `gather`, `kill`, `craft`, `deliver`, `burn` (light a campfire of an item) or `cast` (work a charm). `requires` chains quests; `needs` asks for skill levels; `start` hands the player items when they accept. The HUD hint points players at the next available giver automatically. |
 | Shop entry | `shop` | Buying is served by the listed NPC. |
 | NPC | `npcs` | `hat` is one of `content.NPCHats`. |
 | Creature | `mobs` + `spawns` | `model` is one of `content.MobModels`. |
 | Gatherable | `nodes` | Maps a block to an item, skill, level and regrow time. `tool` must be carried (a fishing rod), `keep` leaves the block in place, and `catches` yields a random item your level allows instead of `item`. |
 | Skill | `skills` | Base content only: mods can use skills but not add them. Pick a `group` from `content.SkillGroups`. |
+| Charm | `charms` | Base content only. `effect` is `heal` (`power` health), `ward` (`power`% less damage for `sec`) or `bane` (double damage against the creature `against` for `sec`); `reagents` are used up. Known charms appear on the hotbar once the player has the Magic `level`. |
 
 ### Skills, needs and levels
 

@@ -15,11 +15,19 @@
     {"id": "agility", "name": "Agility", "icon": "🏃", "group": "support", "desc": "Towpaths, rooftops and stepping stones: shortcuts and a quicker stride."},
     {"id": "thieving", "name": "Thieving", "icon": "🎩", "group": "support", "desc": "Light fingers in the market. The watchman is never far away."}
   ],
+  "charms": [
+    {"id": "hearth_charm", "name": "Hearth Charm", "icon": "🕯", "level": 2, "xp": 18, "reagents": {"salt": 2, "berry": 1}, "effect": "heal", "power": 8, "cooldownMs": 8000,
+     "desc": "Restores 8 health. An old bedside blessing, said over salt and a bilberry.", "words": "Matthew, Mark, Luke and John, bless the bed that I lie on."},
+    {"id": "rowan_ward", "name": "Rowan Ward", "icon": "🌿", "level": 4, "xp": 30, "reagents": {"salt": 1, "rowan_log": 1}, "effect": "ward", "power": 30, "sec": 30, "cooldownMs": 1000,
+     "desc": "Takes 30% off the damage you take for 30 seconds. Rowan has warded doorways for centuries.", "words": "Rowan tree and red thread put the witches to their speed."},
+    {"id": "boggart_bane", "name": "Boggart-bane", "icon": "🧂", "level": 7, "xp": 45, "reagents": {"salt": 2, "glimmer_shard": 1}, "effect": "bane", "against": "bramblet", "sec": 60, "cooldownMs": 1000,
+     "desc": "For a minute, you deal double damage to boggarts.", "words": "Salt on the doorstep, light in the hall, no boggart of yours shall come here at all."}
+  ],
   "items": [
     {"id": "coin", "name": "Coin", "desc": "A copper cartwheel penny, stamped with King George III.", "kind": "currency", "tradeable": true, "stack": 999, "color": "#f2c14e"},
     {"id": "log", "name": "Log", "desc": "Good Lancashire oak. Burns steadily on a campfire.", "kind": "material", "model": "log", "burn": {"level": 1, "xp": 12, "sec": 60}, "tradeable": true, "stack": 64, "value": 1, "color": "#9a6b3f"},
     {"id": "plank", "name": "Plank", "desc": "Sawn smooth, ready for building.", "kind": "block", "block": 8, "tradeable": true, "stack": 64, "color": "#d9a066"},
-    {"id": "stone", "name": "Stone", "desc": "A sturdy building block.", "kind": "block", "block": 9, "tradeable": true, "stack": 64, "value": 1, "color": "#9aa3ad"},
+    {"id": "stone", "name": "Stone", "desc": "A sturdy building block, and good sling-shot.", "kind": "block", "block": 9, "ammo": {"kind": "shot", "damage": 0}, "tradeable": true, "stack": 64, "value": 1, "color": "#9aa3ad"},
     {"id": "copper_ore", "name": "Copper Ore", "desc": "Green-flecked and promising.", "kind": "material", "model": "gem", "tradeable": true, "stack": 64, "value": 3, "color": "#d9824b"},
     {"id": "glimmer_shard", "glow": true, "name": "Wisp-light Shard", "desc": "A cold glow gathered on the moors. Folk say the will-o'-the-wisps leave them behind.", "kind": "material", "model": "gem", "tradeable": true, "stack": 64, "value": 8, "color": "#b48cff"},
     {"id": "berry", "name": "Bilberry", "desc": "Restores 4 health. Bilberries grow wild on the northern moors.", "kind": "food", "heal": 4, "tradeable": true, "stack": 32, "value": 1, "color": "#e0457b"},
@@ -44,7 +52,16 @@
     {"id": "trout", "name": "Baked Trout", "desc": "Restores 8 health.", "kind": "food", "model": "fish", "heal": 8, "tradeable": true, "stack": 32, "value": 6, "color": "#c9a35b"},
     {"id": "salmon", "name": "Poached Salmon", "desc": "Restores 11 health.", "kind": "food", "model": "fish", "heal": 11, "tradeable": true, "stack": 32, "value": 10, "color": "#f0a080"},
     {"id": "cod", "name": "Fried Cod", "desc": "Restores 14 health.", "kind": "food", "model": "fish", "heal": 14, "tradeable": true, "stack": 32, "value": 14, "color": "#e2c27a"},
-    {"id": "burnt_fish", "name": "Burnt Fish", "desc": "Charcoal with fins. Nobody wants this.", "kind": "material", "model": "fish", "tradeable": true, "stack": 32, "color": "#3a2a20"}
+    {"id": "burnt_fish", "name": "Burnt Fish", "desc": "Charcoal with fins. Nobody wants this.", "kind": "material", "model": "fish", "tradeable": true, "stack": 32, "color": "#3a2a20"},
+    {"id": "salt", "name": "Salt", "desc": "Cheshire salt from the Northwich brine pits. Wands and charms use it up.", "kind": "material", "model": "gem", "ammo": {"kind": "salt", "damage": 0}, "tradeable": true, "stack": 99, "value": 1, "color": "#eef2f4"},
+    {"id": "copper_arrow", "name": "Copper Arrow", "desc": "Copper-headed. Bows shoot them; each shot uses one.", "kind": "material", "model": "arrow", "ammo": {"kind": "arrow", "damage": 1}, "tradeable": true, "stack": 99, "value": 1, "color": "#e09060"},
+    {"id": "iron_arrow", "name": "Iron Arrow", "desc": "A heavy iron bodkin.", "kind": "material", "model": "arrow", "ammo": {"kind": "arrow", "damage": 3}, "tradeable": true, "stack": 99, "value": 2, "color": "#aeb6bf"},
+    {"id": "sling", "name": "Sling", "desc": "A leather cradle on two cords. Throws stones up to 9 blocks; each shot uses one stone.", "kind": "weapon", "style": "range", "model": "sling", "damage": 2, "cooldownMs": 900, "reach": 9, "ammoKind": "shot", "tradeable": true, "stack": 1, "value": 3, "color": "#8a6a48"},
+    {"id": "shortbow", "name": "Rowan Shortbow", "desc": "Shoots arrows up to 13 blocks.", "kind": "weapon", "style": "range", "model": "bow", "damage": 4, "cooldownMs": 1000, "reach": 13, "ammoKind": "arrow", "needs": {"range": 4}, "tradeable": true, "stack": 1, "value": 14, "color": "#b5764a"},
+    {"id": "longbow", "name": "Yew Longbow", "desc": "The old English war bow. Shoots arrows up to 16 blocks.", "kind": "weapon", "style": "range", "model": "bow", "damage": 6, "cooldownMs": 1100, "reach": 16, "ammoKind": "arrow", "needs": {"range": 8}, "tradeable": true, "stack": 1, "value": 30, "color": "#7a3f2c"},
+    {"id": "rowan_wand", "name": "Rowan Wand", "desc": "Throws a bolt of will-light up to 11 blocks, spending a pinch of salt each time.", "kind": "weapon", "style": "magic", "model": "wand", "damage": 3, "cooldownMs": 1000, "reach": 11, "ammoKind": "salt", "tradeable": true, "stack": 1, "value": 6, "color": "#b5764a"},
+    {"id": "wisp_staff", "glow": true, "name": "Wisp-light Staff", "desc": "Yew bound with wisp-light shards. Its bolts reach 14 blocks.", "kind": "weapon", "style": "magic", "model": "wand", "damage": 6, "cooldownMs": 1000, "reach": 14, "ammoKind": "salt", "needs": {"magic": 7}, "tradeable": true, "stack": 1, "value": 45, "color": "#c9a8ff"},
+    {"id": "bronze_sword", "name": "Bronze Sword", "desc": "Copper and tin, hammered together.", "kind": "weapon", "model": "sword", "damage": 6, "cooldownMs": 600, "needs": {"melee": 3}, "tradeable": true, "stack": 1, "value": 16, "color": "#c9954a"}
   ],
   "recipes": [
     {"id": "planks", "output": "plank", "count": 4, "inputs": {"log": 1}, "level": 1, "xp": 4},
@@ -58,7 +75,15 @@
     {"id": "cook_herring", "output": "herring", "count": 1, "inputs": {"raw_herring": 1}, "skill": "cooking", "level": 1, "xp": 12, "station": "fire", "burnt": "burnt_fish", "safeAt": 5},
     {"id": "cook_trout", "output": "trout", "count": 1, "inputs": {"raw_trout": 1}, "skill": "cooking", "level": 4, "xp": 24, "station": "fire", "burnt": "burnt_fish", "safeAt": 8},
     {"id": "cook_salmon", "output": "salmon", "count": 1, "inputs": {"raw_salmon": 1}, "skill": "cooking", "level": 7, "xp": 40, "station": "fire", "burnt": "burnt_fish", "safeAt": 11},
-    {"id": "cook_cod", "output": "cod", "count": 1, "inputs": {"raw_cod": 1}, "skill": "cooking", "level": 10, "xp": 55, "station": "fire", "burnt": "burnt_fish", "safeAt": 14}
+    {"id": "cook_cod", "output": "cod", "count": 1, "inputs": {"raw_cod": 1}, "skill": "cooking", "level": 10, "xp": 55, "station": "fire", "burnt": "burnt_fish", "safeAt": 14},
+    {"id": "sling", "output": "sling", "count": 1, "inputs": {"plank": 1, "log": 1}, "level": 1, "xp": 8},
+    {"id": "copper_arrows", "output": "copper_arrow", "count": 10, "inputs": {"plank": 1, "copper_ore": 1}, "level": 3, "xp": 15},
+    {"id": "rowan_wand", "output": "rowan_wand", "count": 1, "inputs": {"rowan_log": 1}, "level": 3, "xp": 18},
+    {"id": "bronze_sword", "output": "bronze_sword", "count": 1, "inputs": {"copper_ore": 2, "tin_ore": 2, "plank": 1}, "level": 4, "xp": 45, "station": "anvil"},
+    {"id": "shortbow", "output": "shortbow", "count": 1, "inputs": {"rowan_log": 2}, "level": 5, "xp": 35},
+    {"id": "iron_arrows", "output": "iron_arrow", "count": 10, "inputs": {"plank": 1, "iron_ore": 1}, "level": 7, "xp": 35, "station": "anvil"},
+    {"id": "wisp_staff", "output": "wisp_staff", "count": 1, "inputs": {"yew_log": 1, "glimmer_shard": 3}, "level": 7, "xp": 70},
+    {"id": "longbow", "output": "longbow", "count": 1, "inputs": {"yew_log": 2}, "level": 8, "xp": 60}
   ],
   "mobs": [
     {"id": "bramblet", "name": "Boggart", "model": "bramblet", "hp": 8, "damage": 1, "cooldownMs": 1400, "speed": 2.2, "aggro": 5, "xp": 15,
@@ -113,7 +138,16 @@
        {"kind": "craft", "target": "herring", "count": 3, "text": "Cook 3 herring"}
      ],
      "start": {"fishing_rod": 1, "tinderbox": 1},
-     "reward": {"coins": 20, "items": {"herring": 3}, "xp": {"fishing": 40, "cooking": 40, "firemaking": 30}}}
+     "reward": {"coins": 20, "items": {"herring": 3}, "xp": {"fishing": 40, "cooking": 40, "firemaking": 30}}},
+    {"id": "salt_and_rowan", "name": "Salt and Rowan", "giver": "nance",
+     "intro": "Boggarts, wisps, worse besides. The mill-owners laugh at charms, but they still hang rowan over their doors. Take this wand and a pouch of salt: equip the wand and it'll throw will-light at anything that troubles you. See off a few boggarts with it, then show me you can work a Hearth Charm.",
+     "outro": "There. You've the knack for it. Keep your salt dry, and come back when you want more.",
+     "steps": [
+       {"kind": "kill", "target": "bramblet", "count": 4, "text": "See off 4 boggarts (equip the wand)"},
+       {"kind": "cast", "target": "hearth_charm", "count": 1, "text": "Work a Hearth Charm (it's on your hotbar)"}
+     ],
+     "start": {"rowan_wand": 1, "salt": 24, "berry": 2},
+     "reward": {"coins": 20, "items": {"salt": 10}, "xp": {"magic": 60}}}
   ],
   "shop": [
     {"npc": "bertram", "item": "berry", "price": 2},
@@ -121,7 +155,12 @@
     {"npc": "bertram", "item": "lantern", "price": 30},
     {"npc": "hannah", "item": "fishing_rod", "price": 6},
     {"npc": "hannah", "item": "tinderbox", "price": 6},
-    {"npc": "hannah", "item": "herring", "price": 6}
+    {"npc": "hannah", "item": "herring", "price": 6},
+    {"npc": "bertram", "item": "sling", "price": 5},
+    {"npc": "bertram", "item": "copper_arrow", "price": 1},
+    {"npc": "bertram", "item": "salt", "price": 1},
+    {"npc": "nance", "item": "salt", "price": 1},
+    {"npc": "nance", "item": "rowan_wand", "price": 12}
   ],
   "npcs": [
     {"id": "mabel", "name": "Mabel Hartley, Lamplighter", "at": "manchester", "dx": -4, "dz": -3, "yaw": 0.6, "color": "#e8a33d", "hat": "tall",
@@ -133,6 +172,9 @@
     {"id": "hannah", "name": "Hannah Leigh, Fishwife", "at": "range", "dx": -1.5, "dz": -1.5, "yaw": 0.8, "color": "#8fa9c9", "hat": "cap",
      "lines": ["Herring off the coast, salmon when they run up the Mersey, and cod if you go deep enough. A rod and patience, that's all.",
                "They say the Liverpool boats bring in more herring in a morning than Manchester eats in a week."]},
+    {"id": "nance", "name": "Nance Clegg, Cunning-woman", "at": "manchester", "dx": -4, "dz": 6, "yaw": 2.4, "color": "#7a5c8f", "hat": "",
+     "lines": ["Salt on the step and rowan over the door. My grandmother swore by it, and no boggart ever crossed her threshold.",
+               "A cunning-woman finds lost things, cures warts and keeps the dark at bay. The magistrate pretends not to know me."]},
     {"id": "ott", "name": "Ottiwell Kershaw, Watchman", "at": "town:manchester:gate", "dx": 2, "dz": 0, "yaw": 1.57, "color": "#5b8fb9", "hat": "helm",
      "lines": ["The moors are no shame to avoid, friend. Nobody will think less of you for staying by the fire.",
                "Shakespeare had Puck do what the wisps do: \"Mislead night-wanderers, laughing at their harm.\""]}

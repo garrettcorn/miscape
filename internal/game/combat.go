@@ -3,8 +3,11 @@ package game
 import (
 	"fmt"
 	"math"
+	"sort"
+	"strings"
 	"time"
 
+	"lanternfall/internal/content"
 	"lanternfall/internal/world"
 )
 
@@ -46,7 +49,9 @@ func (g *Game) broadcastNear(x, z float64, msg M) {
 	}
 }
 
-// Attack hits a mob, or another player when PvP is enabled.
+// Attack hits a mob, or another player when PvP is enabled. Melee weapons
+// reach MeleeRange; range and magic weapons shoot up to their reach with a
+// clear line of sight, using up one piece of ammunition per shot.
 func (g *Game) Attack(p *Player, target uint32) error {
 	if err := g.alive(p); err != nil {
 		return err
@@ -55,46 +60,145 @@ func (g *Game) Attack(p *Player, target uint32) error {
 		return fail("Too soon.")
 	}
 	c := p.Char
+	it := g.weaponItem(c)
 	dmg, cd := g.weapon(c)
-	dmg += c.Level(g.weaponStyle(c)) / 2
-	if m := g.Mobs[target]; m != nil {
+	dmg += c.Level(styleOf(it)) / 2
+	ranged := it != nil && styleOf(it) != "melee" && it.Reach > 0
+
+	var tx, ty, tz float64
+	m := g.Mobs[target]
+	var o *Player
+	if m != nil {
 		if m.HP <= 0 {
 			return fail("It's already gone.")
 		}
-		if g.W.Dist(m.X, m.Z, c.X, c.Z) > MeleeRange || math.Abs(m.Y-c.Y) > 2.5 {
-			return fail("Out of reach.")
+		tx, ty, tz = m.X, m.Y, m.Z
+	} else {
+		o = g.Players[target]
+		if o == nil || o == p {
+			return fail("No target.")
 		}
-		p.nextAttack = g.Now.Add(cd)
-		p.hearthStart = time.Time{}
-		m.HP -= dmg
-		m.lastHitBy = p.ID
-		m.target = p.ID
-		m.hitFlash = 3
-		g.broadcastNear(m.X, m.Z, M{"t": "hit", "src": p.ID, "dst": m.ID, "dmg": dmg, "mob": true})
-		if m.HP <= 0 {
-			g.killMob(m, p)
+		if !g.Cfg.PvP {
+			return fail("PvP is off in this world.")
 		}
-		return nil
+		if g.W.ZoneAt(o.Char.X, o.Char.Z) == world.ZoneTown {
+			return fail("Towns are safe: no fighting here.")
+		}
+		if o.dead || o.Char.HP <= 0 {
+			return fail("They're already down.")
+		}
+		tx, ty, tz = o.Char.X, o.Char.Y, o.Char.Z
 	}
-	o := g.Players[target]
-	if o == nil || o == p {
-		return fail("No target.")
-	}
-	if !g.Cfg.PvP {
-		return fail("PvP is off in this world.")
-	}
-	if g.W.ZoneAt(c.X, c.Z) == world.ZoneTown || g.W.ZoneAt(o.Char.X, o.Char.Z) == world.ZoneTown {
+	if (ranged || o != nil) && g.W.ZoneAt(c.X, c.Z) == world.ZoneTown {
+		if o == nil {
+			return fail("No shooting in town: step out into the countryside first.")
+		}
 		return fail("Towns are safe: no fighting here.")
 	}
-	if o.dead || o.Char.HP <= 0 {
-		return fail("They're already down.")
-	}
-	if g.W.Dist(o.Char.X, o.Char.Z, c.X, c.Z) > MeleeRange || math.Abs(o.Char.Y-c.Y) > 2.5 {
+	ammo := ""
+	if ranged {
+		if math.Hypot(g.W.Dist(tx, tz, c.X, c.Z), ty-c.Y) > it.Reach {
+			return fail("Out of range.")
+		}
+		if !g.lineClear(c.X, c.Y+1.5, c.Z, tx, ty+0.8, tz) {
+			return fail("You don't have a clear shot.")
+		}
+		if ammo = g.pickAmmo(c, it.AmmoKind); ammo == "" {
+			return fail("You've nothing to shoot: the %s needs %s.", it.Name, g.ammoNames(it.AmmoKind))
+		}
+	} else if g.W.Dist(tx, tz, c.X, c.Z) > MeleeRange || math.Abs(ty-c.Y) > 2.5 {
 		return fail("Out of reach.")
 	}
+
 	p.nextAttack = g.Now.Add(cd)
-	g.damagePlayer(o, dmg, p.ID)
+	p.hearthStart = time.Time{}
+	if ranged {
+		c.Inv[ammo]--
+		if c.Inv[ammo] <= 0 {
+			delete(c.Inv, ammo)
+		}
+		p.dirtyMe, g.Dirty = true, true
+		dmg += g.C.Items[ammo].Ammo.Damage
+		g.broadcastNear(c.X, c.Z, M{"t": "shot", "src": p.ID, "dst": target, "kind": it.AmmoKind, "color": g.C.Items[ammo].Color})
+	}
+	if o != nil {
+		g.damagePlayer(o, dmg, p.ID)
+		return nil
+	}
+	if g.hasEffect(p, "bane:"+m.Def.ID) {
+		dmg *= 2
+	}
+	m.HP -= dmg
+	m.lastHitBy = p.ID
+	m.target = p.ID
+	m.hitFlash = 3
+	g.broadcastNear(m.X, m.Z, M{"t": "hit", "src": p.ID, "dst": m.ID, "dmg": dmg, "mob": true})
+	if m.HP <= 0 {
+		g.killMob(m, p)
+	}
 	return nil
+}
+
+// weaponItem is the equipped weapon, if the character still has it.
+func (g *Game) weaponItem(c *Character) *content.Item {
+	if it := g.C.Items[c.Equipped]; it != nil && it.Kind == "weapon" && c.Inv[c.Equipped] > 0 {
+		return it
+	}
+	return nil
+}
+
+// pickAmmo chooses the strongest ammunition of a kind the character carries.
+func (g *Game) pickAmmo(c *Character, kind string) string {
+	best, bd := "", -1
+	for id, n := range c.Inv {
+		it := g.C.Items[id]
+		if n < 1 || it == nil || it.Ammo == nil || it.Ammo.Kind != kind {
+			continue
+		}
+		if it.Ammo.Damage > bd || (it.Ammo.Damage == bd && id < best) {
+			best, bd = id, it.Ammo.Damage
+		}
+	}
+	return best
+}
+
+// ammoNames lists the items that serve as a kind of ammunition, for messages.
+func (g *Game) ammoNames(kind string) string {
+	var names []string
+	for _, id := range sortedItemIDs(g.C.Items) {
+		if a := g.C.Items[id].Ammo; a != nil && a.Kind == kind {
+			names = append(names, g.C.Items[id].Name)
+		}
+	}
+	return strings.Join(names, " or ")
+}
+
+func sortedItemIDs(m map[string]*content.Item) []string {
+	ids := make([]string, 0, len(m))
+	for id := range m {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
+}
+
+// lineClear reports whether nothing solid lies between two points (the
+// ends themselves aside), so shots can't pass through walls or hills.
+func (g *Game) lineClear(ax, ay, az, bx, by, bz float64) bool {
+	dx, dy, dz := g.W.DX(ax, bx), by-ay, bz-az
+	d := math.Sqrt(dx*dx + dy*dy + dz*dz)
+	if d < 0.5 {
+		return true
+	}
+	n := int(d / 0.2)
+	for i := 2; i < n-1; i++ {
+		t := float64(i) / float64(n)
+		x, y, z := int(math.Floor(ax+dx*t)), int(math.Floor(ay+dy*t)), int(math.Floor(az+dz*t))
+		if b := g.W.Get(x, y, z); world.Solid(b) && b != world.Leaves {
+			return false
+		}
+	}
+	return true
 }
 
 func (g *Game) killMob(m *Mob, killer *Player) {
@@ -127,6 +231,9 @@ func (g *Game) killMob(m *Mob, killer *Player) {
 
 func (g *Game) damagePlayer(p *Player, dmg int, src uint32) {
 	c := p.Char
+	if w := p.effects["ward"]; g.Now.Before(w.until) {
+		dmg = max(1, int(math.Round(float64(dmg)*(1-float64(w.power)/100))))
+	}
 	c.HP -= dmg
 	p.lastDamage = g.Now
 	p.dirtyMe = true

@@ -141,6 +141,11 @@ func (g *Game) unlocksAt(skill string, level int) []string {
 			add(it.Name + " fires")
 		}
 	}
+	for _, ch := range g.C.Charms {
+		if skill == "magic" && ch.Level == level {
+			add("the " + ch.Name)
+		}
+	}
 	for _, q := range g.C.Quests {
 		if q.Needs[skill] == level {
 			add("the quest " + q.Name)

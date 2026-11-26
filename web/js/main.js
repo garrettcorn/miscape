@@ -6,7 +6,7 @@ import { Input, glyph } from './input.js';
 import { Net, WorkerNet, PROTO, CLIENT } from './net.js';
 import { UI, esc, applyAccessibility } from './ui.js';
 import { settings, quality, save } from './settings.js';
-import { drawPerson, drawDropped, MOB_MODELS } from './models.js';
+import { drawPerson, drawDropped, drawShot, MOB_MODELS } from './models.js';
 import { project } from './mat.js';
 import { showJoin } from './join.js';
 import { MiniMap } from './minimap.js';
@@ -128,6 +128,7 @@ class Game {
     this.mobDefs = Object.fromEntries(c.mobs.map((m) => [m.id, m]));
     this.nodes = Object.fromEntries(c.nodes.map((n) => [n.block, n]));
     this.skills = c.skills || [];
+    this.charms = c.charms || [];
     this.body = new Body(w.pos[0], w.pos[1], w.pos[2]);
     this.yaw = w.pos[3] || 0;
     $('#screen-join').hidden = true;
@@ -177,6 +178,7 @@ class Game {
       this.lastSent = [m.x, m.y, m.z, this.yaw];
     });
     n.on('hit', (m) => this.onHit(m));
+    n.on('shot', (m) => this.onShot(m));
     n.on('die', (m) => { const e = this.mobs.get(m.id); if (e) e.dead = true; });
     n.on('ko', (m) => { ui.toast(m.text, 'danger'); });
     n.on('toast', (m) => ui.toast(m.text, m.kind));
@@ -233,6 +235,16 @@ class Game {
     if (id === this.myId) return [this.body.x, this.body.y + 2, this.body.z];
     const e = this.others.get(id) || this.mobs.get(id);
     return e ? [e.x, e.y + 1.8, e.z] : null;
+  }
+
+  // A shot from a bow, sling or wand: draw it flying to the target. The
+  // server has already decided the hit; this is only the picture of it.
+  onShot(m) {
+    const a = m.src === this.myId ? [this.body.x, this.body.y + 1.4, this.body.z] : this.entityPos(m.src);
+    const t = this.entityPos(m.dst);
+    if (!a || !t) return;
+    if (m.src === this.myId) this.swing = 1;
+    (this.shots ||= []).push({ a: [a[0], a[1] - (m.src === this.myId ? 0 : 0.4), a[2]], b: [t[0], t[1] - 0.9, t[2]], t0: this.time, kind: m.kind, color: m.color });
   }
 
   onHit(m) {
@@ -332,7 +344,8 @@ class Game {
     }
     if ((inp.use || inp.pressed.has('use')) && tnow > this.nextUse) {
       const sel = ui.hotSel, it = sel && this.items[sel];
-      if (it && it.kind === 'food' && inp.pressed.has('use')) { this.nextUse = tnow + 400; this.net.request({ t: 'eat', item: sel }).then((r) => { if (!r.ok) ui.toast(r.err, 'warn'); }); }
+      if (sel && sel.startsWith('charm:') && inp.pressed.has('use')) { this.nextUse = tnow + 400; this.swing = 1; this.net.request({ t: 'cast', charm: sel.slice(6) }).then((r) => { if (!r.ok) ui.toast(r.err, 'warn'); }); }
+      else       if (it && it.kind === 'food' && inp.pressed.has('use')) { this.nextUse = tnow + 400; this.net.request({ t: 'eat', item: sel }).then((r) => { if (!r.ok) ui.toast(r.err, 'warn'); }); }
       else if (it && it.burn && this.targetBlock && inp.pressed.has('use')) {
         const tb = this.targetBlock, px = tb.x + tb.face[0], py = tb.y + tb.face[1], pz = tb.z + tb.face[2];
         this.nextUse = tnow + 600;
@@ -382,13 +395,16 @@ class Game {
     const b = this.body, [ex, ey, ez] = this.eye();
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
     // Soft-lock the nearest creature in front (controller & touch friendly).
+    // Bows, slings and wands reach further but need you to face the target.
+    const wpn = this.me && this.items[this.me.eq];
+    const reach = wpn && wpn.reach && this.me.inv[this.me.eq] ? wpn.reach - 0.3 : 3.2;
     let best = null, bs = Infinity;
     for (const m of this.mobs.values()) {
       if (m.dead || m.hp <= 0) continue;
       const dx = this.world.dx(b.x, m.x), dz = m.z - b.z, d = Math.hypot(dx, dz);
-      if (d > 3.2 || Math.abs(m.y - b.y) > 2.4) continue;
+      if (d > reach || Math.abs(m.y - b.y) > (d > 3.2 ? 6 : 2.4)) continue;
       const facing = d < 0.8 ? 1 : (dx * fx + dz * fz) / d;
-      if (facing < 0.2) continue;
+      if (facing < (d > 3.2 ? 0.9 : 0.2)) continue;
       const s = d - facing * 1.5;
       if (s < bs) { bs = s; best = m; }
     }
@@ -545,6 +561,7 @@ class Game {
       if (m.dead) continue;
       this.mobModel(m).draw(r, m, this.time);
     }
+    this.shots = (this.shots || []).filter((s) => drawShot(r, s, this.time, this.world));
     const inGloam = this.me.zone === 'danger';
     const playerLight = hasLantern ? [b.x, b.y + 1.2, b.z, inGloam ? 11 : 6] : (inGloam ? [b.x, b.y + 1.2, b.z, 3.5] : [0, 0, 0, 0]);
     const hl = this.targetBlock && !this.targetMob ? [this.targetBlock.x, this.targetBlock.y, this.targetBlock.z] : null;

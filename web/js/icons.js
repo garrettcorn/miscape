@@ -39,6 +39,14 @@ const SHAPES = {
     <path d="M18 13 L24 8 L24 18 Z" fill="${d}"/><circle cx="8" cy="12" r="1.2" fill="${DARK}"/>`,
   tinderbox: (c, d) => `<rect x="4" y="9" width="18" height="11" rx="2" fill="${c}" stroke="${d}"/><rect x="4" y="7" width="18" height="4" rx="1.5" fill="${d}"/>
     <path d="M13 3 Q16 6 13 8 Q10 6 13 3" fill="#ff9a3a"/>`,
+  sling: (c, d) => `<path d="M8 3 Q6 12 12 18 M18 3 Q20 12 14 18" stroke="${GRIP}" stroke-width="1.4" fill="none"/>
+    <ellipse cx="13" cy="19" rx="4.5" ry="3" fill="${c}" stroke="${d}"/><circle cx="13" cy="18" r="1.8" fill="#9aa3ad"/>`,
+  bow: (c, d) => `<path d="M7 3 Q22 13 7 23" stroke="${c}" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <path d="M7 3 L7 23" stroke="#e8e6dc" stroke-width=".9"/><path d="M7 3 Q22 13 7 23" stroke="${d}" stroke-width=".7" fill="none"/>`,
+  arrow: (c, d) => `<path d="M5 21 L19 7" stroke="${GRIP}" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M17 5 L22 4 L21 9 Z" fill="${c}" stroke="${d}" stroke-width=".8"/><path d="M4 18 L8 22 M3 21 L6 24 M7 17 L4 15" stroke="#e8e6dc" stroke-width="1.4"/>`,
+  wand: (c, d) => `<path d="M6 21 L18 7" stroke="${c}" stroke-width="2.4" stroke-linecap="round"/><path d="M6 21 L18 7" stroke="${d}" stroke-width=".6"/>
+    <circle cx="19" cy="6" r="3" fill="#ffe9a0" style="filter:drop-shadow(0 0 2px #ffd27a)"/>`,
   log: (c, d) => `<rect x="3" y="8" width="17" height="10" rx="2" fill="${c}" stroke="${d}"/><ellipse cx="20" cy="13" rx="3.5" ry="5" fill="#d8aa6a" stroke="${d}"/>
     <ellipse cx="20" cy="13" rx="1.5" ry="2.4" fill="none" stroke="${d}" stroke-width=".7"/>`,
   bundle: (c, d) => `<rect x="4" y="6" width="18" height="6" rx="3" fill="${c}" stroke="${d}"/><rect x="4" y="14" width="18" height="6" rx="3" fill="${c}" stroke="${d}"/>

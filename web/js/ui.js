@@ -131,10 +131,29 @@ export class UI {
     return r || {};
   }
 
+  // Active charm effects as small chips by the health bar, counting down.
+  renderFx() {
+    const el = $('#fx');
+    if (!el) return;
+    const now = performance.now(), parts = [];
+    for (const [k, end] of Object.entries(this.fxEnds || {})) {
+      const s = Math.ceil((end - now) / 1000);
+      if (s <= 0) continue;
+      const label = k === 'ward' ? '🌿 Warded' : k.startsWith('bane:') ? `🧂 Bane of ${esc((this.g.mobDefs[k.slice(5)] || { name: k.slice(5) }).name)}s` : esc(k);
+      parts.push(`<span class="fxchip">${label} ${s}s</span>`);
+    }
+    const html = parts.join('');
+    if (el.innerHTML !== html) el.innerHTML = html;
+    clearTimeout(this.fxTimer);
+    if (parts.length) this.fxTimer = setTimeout(() => this.renderFx(), 500);
+  }
+
   updateHUD(me) {
     const g = this.g;
     $('#hpfill').style.width = `${Math.max(0, me.hp / me.mhp * 100)}%`;
     $('#hptext').textContent = `${me.hp}/${me.mhp}`;
+    this.fxEnds = Object.fromEntries(Object.entries(me.fx || {}).map(([k, s]) => [k, performance.now() + s * 1000]));
+    this.renderFx();
     const z = $('#zone');
     // Zone kinds come from the server; names come from the world's map files.
     const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -180,8 +199,11 @@ export class UI {
     if (!me.trade && this.panel && this.panel.kind === 'trade') this.close();
   }
 
+  // The hotbar holds blocks, food, fuel, and the charms you know ("charm:<id>").
   hotItems(me) {
-    return Object.keys(me.inv).filter((id) => { const k = this.item(id).kind; const it = this.item(id); return k === 'block' || k === 'food' || !!it.burn; }).sort();
+    const items = Object.keys(me.inv).filter((id) => { const k = this.item(id).kind; const it = this.item(id); return k === 'block' || k === 'food' || !!it.burn; }).sort();
+    const magic = (me.skills.magic || { lvl: 1 }).lvl;
+    return items.concat((this.g.charms || []).filter((c) => magic >= c.level).map((c) => 'charm:' + c.id));
   }
 
   renderHotbar(me) {
@@ -189,8 +211,19 @@ export class UI {
     if (this.hot >= items.length) this.hot = Math.max(0, items.length - 1);
     this.hotSel = items[this.hot] || null;
     $('#hotbar').innerHTML = items.slice(0, 8).map((id, i) =>
-      `<button class="slot ${i === this.hot ? 'sel' : ''}" data-hot="${i}" title="${esc(this.item(id).name)}" tabindex="-1"><span class="k">${i + 1}</span>${this.icon(id)}<span class="n">${me.inv[id]}</span></button>`).join('');
+      this.slotHTML(me, id, i)).join('');
     for (const b of document.querySelectorAll('#hotbar .slot')) b.onclick = () => { this.hot = +b.dataset.hot; this.renderHotbar(this.g.me); };
+  }
+
+  slotHTML(me, id, i) {
+    const sel = i === this.hot ? 'sel' : '';
+    const ch = id.startsWith('charm:') && (this.g.charms || []).find((c) => 'charm:' + c.id === id);
+    if (ch) {
+      const can = Object.entries(ch.reagents).every(([k, v]) => (me.inv[k] || 0) >= v);
+      const tip = `${ch.name}: ${ch.desc} Uses ${Object.entries(ch.reagents).map(([k, v]) => v + ' ' + this.item(k).name).join(', ')}.`;
+      return `<button class="slot charm ${sel} ${can ? '' : 'dim'}" data-hot="${i}" title="${esc(tip)}" tabindex="-1"><span class="k">${i + 1}</span><span class="charmic">${esc(ch.icon)}</span></button>`;
+    }
+    return `<button class="slot ${sel}" data-hot="${i}" title="${esc(this.item(id).name)}" tabindex="-1"><span class="k">${i + 1}</span>${this.icon(id)}<span class="n">${me.inv[id]}</span></button>`;
   }
 
   cycleHot(d) {
@@ -202,6 +235,7 @@ export class UI {
   async dropHot() {
     const id = this.hotSel;
     if (!id) { this.toast('Select something on the hotbar to drop it, or drop items from your pack.', 'info'); return; }
+    if (id.startsWith('charm:')) { this.toast('Charms can\'t be dropped. Pick an item on the hotbar first.', 'info'); return; }
     const r = await this.req({ t: 'drop', item: id, count: 1 });
     if (r.ok) this.toast(`Dropped ${this.item(id).name}.`, 'info');
   }

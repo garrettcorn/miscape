@@ -56,7 +56,9 @@ type Player struct {
 	dead             bool
 	dirtyMe          bool
 	fullWarned       time.Time
-	place            string // last place name sent to the client (see placeKey)
+	place            string               // last place name sent to the client (see placeKey)
+	effects          map[string]effect    // active charm effects by name ("ward", "bane:<mob>")
+	charmReady       map[string]time.Time // charm cooldowns
 }
 
 type Mob struct {
