@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.8.0] - 2026-11-26
+
+_If you are upgrading: saves carry over unchanged. Update servers, join companions and browsers together (protocol 5)._
+
+### Changed
+
+- **Breaking:** bump the protocol to version 5 for thieving and slaying ([`4b08676`](https://github.com/garrettcorn/miscape/commit/4b08676))
+- Stop creatures spawning inside towns ([`4b08676`](https://github.com/garrettcorn/miscape/commit/4b08676))
+
+### Added
+
+- Add pickpocketing townsfolk from the talk dialog, with a stun and a fine from the watch if you're caught; players can never be robbed ([`4b08676`](https://github.com/garrettcorn/miscape/commit/4b08676))
+- Add market stalls to rob for Eccles cakes, cotton and silk, which restock after a while ([`4b08676`](https://github.com/garrettcorn/miscape/commit/4b08676))
+- Add Josiah Rawcliffe the magistrate, who hands out bounty warrants that train Slaying and pay on completion ([`4b08676`](https://github.com/garrettcorn/miscape/commit/4b08676))
+- Add the Boggart of the Clough, a creature that needs Slaying 8 ([`4b08676`](https://github.com/garrettcorn/miscape/commit/4b08676))
+
 ## [0.7.0] - 2026-11-26
 
 _If you are upgrading: saves carry over unchanged. Update servers, join companions and browsers together (protocol 4)._
@@ -126,6 +142,8 @@ _If you are upgrading: browsers remember characters per address, so to keep play
 ## [0.1.0] - 2026-11-25
 
 _Initial release._
+
+[0.8.0]: https://github.com/garrettcorn/miscape/releases/tag/v0.8.0
 
 [0.7.0]: https://github.com/garrettcorn/miscape/releases/tag/v0.7.0
 
