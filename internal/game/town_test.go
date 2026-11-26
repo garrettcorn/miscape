@@ -27,7 +27,7 @@ func TestPickpocketingPaysOrGetsYouFined(t *testing.T) {
 		r := f.do(p, steal)
 		if r["ok"] == true {
 			wins++
-		} else if strings.Contains(r["err"].(string), "fines you") {
+		} else if strings.Contains(r["err"].(string), "catches your wrist") && strings.Contains(r["err"].(string), "clip round the ear") {
 			caught++
 		} else {
 			t.Fatalf("unexpected: %v", r)
@@ -148,5 +148,21 @@ func TestCloughBoggartNeedsSlaying8(t *testing.T) {
 	f.mustOK(p, protocol.In{T: "attack", Target: boss.ID})
 	if u := f.g.unlocksAt("slaying", 8); !strings.Contains(strings.Join(u, ","), "Boggart of the Clough") {
 		t.Fatalf("slaying 8 unlocks: %v", u)
+	}
+}
+
+// The fine never takes more than you have, and the watch still cuffs you
+// when your purse is empty.
+func TestBeingCaughtWithEmptyPockets(t *testing.T) {
+	f := newFixture(t)
+	p := f.join("Skint")
+	delete(p.Char.Inv, "coin")
+	e := f.g.caught(p, 10, "Caught!")
+	if e == nil || strings.Contains(e.Error(), "fines") || p.Char.Inv["coin"] != 0 {
+		t.Fatalf("empty purse: %v, coins %d", e, p.Char.Inv["coin"])
+	}
+	p.Char.Inv["coin"] = 4
+	if e := f.g.caught(p, 10, "Caught!"); !strings.Contains(e.Error(), "fines you 4 coins") || p.Char.Inv["coin"] != 0 {
+		t.Fatalf("fine larger than purse: %v", e)
 	}
 }
