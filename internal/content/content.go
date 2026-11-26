@@ -34,7 +34,7 @@ var Models = map[string]bool{"sword": true, "axe": true, "pickaxe": true, "club"
 // MobModels and NPCHats are the creature models and NPC hats the client can
 // draw (web/js/models.js). Add a drawing there before adding a name here.
 var (
-	MobModels = map[string]bool{"bramblet": true, "wisp": true, "hare": true, "grouse": true, "deer": true}
+	MobModels = map[string]bool{"bramblet": true, "wisp": true, "hare": true, "grouse": true, "deer": true, "clough": true}
 	NPCHats   = map[string]bool{"": true, "tall": true, "cap": true, "helm": true}
 )
 
@@ -165,6 +165,7 @@ type Node struct {
 	RegrowSec int            `json:"regrowSec"`
 	Needs     map[string]int `json:"needs,omitempty"`   // other skill levels needed
 	Tool      string         `json:"tool,omitempty"`    // an item you must carry (a fishing rod)
+	Spent     uint8          `json:"spent,omitempty"`   // the block left while it restocks (an empty stall), instead of air
 	Keep      bool           `json:"keep,omitempty"`    // the block stays when gathered (fishing spots)
 	Catches   []Catch        `json:"catches,omitempty"` // what it yields by level, instead of Item
 }
@@ -223,18 +224,41 @@ type ShopEntry struct {
 // NPC is a townsperson. Like spawns, it stands at an offset from a named
 // place or point ("at"); X, Y and Z are filled in by Resolve.
 type NPC struct {
-	ID    string   `json:"id"`
-	Name  string   `json:"name"`
-	At    string   `json:"at"`
-	DX    float64  `json:"dx,omitempty"`
-	DZ    float64  `json:"dz,omitempty"`
-	X     float64  `json:"x"`
-	Y     float64  `json:"y"`
-	Z     float64  `json:"z"`
-	Yaw   float64  `json:"yaw"`
-	Color string   `json:"color"`
-	Hat   string   `json:"hat,omitempty"` // tall | cap | helm | "" (hair)
-	Lines []string `json:"lines"`
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	At     string   `json:"at"`
+	DX     float64  `json:"dx,omitempty"`
+	DZ     float64  `json:"dz,omitempty"`
+	X      float64  `json:"x"`
+	Y      float64  `json:"y"`
+	Z      float64  `json:"z"`
+	Yaw    float64  `json:"yaw"`
+	Color  string   `json:"color"`
+	Hat    string   `json:"hat,omitempty"` // tall | cap | helm | "" (hair)
+	Lines  []string `json:"lines"`
+	Pocket *Pocket  `json:"pocket,omitempty"` // can be pickpocketed (thieving)
+}
+
+// Pocket is what picking an NPC's pocket takes: the Thieving level, the XP,
+// a coin range and a chance at items. Getting caught costs Fine coins.
+type Pocket struct {
+	Level int    `json:"level"`
+	XP    int    `json:"xp"`
+	Coins [2]int `json:"coins"`
+	Loot  []Drop `json:"loot,omitempty"`
+	Fine  int    `json:"fine"`
+}
+
+// Bounty is a kind of warrant a magistrate (Giver) hands out: kill Min..Max
+// of Mob, for XP Slaying XP per kill and Coins per kill when you report back.
+type Bounty struct {
+	Giver string `json:"giver"`
+	Mob   string `json:"mob"`
+	Level int    `json:"level"`
+	Min   int    `json:"min"`
+	Max   int    `json:"max"`
+	XP    int    `json:"xp"`
+	Coins int    `json:"coins"`
 }
 
 // Rules are tunable multipliers. Mods and world config may adjust them within
@@ -280,17 +304,18 @@ func (r Rules) Clamp() Rules {
 
 // Pack is the on-disk/JSON form of content.
 type Pack struct {
-	Skills  []Skill     `json:"skills,omitempty"`
-	Charms  []Charm     `json:"charms,omitempty"`
-	Courses []Course    `json:"courses,omitempty"`
-	Items   []Item      `json:"items"`
-	Recipes []Recipe    `json:"recipes"`
-	Mobs    []Mob       `json:"mobs"`
-	Spawns  []Spawn     `json:"spawns"`
-	Nodes   []Node      `json:"nodes"`
-	Quests  []Quest     `json:"quests"`
-	Shop    []ShopEntry `json:"shop"`
-	NPCs    []NPC       `json:"npcs"`
+	Skills   []Skill     `json:"skills,omitempty"`
+	Charms   []Charm     `json:"charms,omitempty"`
+	Courses  []Course    `json:"courses,omitempty"`
+	Bounties []Bounty    `json:"bounties,omitempty"`
+	Items    []Item      `json:"items"`
+	Recipes  []Recipe    `json:"recipes"`
+	Mobs     []Mob       `json:"mobs"`
+	Spawns   []Spawn     `json:"spawns"`
+	Nodes    []Node      `json:"nodes"`
+	Quests   []Quest     `json:"quests"`
+	Shop     []ShopEntry `json:"shop"`
+	NPCs     []NPC       `json:"npcs"`
 }
 
 // Content is the resolved, indexed content used by the game.
@@ -298,6 +323,7 @@ type Content struct {
 	Skills   []*Skill // in display order
 	Charms   []*Charm // in display order
 	Courses  []*Course
+	Bounties []Bounty
 	Items    map[string]*Item
 	Recipes  map[string]*Recipe
 	Mobs     map[string]*Mob
@@ -355,6 +381,10 @@ func (c *Content) merge(p *Pack, ns string) error {
 			c.Skills = append(c.Skills, &s)
 		}
 	}
+	if len(p.Bounties) > 0 && ns != "" {
+		return fmt.Errorf("mods can't add bounties in mod API 1")
+	}
+	c.Bounties = append(c.Bounties, p.Bounties...)
 	for i := range p.Courses {
 		if ns != "" {
 			return fmt.Errorf("mods can't add agility courses in mod API 1")
@@ -434,6 +464,11 @@ func (c *Content) Validate() error {
 	for _, s := range c.Skills {
 		if !skillIDRe.MatchString(s.ID) || s.Name == "" || !slices.Contains(SkillGroups, s.Group) {
 			return fmt.Errorf("skill %q: bad id, name or group %q", s.ID, s.Group)
+		}
+	}
+	for _, b := range c.Bounties {
+		if c.NPCs[b.Giver] == nil || c.Mobs[b.Mob] == nil || b.Level < 1 || b.Level > 100 || b.Min < 1 || b.Max < b.Min || b.Max > 50 || b.XP < 0 || b.Coins < 0 {
+			return fmt.Errorf("bounty %s/%s: bad giver, mob or numbers", b.Giver, b.Mob)
 		}
 	}
 	for _, co := range c.Courses {
@@ -566,6 +601,16 @@ func (c *Content) Validate() error {
 	for id, n := range c.NPCs {
 		if !NPCHats[n.Hat] {
 			return fmt.Errorf("npc %s: unknown hat %q", id, n.Hat)
+		}
+		if pk := n.Pocket; pk != nil {
+			if pk.Level < 1 || pk.Level > 100 || pk.XP < 0 || pk.Coins[0] < 0 || pk.Coins[1] < pk.Coins[0] || pk.Fine < 0 {
+				return fmt.Errorf("npc %s: bad pocket", id)
+			}
+			for _, d := range pk.Loot {
+				if c.Items[d.Item] == nil || d.Min < 0 || d.Max < d.Min || d.Chance < 0 || d.Chance > 1 {
+					return fmt.Errorf("npc %s: bad pocket loot %q", id, d.Item)
+				}
+			}
 		}
 	}
 	for _, s := range c.Spawns {
@@ -722,16 +767,17 @@ func (c *Content) rehash() {
 
 // ClientView is the subset of content shipped to clients for UI.
 type ClientView struct {
-	Skills  []*Skill    `json:"skills"`
-	Charms  []*Charm    `json:"charms"`
-	Courses []*Course   `json:"courses"`
-	Items   []*Item     `json:"items"`
-	Recipes []*Recipe   `json:"recipes"`
-	Mobs    []ClientMob `json:"mobs"`
-	Quests  []*Quest    `json:"quests"`
-	NPCs    []*NPC      `json:"npcs"`
-	Shop    []ShopEntry `json:"shop"`
-	Nodes   []*Node     `json:"nodes"`
+	Skills   []*Skill    `json:"skills"`
+	Charms   []*Charm    `json:"charms"`
+	Courses  []*Course   `json:"courses"`
+	Bounties []Bounty    `json:"bounties"`
+	Items    []*Item     `json:"items"`
+	Recipes  []*Recipe   `json:"recipes"`
+	Mobs     []ClientMob `json:"mobs"`
+	Quests   []*Quest    `json:"quests"`
+	NPCs     []*NPC      `json:"npcs"`
+	Shop     []ShopEntry `json:"shop"`
+	Nodes    []*Node     `json:"nodes"`
 }
 
 type ClientMob struct {
@@ -742,7 +788,7 @@ type ClientMob struct {
 }
 
 func (c *Content) View() ClientView {
-	v := ClientView{Shop: c.Shop, Skills: c.Skills, Charms: c.Charms, Courses: c.Courses}
+	v := ClientView{Shop: c.Shop, Skills: c.Skills, Charms: c.Charms, Courses: c.Courses, Bounties: c.Bounties}
 	for _, k := range sortedKeys(c.Items) {
 		v.Items = append(v.Items, c.Items[k])
 	}

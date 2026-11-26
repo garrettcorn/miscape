@@ -184,6 +184,10 @@ export class UI {
       const giver = next && g.npcs[next.giver];
       if (giver) html = `<h4>${Object.keys(me.quests).length ? 'New quest' : 'Welcome!'}</h4>Find <b>${esc(giver.name)}</b> and press ${esc(glyph(g.input.device, 'interact'))} to talk.`;
     }
+    if (me.bounty) {
+      const b = me.bounty, m = g.mobDefs[b.mob];
+      html += `<h4>📜 Warrant</h4>${b.left > 0 ? `See off ${b.left} more ${esc(m ? m.name : b.mob)}${b.left > 1 ? 's' : ''} (${b.total - b.left}/${b.total})` : `Done! Report to ${esc(g.npcs[b.giver]?.name || 'the magistrate')}.`}`;
+    }
     tr.innerHTML = html;
     // Hearth progress.
     const hb = $('#hearthbar');
@@ -352,6 +356,9 @@ export class UI {
         if (r.ok && rec) this.toast(`Made ${rec.count > 1 ? rec.count + '× ' : ''}${this.item(rec.output).name}.`, 'good');
         break;
       }
+      case 'steal': r = await n.request({ t: 'steal', npc: this.dialog.npc }); if (r.ok) this.renderDialog(); break;
+      case 'bountyTake': r = await n.request({ t: 'bounty_take', npc: this.dialog.npc }); if (r.ok) this.talk(this.dialog.npc); break;
+      case 'bountyClaim': r = await n.request({ t: 'bounty_claim', npc: this.dialog.npc }); if (r.ok) this.talk(this.dialog.npc); break;
       case 'accept': r = await n.request({ t: 'quest_accept', quest: arg }); if (r.ok) this.talk(this.dialog.npc); break;
       case 'turnin': r = await n.request({ t: 'quest_turnin', quest: arg }); if (r.ok) this.talk(this.dialog.npc); break;
       case 'buy': r = await n.request({ t: 'buy', item: arg, count: 1 }); break;
@@ -702,6 +709,17 @@ export class UI {
       else if (qs.status === 'locked') { html += `<p class="note">${esc(q.name)} unlocks after “${esc(this.g.quests[q.requires]?.name)}”.</p>`; }
     }
     if (!spoke) html += `<p>“${esc(d.line || 'Hello!')}”</p>`;
+    if (d.bounties) {
+      const b = me.bounty, mine = b && b.giver === d.npc;
+      html += `<h4>📜 Warrants</h4>`;
+      if (mine && b.left === 0) html += `<button class="btn primary" data-do="bountyClaim" data-fid="bc">Report back: claim your reward</button>`;
+      else if (b) html += `<p class="note">Your warrant: ${b.left} ${esc(this.g.mobDefs[b.mob]?.name || b.mob)} left. Slaying ${(me.skills.slaying || { lvl: 1 }).lvl}.</p>`;
+      else html += `<button class="btn" data-do="bountyTake" data-fid="bt">Ask for a warrant (Slaying ${(me.skills.slaying || { lvl: 1 }).lvl})</button>`;
+    }
+    if (d.pocket) {
+      const lvl = (me.skills.thieving || { lvl: 1 }).lvl, can = lvl >= d.pocket;
+      html += `<button class="btn ${can ? '' : 'dim'}" data-do="steal" data-fid="st" title="Getting caught means a fine and a few seconds seeing stars">🎩 Pick their pocket (Thieving ${d.pocket}${can ? '' : ', you have ' + lvl})</button>`;
+    }
     if (d.shop && d.shop.length) {
       html += `<h4>Buy <span class="note">· you have ${me.inv.coin || 0} coins</span></h4><div class="grid">` + d.shop.map((s) => {
         const it = this.item(s.item), afford = (me.inv.coin || 0) >= s.price;

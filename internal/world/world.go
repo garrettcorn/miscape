@@ -56,7 +56,9 @@ const (
 	Oats       uint8 = 37
 	Cabbages   uint8 = 38
 	Feverfew   uint8 = 39
-	NumBlocks        = 40
+	Stall      uint8 = 40 // a market stall piled with goods (thieving)
+	StallEmpty uint8 = 41 // a stall waiting to be restocked
+	NumBlocks        = 42
 )
 
 // Plant reports whether a block is a small see-through thing you walk

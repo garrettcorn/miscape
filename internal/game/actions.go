@@ -26,6 +26,9 @@ func (g *Game) alive(p *Player) error {
 	if p.dead || p.Char.HP <= 0 {
 		return fail("You need to recover first.")
 	}
+	if left := p.stunUntil.Sub(g.Now); left > 0 {
+		return fail("You're still seeing stars (%ds).", int(math.Ceil(left.Seconds())))
+	}
 	return nil
 }
 
@@ -50,7 +53,7 @@ func (g *Game) Gather(p *Player, bx, by, bz int) error {
 	if node == nil || g.placed[idx] != "" {
 		return fail("You can't gather that.")
 	}
-	if g.W.ZoneAt(float64(bx)+0.5, float64(bz)+0.5) == world.ZoneTown {
+	if node.Skill != "thieving" && g.W.ZoneAt(float64(bx)+0.5, float64(bz)+0.5) == world.ZoneTown {
 		return fail("The folk of %s would rather you didn't chop up the town.", g.W.ZoneName(float64(bx)+0.5, float64(bz)+0.5))
 	}
 	if lvl := p.Char.Level(node.Skill); lvl < node.Level {
@@ -82,6 +85,11 @@ func (g *Game) Gather(p *Player, bx, by, bz int) error {
 		return nil
 	}
 	delete(g.nodeHits, idx)
+	if node.Skill == "thieving" {
+		if err := g.stealFromStall(p, node); err != nil {
+			return err
+		}
+	}
 	n := g.yield()
 	got := map[string]int{item: n}
 	if !g.grant(p, got) {
@@ -94,9 +102,9 @@ func (g *Game) Gather(p *Player, bx, by, bz int) error {
 	g.addXP(p, node.Skill, xp)
 	g.progress(p, "gather", item, n)
 	if !node.Keep {
-		g.setBlock(bx, by, bz, world.Air)
+		g.setBlock(bx, by, bz, node.Spent)
 		regrow := time.Duration(float64(node.RegrowSec)*g.C.Rules.RegrowMultiplier) * time.Second
-		g.regens = append(g.regens, regen{P: idx, Block: b, At: g.Now.Add(regrow)})
+		g.regens = append(g.regens, regen{P: idx, Block: b, From: node.Spent, At: g.Now.Add(regrow)})
 	}
 	g.toast(p, fmt.Sprintf("+%d %s", n, g.itemName(item)), "item")
 	return nil

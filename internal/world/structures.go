@@ -111,7 +111,8 @@ func (b *builder) town(id string, r int, gate [2]int) {
 	b.house(-15, 10, false)
 	// Market stall.
 	b.box(6, g+1, 4, 8, g+1, 4, Plank)
-	b.set(6, g+2, 4, BerryBush)
+	b.set(6, g+2, 4, Stall)
+	b.set(8, g+2, 4, Stall)
 	// Anvil by the lamplighter's workshop.
 	b.set(-6, g, 3, Cobble)
 	b.set(-6, g+1, 3, Anvil)

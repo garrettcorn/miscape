@@ -141,7 +141,7 @@ func (g *Game) meMsg(p *Player) M {
 	if !p.hearthStart.IsZero() {
 		hearth = g.Now.Sub(p.hearthStart).Seconds() / HearthSeconds
 	}
-	return M{"t": "me", "name": c.Name, "color": c.Color, "hp": c.HP, "mhp": c.MaxHP(), "inv": c.Inv, "eq": c.Equipped, "skills": skills, "cap": g.LevelCap(), "combat": c.CombatLevel(), "fx": g.effectsView(p), "run": g.runView(p),
+	return M{"t": "me", "name": c.Name, "color": c.Color, "hp": c.HP, "mhp": c.MaxHP(), "inv": c.Inv, "eq": c.Equipped, "skills": skills, "cap": g.LevelCap(), "combat": c.CombatLevel(), "fx": g.effectsView(p), "run": g.runView(p), "bounty": c.Bounty,
 		"quests": c.Quests, "slots": g.slotsUsed(c.Inv), "maxSlots": InventorySlots,
 		"zone": g.W.ZoneAt(c.X, c.Z), "zoneName": g.W.ZoneName(c.X, c.Z), "sea": g.atSea(c), "hearth": hearth, "trade": g.tradeView(p)}
 }

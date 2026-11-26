@@ -156,6 +156,16 @@ func (g *Game) unlocksAt(skill string, level int) []string {
 			add("hunting the " + m.Name)
 		}
 	}
+	for _, n := range g.C.NPCs {
+		if pk := n.Pocket; pk != nil && skill == "thieving" && pk.Level == level {
+			add("picking " + firstName(n.Name) + "'s pocket")
+		}
+	}
+	for _, b := range g.C.Bounties {
+		if skill == "slaying" && b.Level == level && b.Level > 1 {
+			add(g.mobName(b.Mob) + " warrants")
+		}
+	}
 	for _, co := range g.C.Courses {
 		if skill == "agility" && co.Level == level {
 			add("the " + co.Name)

@@ -31,6 +31,7 @@ type Character struct {
 	Placed    int                    `json:"placed"`
 	Created   time.Time              `json:"created"`
 	LastSeen  time.Time              `json:"lastSeen"`
+	Bounty    *BountyState           `json:"bounty,omitempty"` // an open slaying warrant
 
 	levelCap int // the world's skill level cap (set when added to a game)
 }
@@ -62,6 +63,8 @@ type Player struct {
 	run              *courseRun           // the agility course being run, if any
 	runCooldown      time.Time
 	runWarned        string
+	nextSteal        time.Time
+	stunUntil        time.Time // caught thieving
 }
 
 type Mob struct {
@@ -83,6 +86,7 @@ type Mob struct {
 type regen struct {
 	P     world.Pos `json:"p"`
 	Block uint8     `json:"b"`
+	From  uint8     `json:"f,omitempty"` // the block it replaces when it comes back (air unless a stall)
 	At    time.Time `json:"at"`
 }
 

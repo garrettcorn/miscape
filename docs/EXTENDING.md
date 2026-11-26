@@ -17,12 +17,13 @@ Mods can add the same kinds of entries (see [MODS.md](MODS.md)).
 | Recipe | `recipes` | `skill` (default `crafting`) and `level` say which skill makes it and how good you must be. `station: "anvil"` requires standing at one (stations are listed in `content.Stations`). Cooking recipes can set `burnt` and `safeAt`: below `safeAt` there's a chance of getting the burnt item instead. |
 | Quest | `quests` | Steps are `gather`, `kill`, `craft`, `deliver`, `burn` (light a campfire of an item) or `cast` (work a charm). `requires` chains quests; `needs` asks for skill levels; `start` hands the player items when they accept. The HUD hint points players at the next available giver automatically. |
 | Shop entry | `shop` | Buying is served by the listed NPC. |
-| NPC | `npcs` | `hat` is one of `content.NPCHats`. |
+| NPC | `npcs` | `hat` is one of `content.NPCHats`. A `pocket` (Thieving level, XP, coin range, `loot`, `fine`) lets players pick it; getting caught stuns and fines them. Players can never be robbed. |
 | Creature | `mobs` + `spawns` | `model` is one of `content.MobModels`. `flees` makes it a game animal that runs from players instead of fighting; `skill` sends kill XP to that skill (e.g. hunting) instead of the weapon's; `needs` gates attacking it. |
-| Gatherable | `nodes` | Maps a block to an item, skill, level and regrow time. `tool` must be carried (a fishing rod), `keep` leaves the block in place, and `catches` yields a random item your level allows instead of `item`. |
+| Gatherable | `nodes` | Maps a block to an item, skill, level and regrow time. `tool` must be carried (a fishing rod), `keep` leaves the block in place, `spent` leaves another block while it regrows (an empty stall), nodes that train `thieving` may be robbed in town but risk getting caught, and `catches` yields a random item your level allows instead of `item`. |
 | Skill | `skills` | Base content only: mods can use skills but not add them. Pick a `group` from `content.SkillGroups`. |
 | Charm | `charms` | Base content only. `effect` is `heal` (`power` health), `ward` (`power`% less damage for `sec`) or `bane` (double damage against the creature `against` for `sec`); `reagents` are used up. Known charms appear on the hotbar once the player has the Magic `level`. |
 | Agility course | `courses` | Base content only. Checkpoint `offsets` from the place `at`, run in order within `limitSec` for `xp`; the first is the start flag. The server follows the speed-checked position, and every Agility level adds 1% sprint speed. |
+| Bounty | `bounties` | Base content only. A warrant a magistrate NPC (`giver`) hands out: kill `min`..`max` of `mob` once you have Slaying `level`; each assigned kill gives `xp` Slaying XP, and reporting back pays `coins` per kill. |
 
 ### Skills, needs and levels
 

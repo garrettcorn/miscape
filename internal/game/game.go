@@ -167,13 +167,13 @@ func (g *Game) mobMaxHP(def *content.Mob) int {
 }
 
 func (g *Game) respawnMob(m *Mob) {
-	// Pick a spot with headroom (not inside a trunk), falling back to the spawn center.
+	// Pick a dry spot outside town, falling back to the spawn center.
 	m.X, m.Z = g.W.WrapX(m.Spawn.X), m.Spawn.Z
 	for try_ := 0; try_ < 20; try_++ {
 		a := g.rng.Float64() * 2 * math.Pi
 		r := g.rng.Float64() * m.Spawn.R
 		x, z := g.W.WrapX(m.Spawn.X+math.Cos(a)*r), m.Spawn.Z+math.Sin(a)*r
-		if g.W.GroundY(int(x), int(z)) > 0 && !g.wet(int(x), int(z)) {
+		if g.W.GroundY(int(x), int(z)) > 0 && !g.wet(int(x), int(z)) && g.W.ZoneAt(x, z) != world.ZoneTown {
 			m.X, m.Z = x, z
 			break
 		}

@@ -34,6 +34,11 @@ func TestAnimalsFleeAndTrainHunting(t *testing.T) {
 			t.Fatalf("%s spawned in zone %v or water at %.0f,%.0f", m.Def.ID, f.g.W.ZoneAt(m.X, m.Z), m.X, m.Z)
 		}
 	}
+	for _, m := range f.g.Mobs {
+		if !m.Def.Flees {
+			m.HP, m.deadUntil = 0, f.g.Now.Add(time.Hour) // only animals for this test
+		}
+	}
 	// A hare runs away and never bites.
 	f.at(p, hare.X+2, hare.Y, hare.Z)
 	hp := p.Char.HP

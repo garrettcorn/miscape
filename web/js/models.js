@@ -233,6 +233,7 @@ export const MOB_MODELS = {
   hare: { draw: drawHare, tag: 0.95 },
   grouse: { draw: drawGrouse, tag: 0.85 },
   deer: { draw: drawDeer, tag: 2.4 },
+  clough: { draw: drawClough, tag: 2.9 },
 };
 
 // A projectile in flight (bow, sling or wand), from s.a to s.b, started at
@@ -307,4 +308,20 @@ export function drawFlag(r, x, y, z, col, glow, t) {
   box(r, x, y, z, 0, 0, 2.4, 0, 0.08, 2.4, 0.08, [0.4, 0.28, 0.18]);
   const wave = Math.sin(t * 4 + x) * 0.15;
   box(r, x, y, z, wave, 0.3, 2.35, 0, 0.55, 0.38, 0.03, col, glow ? 2 : 0);
+}
+
+// The Boggart of the Clough: an old, hulking boggart, mossy and dark.
+export function drawClough(r, e, t) {
+  const sway = Math.sin(t * 2 + e.id) * 0.05;
+  const { x, z, yaw } = e, y = e.y, f = e.flash > 0 ? 1 : 0;
+  const body = [0.24, 0.3, 0.2], moss = [0.32, 0.45, 0.22];
+  box(r, x, y, z, yaw, 0, 1.6, 0, 1.2, 1.25, 1.0, body, f, sway);
+  box(r, x, y, z, yaw, 0, 1.7, 0, 1.0, 0.2, 0.9, moss, f);
+  box(r, x, y, z, yaw, 0, 2.15, 0.15, 0.7, 0.55, 0.6, body, f);
+  for (const s of [-1, 1]) {
+    box(r, x, y, z, yaw, s * 0.72, 1.55, 0.1, 0.28, 1.0, 0.28, body, f, Math.sin(t * 3 + s) * 0.3);
+    box(r, x, y, z, yaw, s * 0.3, 0.45, 0, 0.35, 0.45, 0.35, body, f);
+    box(r, x, y, z, yaw, s * 0.18, 2.0, 0.46, 0.12, 0.1, 0.02, [1.0, 0.75, 0.2], 2);
+    box(r, x, y, z, yaw, s * 0.3, 2.45, 0.1, 0.08, 0.25, 0.08, [0.85, 0.8, 0.65], f);
+  }
 }

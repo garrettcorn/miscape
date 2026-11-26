@@ -86,7 +86,7 @@ func TestJoinPlayAndPersistAcrossRestart(t *testing.T) {
 	dir := t.TempDir()
 	s, ts := start(t, dir, true)
 	c := dial(t, ts)
-	c.send(map[string]any{"t": "hello", "proto": 4, "name": "Rowan"})
+	c.send(map[string]any{"t": "hello", "proto": 5, "name": "Rowan"})
 	w := c.waitFor("welcome")
 	token, _ := w["token"].(string)
 	if token == "" || w["realm"].(map[string]any)["kind"] != "private" {
@@ -126,7 +126,7 @@ func TestJoinPlayAndPersistAcrossRestart(t *testing.T) {
 	defer ts2.Close()
 	defer s2.Shutdown()
 	c2 := dial(t, ts2)
-	c2.send(map[string]any{"t": "hello", "proto": 4, "token": token})
+	c2.send(map[string]any{"t": "hello", "proto": 5, "token": token})
 	w2 := c2.waitFor("welcome")
 	if w2["realm"].(map[string]any)["id"] != realm {
 		t.Fatal("realm changed across restart")
@@ -154,14 +154,14 @@ func TestRemoteNeedsInviteLocalDoesNot(t *testing.T) {
 	defer remote.Close()
 	defer s.Shutdown()
 	c := dial(t, remote)
-	c.send(map[string]any{"t": "hello", "proto": 4, "name": "Remote"})
+	c.send(map[string]any{"t": "hello", "proto": 5, "name": "Remote"})
 	if e := c.waitFor("error"); e["code"] != "invite_required" {
 		t.Fatal(e)
 	}
 	local := httptest.NewServer(s.Handler(true))
 	defer local.Close()
 	c2 := dial(t, local)
-	c2.send(map[string]any{"t": "hello", "proto": 4, "name": "Hosty"})
+	c2.send(map[string]any{"t": "hello", "proto": 5, "name": "Hosty"})
 	c2.waitFor("welcome")
 }
 
@@ -170,7 +170,7 @@ func TestBadMessagesAreRejectedWithoutDisconnect(t *testing.T) {
 	defer ts.Close()
 	defer s.Shutdown()
 	c := dial(t, ts)
-	c.send(map[string]any{"t": "hello", "proto": 4, "name": "Fuzzy"})
+	c.send(map[string]any{"t": "hello", "proto": 5, "name": "Fuzzy"})
 	c.waitFor("welcome")
 	for _, raw := range []string{`{"t":"craft"}`, `nonsense`, `{"t":"gather","rid":5,"bx":-9}`, `{"t":"move","x":"NaN"}`} {
 		c.raw(raw)

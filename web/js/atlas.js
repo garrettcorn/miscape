@@ -5,7 +5,8 @@ export const TILE_NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'sand', '
   'cobble', 'copper', 'gloamstone', 'glimmer', 'lantern', 'roof', 'flowers', 'anvil_top', 'anvil_side', 'bedrock', 'sign',
   'berry', 'dead_side', 'dead_top', 'moss_top', 'moss_side', 'snow_top', 'snow_side', 'ice',
   'fishspot', 'fire', 'range_top', 'range_side', 'rowan_side', 'yew_side', 'tin', 'coal', 'iron',
-  'snare', 'snare_full', 'soil_top', 'sprout', 'potatoes', 'oats', 'cabbages', 'feverfew'];
+  'snare', 'snare_full', 'soil_top', 'sprout', 'potatoes', 'oats', 'cabbages', 'feverfew',
+  'stall_top', 'stall_side', 'stall_empty'];
 
 function rng(seed) {
   let s = seed >>> 0;
@@ -71,6 +72,9 @@ const painters = {
   oats: (t) => { t.clear(); for (let x = 1; x < 16; x += 3) { t.rect(x, 3, 1, 13, '#c9b56a'); for (let y = 2; y < 8; y += 2) t.rect(x - 1, y, 3, 1, '#e8d890'); } return t; },
   cabbages: (t) => { t.clear(); for (const [x, s] of [[4, 5], [11, 4]]) { t.rect(x - s / 2, 16 - s * 2, s, s * 2, '#5f9a48'); t.rect(x - s / 2 + 1, 16 - s * 2 + 1, s - 2, s * 2 - 2, '#8fc070'); } return t; },
   feverfew: (t) => { t.clear(); for (const x of [3, 7, 12]) { t.rect(x, 6, 1, 10, '#4f8a3c'); t.rect(x - 1, 4, 3, 3, '#ffffff'); t.px(x, 5, hex('#f2c94e')); } return t; },
+  stall_top: (t) => { painters.plank(t); for (let i = 0; i < 7; i++) { const x = 1 + Math.floor(t.r() * 12), y = 1 + Math.floor(t.r() * 12); t.rect(x, y, 3, 3, ['#c98a4a', '#f0ece2', '#c03a5a', '#e0457b'][i % 4]); } return t; },
+  stall_side: (t) => { painters.plank(t); for (let x = 0; x < 16; x += 4) t.rect(x, 0, 2, 5, '#c0392b').rect(x + 2, 0, 2, 5, '#f4f1ea'); return t; },
+  stall_empty: (t) => painters.plank(t).speck('#8a5a32', 0.04),
 };
 
 // Returns RGBA bytes for all layers stacked: TILE x TILE x N.

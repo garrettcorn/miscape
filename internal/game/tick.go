@@ -3,8 +3,6 @@ package game
 import (
 	"math"
 	"time"
-
-	"lanternfall/internal/world"
 )
 
 // ---------- tick ----------
@@ -39,7 +37,7 @@ func (g *Game) tickRegen() {
 			continue
 		}
 		x, y, z := int(r.P.X), int(r.P.Y), int(r.P.Z)
-		if g.W.Get(x, y, z) != world.Air || g.entityInCell(x, y, z) {
+		if g.W.Get(x, y, z) != r.From || g.entityInCell(x, y, z) {
 			r.At = g.Now.Add(5 * time.Second)
 			keep = append(keep, r)
 			continue

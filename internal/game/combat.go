@@ -215,6 +215,7 @@ func (g *Game) killMob(m *Mob, killer *Player) {
 	}
 	g.addXP(killer, skill, m.Def.XP)
 	g.progress(killer, "kill", m.Def.ID, 1)
+	g.bountyKill(killer, m)
 	loot := map[string]int{}
 	for _, d := range m.Def.Drops {
 		if g.rng.Float64() <= d.Chance {

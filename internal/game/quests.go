@@ -48,7 +48,16 @@ func (g *Game) Talk(p *Player, npc string) error {
 			shop = append(shop, s)
 		}
 	}
-	g.Out.Send(p.ID, M{"t": "dialog", "npc": npc, "name": n.Name, "lines": n.Lines, "quests": quests, "shop": shop})
+	d := M{"t": "dialog", "npc": npc, "name": n.Name, "lines": n.Lines, "quests": quests, "shop": shop}
+	if n.Pocket != nil {
+		d["pocket"] = n.Pocket.Level
+	}
+	for _, b := range g.C.Bounties {
+		if b.Giver == npc {
+			d["bounties"] = true
+		}
+	}
+	g.Out.Send(p.ID, d)
 	return nil
 }
 

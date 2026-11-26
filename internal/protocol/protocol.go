@@ -20,10 +20,12 @@ const (
 	// light_fire message.
 	// Version 4: snares, crops and agility courses (blocks 32-39, the set_trap
 	// and plant messages).
-	ProtoMin = 4
-	ProtoMax = 4
+	// Version 5: thieving and slaying (stall blocks 40-41; steal, bounty_take
+	// and bounty_claim).
+	ProtoMin = 5
+	ProtoMax = 5
 	// Current is what this server speaks natively.
-	Current = 4
+	Current = 5
 
 	// MaxCoord bounds block and chunk coordinates; the game checks them
 	// against the actual world size.
@@ -99,7 +101,7 @@ var types = map[string]bool{
 	"hello": false, "move": false, "chunks": false, "ping": false,
 	"gather": true, "attack": true, "place": true, "break": true, "light_fire": true, "set_trap": true, "plant": true,
 	"craft": true, "eat": true, "equip": true, "drop": true, "cast": true,
-	"talk": true, "quest_accept": true, "quest_turnin": true,
+	"talk": true, "quest_accept": true, "quest_turnin": true, "steal": true, "bounty_take": true, "bounty_claim": true,
 	"buy": true, "sell": true,
 	"trade_request": true, "trade_respond": true, "trade_offer": true,
 	"trade_lock": true, "trade_confirm": true, "trade_cancel": true,
@@ -225,7 +227,7 @@ func Validate(m *In) error {
 		if !validID(m.Item) || m.Count < 1 || m.Count > 64 {
 			return bad("item/count")
 		}
-	case "talk":
+	case "talk", "steal", "bounty_take", "bounty_claim":
 		if !validID(m.NPC) {
 			return bad("npc")
 		}

@@ -29,6 +29,11 @@
     {"id": "pennine_fell_race", "name": "Pennine Fell Race", "level": 5, "xp": 80, "limitSec": 7, "at": "manchester",
      "offsets": [[21, 3], [22, -4], [21, -11], [17, -16], [10, -20], [3, -24]]}
   ],
+  "bounties": [
+    {"giver": "rawcliffe", "mob": "bramblet", "level": 1, "min": 5, "max": 9, "xp": 14, "coins": 3},
+    {"giver": "rawcliffe", "mob": "gloamwisp", "level": 3, "min": 4, "max": 7, "xp": 32, "coins": 6},
+    {"giver": "rawcliffe", "mob": "clough_boggart", "level": 8, "min": 1, "max": 1, "xp": 160, "coins": 90}
+  ],
   "items": [
     {"id": "coin", "name": "Coin", "desc": "A copper cartwheel penny, stamped with King George III.", "kind": "currency", "tradeable": true, "stack": 999, "color": "#f2c14e"},
     {"id": "log", "name": "Log", "desc": "Good Lancashire oak. Burns steadily on a campfire.", "kind": "material", "model": "log", "burn": {"level": 1, "xp": 12, "sec": 60}, "tradeable": true, "stack": 64, "value": 1, "color": "#9a6b3f"},
@@ -96,7 +101,12 @@
     {"id": "baked_potato", "name": "Baked Potato", "desc": "Restores 4 health.", "kind": "food", "model": "food", "heal": 4, "tradeable": true, "stack": 32, "value": 2, "color": "#b88a4a"},
     {"id": "porridge", "name": "Porridge", "desc": "Restores 6 health.", "kind": "food", "model": "food", "heal": 6, "tradeable": true, "stack": 32, "value": 3, "color": "#e8d8b0"},
     {"id": "feverfew_tea", "name": "Feverfew Tea", "desc": "Restores 10 health.", "kind": "food", "model": "food", "heal": 10, "tradeable": true, "stack": 32, "value": 9, "color": "#c8c890"},
-    {"id": "lobscouse", "name": "Lobscouse", "desc": "The sailors' stew of Liverpool: meat, potatoes and cabbage. Restores 18 health.", "kind": "food", "model": "food", "heal": 18, "tradeable": true, "stack": 32, "value": 18, "color": "#8a5a3a"}
+    {"id": "lobscouse", "name": "Lobscouse", "desc": "The sailors' stew of Liverpool: meat, potatoes and cabbage. Restores 18 health.", "kind": "food", "model": "food", "heal": 18, "tradeable": true, "stack": 32, "value": 18, "color": "#8a5a3a"},
+    {"id": "eccles_cake", "name": "Eccles Cake", "desc": "Currants in flaky pastry, from just down the road in Eccles. Restores 5 health.", "kind": "food", "model": "food", "heal": 5, "tradeable": true, "stack": 32, "value": 2, "color": "#c98a4a"},
+    {"id": "cotton_bolt", "name": "Bolt of Cotton", "desc": "Fresh from the Ancoats mills. Cottonopolis, they're starting to call Manchester.", "kind": "material", "model": "bundle", "tradeable": true, "stack": 32, "value": 6, "color": "#f0ece2"},
+    {"id": "silk_handkerchief", "name": "Silk Handkerchief", "desc": "Macclesfield silk. A fence would pay well for it.", "kind": "material", "model": "bundle", "tradeable": true, "stack": 32, "value": 12, "color": "#c03a5a"},
+    {"id": "pocket_watch", "name": "Pocket Watch", "desc": "A silver watch, the kind gentlemen carry. Worth a great deal.", "kind": "material", "model": "coin", "tradeable": true, "stack": 8, "value": 30, "color": "#cfd4da"},
+    {"id": "boggart_tooth", "name": "Clough Boggart's Tooth", "desc": "Proof you saw off the boggart of Boggart Hole Clough. The magistrate will want to see it.", "kind": "material", "model": "gem", "tradeable": true, "stack": 8, "value": 40, "color": "#e8dcc0"}
   ],
   "recipes": [
     {"id": "planks", "output": "plank", "count": 4, "inputs": {"log": 1}, "level": 1, "xp": 4},
@@ -141,16 +151,20 @@
      "drops": [{"item": "raw_grouse", "min": 1, "max": 1, "chance": 1}, {"item": "feather", "min": 2, "max": 4, "chance": 1}]},
     {"id": "deer", "name": "Red Deer", "model": "deer", "hp": 14, "damage": 0, "cooldownMs": 1000, "speed": 4.6, "aggro": 9, "xp": 45, "flees": true, "skill": "hunting", "needs": {"hunting": 6},
      "drops": [{"item": "venison", "min": 1, "max": 2, "chance": 1}, {"item": "hide", "min": 1, "max": 2, "chance": 1}]}
+,
+    {"id": "clough_boggart", "name": "Boggart of the Clough", "model": "clough", "hp": 70, "damage": 5, "cooldownMs": 1300, "speed": 2.6, "aggro": 4, "xp": 160, "needs": {"slaying": 8},
+     "drops": [{"item": "boggart_tooth", "min": 1, "max": 1, "chance": 1}, {"item": "coin", "min": 20, "max": 40, "chance": 1}, {"item": "glimmer_shard", "min": 1, "max": 3, "chance": 0.5}]}
   ],
   "spawns": [
     {"mob": "bramblet", "at": "manchester", "dx": 20, "dz": 12, "r": 5, "count": 4},
     {"mob": "bramblet", "at": "manchester", "dx": -6, "dz": 22, "r": 5, "count": 3},
     {"mob": "gloamwisp", "at": "highland_moors", "dx": -5, "dz": -3, "r": 5, "count": 3},
     {"mob": "gloamwisp", "at": "highland_moors", "dx": 5, "dz": 4, "r": 5, "count": 3},
-    {"mob": "hare", "at": "manchester", "dx": 4, "dz": 20, "r": 4, "count": 4},
+    {"mob": "hare", "at": "manchester", "dx": 12, "dz": -21, "r": 2, "count": 4},
     {"mob": "hare", "at": "manchester", "dx": -34, "dz": -12, "r": 3, "count": 3},
     {"mob": "grouse", "at": "manchester", "dx": -2, "dz": -24, "r": 4, "count": 4},
-    {"mob": "deer", "at": "manchester", "dx": 40, "dz": 32, "r": 5, "count": 3}
+    {"mob": "deer", "at": "manchester", "dx": 40, "dz": 32, "r": 5, "count": 3},
+    {"mob": "clough_boggart", "at": "manchester", "dx": -14, "dz": -17, "r": 1, "count": 1}
   ],
   "nodes": [
     {"block": 6, "name": "Tree", "item": "log", "skill": "woodcutting", "level": 1, "xp": 10, "hits": 3, "regrowSec": 45},
@@ -164,6 +178,8 @@
     {"block": 31, "name": "Iron Vein", "item": "iron_ore", "skill": "mining", "level": 7, "xp": 45, "hits": 4, "regrowSec": 75},
     {"block": 27, "name": "Rowan Tree", "item": "rowan_log", "skill": "woodcutting", "level": 5, "xp": 30, "hits": 4, "regrowSec": 60},
     {"block": 28, "name": "Yew Tree", "item": "yew_log", "skill": "woodcutting", "level": 8, "xp": 55, "hits": 5, "regrowSec": 90},
+    {"block": 40, "name": "Market Stall", "skill": "thieving", "level": 1, "hits": 1, "spent": 41, "regrowSec": 30,
+     "catches": [{"item": "eccles_cake", "level": 1, "xp": 12}, {"item": "cotton_bolt", "level": 4, "xp": 22}, {"item": "silk_handkerchief", "level": 7, "xp": 36}]},
     {"block": 24, "name": "Fishing Spot", "skill": "fishing", "level": 1, "hits": 3, "keep": true, "tool": "fishing_rod",
      "catches": [{"item": "raw_herring", "level": 1, "xp": 10}, {"item": "raw_trout", "level": 4, "xp": 22}, {"item": "raw_salmon", "level": 7, "xp": 36}, {"item": "raw_cod", "level": 10, "xp": 50}]}
   ],
@@ -220,7 +236,14 @@
        {"kind": "craft", "target": "baked_potato", "count": 3, "text": "Bake 3 potatoes"}
      ],
      "start": {"seed_potato": 4},
-     "reward": {"coins": 25, "items": {"oat_seed": 3}, "xp": {"farming": 50, "cooking": 20}}}
+     "reward": {"coins": 25, "items": {"oat_seed": 3}, "xp": {"farming": 50, "cooking": 20}}},
+    {"id": "first_warrant", "name": "The Magistrate's Warrant", "giver": "rawcliffe",
+     "intro": "Josiah Rawcliffe, Justice of the Peace. The county pays for every creature that troubles honest folk, and I sign the warrants. Prove yourself on the boggarts outside town, and I'll have regular work for you. There's an old one in Boggart Hole Clough that nobody has managed to shift; maybe one day.",
+     "outro": "Good. From now on, ask me for a warrant whenever you want one. And keep your hands out of other people's pockets; I do hear about it.",
+     "steps": [
+       {"kind": "kill", "target": "bramblet", "count": 5, "text": "See off 5 boggarts"}
+     ],
+     "reward": {"coins": 25, "xp": {"slaying": 60}}}
   ],
   "shop": [
     {"npc": "bertram", "item": "berry", "price": 2},
@@ -241,25 +264,29 @@
     {"npc": "jonas", "item": "feverfew_seed", "price": 8}
   ],
   "npcs": [
-    {"id": "mabel", "name": "Mabel Hartley, Lamplighter", "at": "manchester", "dx": -4, "dz": -3, "yaw": 0.6, "color": "#e8a33d", "hat": "tall",
+    {"id": "mabel", "name": "Mabel Hartley, Lamplighter", "at": "manchester", "dx": -4, "dz": -3, "yaw": 0.6, "color": "#e8a33d", "hat": "tall", "pocket": {"level": 1, "xp": 8, "coins": [1, 3], "fine": 3, "loot": [{"item": "berry", "min": 1, "max": 1, "chance": 0.3}]},
      "lines": ["They've lit Philips and Lee's mill over in Salford with gas, they say. One day every street will glow like it.",
                "Mr Blake the poet writes of \"dark Satanic Mills\". I'd rather they were well-lit ones."]},
-    {"id": "bertram", "name": "Bertram Oakes, Shudehill Market", "at": "manchester", "dx": 5, "dz": 3, "yaw": 3.8, "color": "#6aa84f", "hat": "cap",
+    {"id": "bertram", "name": "Bertram Oakes, Shudehill Market", "at": "manchester", "dx": 5, "dz": 3, "yaw": 3.8, "color": "#6aa84f", "hat": "cap", "pocket": {"level": 3, "xp": 16, "coins": [2, 6], "fine": 6, "loot": [{"item": "eccles_cake", "min": 1, "max": 1, "chance": 0.3}]},
      "lines": ["Bilberries! Planks! Lanterns for the moors! I buy logs and ore too.",
                "Coal's been cheap since the Duke of Bridgewater's canal opened in 1761. Barges bring it in from Worsley."]},
-    {"id": "hannah", "name": "Hannah Leigh, Fishwife", "at": "range", "dx": -1.5, "dz": -1.5, "yaw": 0.8, "color": "#8fa9c9", "hat": "cap",
+    {"id": "hannah", "name": "Hannah Leigh, Fishwife", "at": "range", "dx": -1.5, "dz": -1.5, "yaw": 0.8, "color": "#8fa9c9", "hat": "cap", "pocket": {"level": 2, "xp": 12, "coins": [1, 4], "fine": 4, "loot": [{"item": "herring", "min": 1, "max": 1, "chance": 0.4}]},
      "lines": ["Herring off the coast, salmon when they run up the Mersey, and cod if you go deep enough. A rod and patience, that's all.",
                "They say the Liverpool boats bring in more herring in a morning than Manchester eats in a week."]},
     {"id": "nance", "name": "Nance Clegg, Cunning-woman", "at": "manchester", "dx": -4, "dz": 6, "yaw": 2.4, "color": "#7a5c8f", "hat": "",
      "lines": ["Salt on the step and rowan over the door. My grandmother swore by it, and no boggart ever crossed her threshold.",
                "A cunning-woman finds lost things, cures warts and keeps the dark at bay. The magistrate pretends not to know me."]},
-    {"id": "abel", "name": "Abel Fothergill, Gamekeeper", "at": "manchester", "dx": 15.5, "dz": -3.5, "yaw": 4.7, "color": "#5a6b3a", "hat": "cap",
+    {"id": "abel", "name": "Abel Fothergill, Gamekeeper", "at": "manchester", "dx": 15.5, "dz": -3.5, "yaw": 4.7, "color": "#5a6b3a", "hat": "cap", "pocket": {"level": 7, "xp": 34, "coins": [4, 9], "fine": 10, "loot": [{"item": "fox_fur", "min": 1, "max": 1, "chance": 0.2}]},
      "lines": ["Hares by the field gate, grouse up toward the moors, and red deer off to the north-east. Deer need a steady hand.",
                "Poaching's a hanging matter if the magistrate's in a mood. Snares are fine when the squire allows it, mind."]},
-    {"id": "jonas", "name": "Jonas Ogden, Smallholder", "at": "allotment", "dx": -3.5, "dz": -2.5, "yaw": 0.8, "color": "#7a6a3a", "hat": "tall",
+    {"id": "jonas", "name": "Jonas Ogden, Smallholder", "at": "allotment", "dx": -3.5, "dz": -2.5, "yaw": 0.8, "color": "#7a6a3a", "hat": "tall", "pocket": {"level": 5, "xp": 24, "coins": [3, 7], "fine": 8, "loot": [{"item": "cabbage_seed", "min": 1, "max": 2, "chance": 0.4}]},
      "lines": ["Potatoes keep a family alive through winter. Oats too, if you've a pot to boil them in.",
                "Plant and walk away; they grow whether you watch or not."]},
-    {"id": "ott", "name": "Ottiwell Kershaw, Watchman", "at": "town:manchester:gate", "dx": 2, "dz": 0, "yaw": 1.57, "color": "#5b8fb9", "hat": "helm",
+    {"id": "rawcliffe", "name": "Josiah Rawcliffe, Magistrate", "at": "manchester", "dx": -9.5, "dz": -1.5, "yaw": 1.2, "color": "#2e2e3a", "hat": "tall",
+     "pocket": {"level": 10, "xp": 60, "coins": [10, 20], "fine": 25, "loot": [{"item": "pocket_watch", "min": 1, "max": 1, "chance": 0.35}]},
+     "lines": ["The Riot Act is read, the warrant is signed, and the creature is dealt with. That is how a county is kept.",
+               "Some say the boggart of the Clough is older than the parish. I say it is overdue a warrant."]},
+    {"id": "ott", "name": "Ottiwell Kershaw, Watchman", "at": "town:manchester:gate", "dx": 2, "dz": 0, "yaw": 1.57, "color": "#5b8fb9", "hat": "helm", "pocket": {"level": 9, "xp": 48, "coins": [6, 12], "fine": 15, "loot": [{"item": "pocket_watch", "min": 1, "max": 1, "chance": 0.15}]},
      "lines": ["The moors are no shame to avoid, friend. Nobody will think less of you for staying by the fire.",
                "Shakespeare had Puck do what the wisps do: \"Mislead night-wanderers, laughing at their harm.\""]}
   ]
