@@ -83,22 +83,29 @@ func TestQuestsGiveAdventurePoints(t *testing.T) {
 			t.Errorf("quest %s gives no adventure points", id)
 		}
 	}
-	// Some quests need points, and there are enough points from quests that
-	// need none to unlock them, so nobody is ever stuck.
-	free, gated := 0, 0
+	// Some quests need points, and doing the quests you can always unlocks
+	// the rest eventually, so nobody is ever stuck.
+	gated := 0
 	for _, q := range c.Quests {
-		if q.NeedsAP == 0 {
-			free += q.Reward.AP
-		} else {
+		if q.NeedsAP > 0 {
 			gated++
 		}
 	}
 	if gated == 0 {
 		t.Fatal("no quest needs adventure points")
 	}
+	ap, done := 0, map[string]bool{}
+	for progress := true; progress; {
+		progress = false
+		for id, q := range c.Quests {
+			if !done[id] && ap >= q.NeedsAP && (q.Requires == "" || done[q.Requires]) {
+				done[id], ap, progress = true, ap+q.Reward.AP, true
+			}
+		}
+	}
 	for id, q := range c.Quests {
-		if q.NeedsAP > free {
-			t.Errorf("quest %s needs %d points but the free quests give %d", id, q.NeedsAP, free)
+		if !done[id] {
+			t.Errorf("quest %s (needs %d points) can never be reached; all reachable quests give %d", id, q.NeedsAP, ap)
 		}
 	}
 }

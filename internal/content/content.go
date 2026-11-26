@@ -34,7 +34,7 @@ var Models = map[string]bool{"sword": true, "axe": true, "pickaxe": true, "club"
 // MobModels and NPCHats are the creature models and NPC hats the client can
 // draw (web/js/models.js). Add a drawing there before adding a name here.
 var (
-	MobModels = map[string]bool{"bramblet": true, "wisp": true, "hare": true, "grouse": true, "deer": true, "clough": true}
+	MobModels = map[string]bool{"bramblet": true, "wisp": true, "hare": true, "grouse": true, "deer": true, "clough": true, "shuck": true, "jerseydevil": true, "curupira": true, "boitata": true, "tokoloshe": true, "grootslang": true, "jiangshi": true, "yeti": true, "bunyip": true, "yowie": true}
 	NPCHats   = map[string]bool{"": true, "tall": true, "cap": true, "helm": true}
 )
 

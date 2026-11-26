@@ -1,6 +1,7 @@
 package game
 
 import (
+	"math"
 	"slices"
 	"strings"
 	"testing"
@@ -170,5 +171,66 @@ func TestDangerAndHotspotsReachTheClient(t *testing.T) {
 	}
 	if mines == 0 {
 		t.Fatal("no mines on the map")
+	}
+}
+
+// Each town's quests can be done nearby: what they ask you to mine, chop,
+// catch or fight is found within reach of the town.
+func TestTownQuestsCanBeDoneNearby(t *testing.T) {
+	f := newFixture(t)
+	near := func(town string, kind string, ok func(s *world.Site) bool) bool {
+		p := f.g.W.Def.Place(town)
+		for _, s := range f.g.W.Sites() {
+			if s.Kind == kind && f.g.W.Dist(s.X, s.Z, p.X, p.Z) < p.Radius+90 && ok(s) {
+				return true
+			}
+		}
+		return false
+	}
+	has := func(b uint8) func(*world.Site) bool {
+		return func(s *world.Site) bool { return slices.Contains(s.Blocks, b) }
+	}
+	tier := func(min int) func(*world.Site) bool {
+		return func(s *world.Site) bool { return f.g.W.Tier(s.Danger) >= min }
+	}
+	any := func(*world.Site) bool { return true }
+	for _, c := range []struct {
+		town, kind string
+		ok         func(*world.Site) bool
+	}{
+		{"falun", world.SiteMine, has(world.CopperOre)},
+		{"potosi", world.SiteMine, has(world.IronOre)},
+		{"timbuktu", world.SiteWood, has(world.Rowan)},
+		{"bergen", world.SiteFishing, any},
+		{"boston", world.SiteFishing, tier(2)},    // trout
+		{"hobart", world.SiteFishing, tier(6)},    // cod
+		{"quebec", world.SiteHunting, any},        // hides
+		{"cape_town", world.SiteHunting, tier(4)}, // deer
+	} {
+		if !near(c.town, c.kind, c.ok) {
+			t.Errorf("%s has no suitable %s nearby for its quest", c.town, c.kind)
+		}
+	}
+	// Quest creatures roam near their towns.
+	for town, mob := range map[string]string{"boston": "jersey_devil", "cape_town": "grootslang", "canton": "jiangshi", "sydney": "yowie"} {
+		p := f.g.W.Def.Place(town)
+		found := false
+		for i := 0; i < 600 && !found; i++ {
+			a, d := float64(i)*0.7, p.Radius+10+float64(i%30)
+			x, z := f.g.W.WrapX(p.X+math.Cos(a)*d), p.Z+math.Sin(a)*d
+			if f.g.wet(int(x), int(z)) {
+				continue
+			}
+			if d := f.g.pickWild(x, z, f.g.W.Tier(max(1, f.g.W.Danger(x, z)))); d != nil && d.ID == mob {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("no %s roams near %s", mob, town)
+		}
+	}
+	// Villages have soil for farming quests.
+	if _, err := f.g.W.Point("town:calcutta:allotment"); err != nil {
+		t.Fatal(err)
 	}
 }

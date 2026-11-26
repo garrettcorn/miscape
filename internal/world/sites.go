@@ -44,7 +44,7 @@ type band struct {
 
 // OreBands and TreeBands say which ores and trees appear at which danger.
 var (
-	OreBands  = []band{{CopperOre, 1, 3}, {TinOre, 1, 4}, {Coal, 2, 6}, {IronOre, 4, 8}, {Glimmer, 6, 10}}
+	OreBands  = []band{{CopperOre, 1, 3}, {TinOre, 1, 4}, {Coal, 2, 6}, {IronOre, 4, 8}, {Glimmer, 6, 10}, {SilverOre, 8, 10}}
 	TreeBands = []band{{Log, 1, 5}, {Rowan, 2, 7}, {Yew, 5, 10}}
 )
 

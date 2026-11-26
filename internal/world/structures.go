@@ -202,6 +202,20 @@ func (b *builder) village(id string, r int, gate [2]int) {
 	b.set(-3, g, 3, Cobble)
 	b.set(-3, g+1, 3, Anvil)
 	b.set(3, g+1, -3, Range)
+	// A little allotment behind the cottages.
+	ax, az := -10, 2
+	if gate[0] == 0 {
+		ax, az = 2, -9
+	}
+	for z := 0; z < 4; z++ {
+		for x := 0; x < 4; x++ {
+			blk := Soil
+			if z == 0 || z == 3 || x == 0 || x == 3 {
+				blk = Cobble
+			}
+			b.set(ax+x, g, az+z, blk)
+		}
+	}
 
 	w := b.w
 	pt := func(name string, dx, dz float64) {
@@ -211,6 +225,7 @@ func (b *builder) village(id string, r int, gate [2]int) {
 	pt("anvil", -3, 3)
 	pt("range", 3, -3)
 	pt("stall", 3, 3)
+	pt("allotment", float64(ax)+2, float64(az)+2)
 	pt("gate", float64(gate[0]*(r+4))+0.5, float64(gate[1]*(r+4))+0.5)
 }
 

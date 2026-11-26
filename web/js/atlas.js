@@ -6,7 +6,7 @@ export const TILE_NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'sand', '
   'berry', 'dead_side', 'dead_top', 'moss_top', 'moss_side', 'snow_top', 'snow_side', 'ice',
   'fishspot', 'fire', 'range_top', 'range_side', 'rowan_side', 'yew_side', 'tin', 'coal', 'iron',
   'snare', 'snare_full', 'soil_top', 'sprout', 'potatoes', 'oats', 'cabbages', 'feverfew',
-  'stall_top', 'stall_side', 'stall_empty'];
+  'stall_top', 'stall_side', 'stall_empty', 'silver'];
 
 function rng(seed) {
   let s = seed >>> 0;
@@ -75,6 +75,7 @@ const painters = {
   stall_top: (t) => { painters.plank(t); for (let i = 0; i < 7; i++) { const x = 1 + Math.floor(t.r() * 12), y = 1 + Math.floor(t.r() * 12); t.rect(x, y, 3, 3, ['#c98a4a', '#f0ece2', '#c03a5a', '#e0457b'][i % 4]); } return t; },
   stall_side: (t) => { painters.plank(t); for (let x = 0; x < 16; x += 4) t.rect(x, 0, 2, 5, '#c0392b').rect(x + 2, 0, 2, 5, '#f4f1ea'); return t; },
   stall_empty: (t) => painters.plank(t).speck('#8a5a32', 0.04),
+  silver: (t) => { painters.stone(t); for (let i = 0; i < 7; i++) { const x = 1 + Math.floor(t.r() * 13), y = 1 + Math.floor(t.r() * 13); t.rect(x, y, 2, 1, '#eef3f8').px(x, y + 1, hex('#b9c4d0')); } return t.speck('#ffffff', 0.02); },
 };
 
 // Returns RGBA bytes for all layers stacked: TILE x TILE x N.

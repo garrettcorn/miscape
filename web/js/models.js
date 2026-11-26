@@ -234,6 +234,16 @@ export const MOB_MODELS = {
   grouse: { draw: drawGrouse, tag: 0.85 },
   deer: { draw: drawDeer, tag: 2.4 },
   clough: { draw: drawClough, tag: 2.9 },
+  shuck: { draw: (r, e, t) => FOLK.shuck(r, e, t), tag: 1.5 },
+  jerseydevil: { draw: (r, e, t) => FOLK.jerseydevil(r, e, t), tag: 2.3 },
+  curupira: { draw: (r, e, t) => FOLK.curupira(r, e, t), tag: 1.7 },
+  boitata: { draw: (r, e, t) => FOLK.boitata(r, e, t), tag: 1.2 },
+  tokoloshe: { draw: (r, e, t) => FOLK.tokoloshe(r, e, t), tag: 1.4 },
+  grootslang: { draw: (r, e, t) => FOLK.grootslang(r, e, t), tag: 1.6 },
+  jiangshi: { draw: (r, e, t) => FOLK.jiangshi(r, e, t), tag: 2.4 },
+  yeti: { draw: (r, e, t) => FOLK.yeti(r, e, t), tag: 3.1 },
+  bunyip: { draw: (r, e, t) => FOLK.bunyip(r, e, t), tag: 1.8 },
+  yowie: { draw: (r, e, t) => FOLK.yowie(r, e, t), tag: 2.9 },
 };
 
 // A projectile in flight (bow, sling or wand), from s.a to s.b, started at
@@ -325,3 +335,73 @@ export function drawClough(r, e, t) {
     box(r, x, y, z, yaw, s * 0.3, 2.45, 0.1, 0.08, 0.25, 0.08, [0.85, 0.8, 0.65], f);
   }
 }
+
+// ---------- folklore creatures ----------
+// Four body plans, coloured and sized per creature.
+
+// A hound or other four-legged beast. o: {body, dark, eye, scale, glowEye}
+function quadruped(r, e, t, o) {
+  const k = o.scale || 1, { x, z, yaw } = e, f = e.flash > 0 ? 1 : 0;
+  const leg = e.moving ? Math.sin(t * 12 + e.id) * 0.5 : 0;
+  box(r, x, e.y, z, yaw, 0, 0.95 * k, 0, 0.45 * k, 0.4 * k, 1.0 * k, o.body, f);
+  box(r, x, e.y, z, yaw, 0, 1.12 * k, 0.6 * k, 0.4 * k, 0.38 * k, 0.42 * k, o.body, f);
+  box(r, x, e.y, z, yaw, 0, 1.0 * k, 0.88 * k, 0.22 * k, 0.18 * k, 0.2 * k, o.dark, f);
+  for (const [ox, oz, s] of [[-0.15, 0.35, 1], [0.15, 0.35, -1], [-0.15, -0.35, -1], [0.15, -0.35, 1]]) box(r, x, e.y, z, yaw, ox * k, 0.6 * k, oz * k, 0.12 * k, 0.6 * k, 0.12 * k, o.dark, f, leg * s);
+  box(r, x, e.y, z, yaw, 0, 1.05 * k, -0.55 * k, 0.08 * k, 0.08 * k, 0.4 * k, o.dark, f, -0.6);
+  for (const s of [-1, 1]) box(r, x, e.y, z, yaw, s * 0.1 * k, 1.1 * k, 0.81 * k, 0.07 * k, 0.07 * k, 0.02, o.eye, o.glowEye ? 2 : 0);
+}
+
+// Something that walks on two legs. o: {body, head, eye, scale, hat, arms ('out' for a jiangshi), hair}
+function biped(r, e, t, o) {
+  const k = o.scale || 1, { x, z, yaw } = e, f = e.flash > 0 ? 1 : 0;
+  const hop = o.hop ? Math.abs(Math.sin(t * 6 + e.id)) * (e.moving ? 0.35 : 0.08) : 0;
+  const y = e.y + hop, swing = e.moving && !o.hop ? Math.sin(t * 9 + e.id) * 0.6 : 0;
+  for (const s of [-1, 1]) box(r, x, y, z, yaw, s * 0.13 * k, 0.75 * k, 0, 0.18 * k, 0.75 * k, 0.2 * k, o.body, f, swing * s);
+  box(r, x, y, z, yaw, 0, 1.45 * k, 0, 0.55 * k, 0.72 * k, 0.32 * k, o.body, f);
+  box(r, x, y, z, yaw, 0, 1.85 * k, 0.02, 0.4 * k, 0.4 * k, 0.38 * k, o.head || o.body, f);
+  const arm = o.arms === 'out' ? -1.45 : -swing;
+  for (const s of [-1, 1]) box(r, x, y, z, yaw, s * 0.36 * k, 1.42 * k, 0, 0.15 * k, 0.65 * k, 0.16 * k, o.body, f, arm * (o.arms === 'out' ? 1 : s));
+  for (const s of [-1, 1]) box(r, x, y, z, yaw, s * 0.09 * k, 1.72 * k, 0.2 * k, 0.07 * k, 0.07 * k, 0.02, o.eye, o.glowEye ? 2 : 0);
+  if (o.hat) box(r, x, y, z, yaw, 0, 2.1 * k, 0, 0.46 * k, 0.12 * k, 0.44 * k, o.hat, f);
+  if (o.hair) box(r, x, y, z, yaw, 0, 2.1 * k, -0.04, 0.46 * k, 0.24 * k, 0.42 * k, o.hair, 2);
+  if (o.talisman) box(r, x, y, z, yaw, 0, 1.92 * k, 0.21 * k, 0.12 * k, 0.26 * k, 0.01, o.talisman, 0);
+}
+
+// A great serpent, its coils following behind. o: {body, belly, eye, scale, glow}
+function serpent(r, e, t, o) {
+  const k = o.scale || 1, { x, z, yaw } = e, f = e.flash > 0 ? 1 : o.glow ? 2 : 0;
+  for (let i = 0; i < 6; i++) {
+    const wav = Math.sin(t * 4 - i * 0.9 + e.id) * 0.25 * k, s = (1 - i * 0.1) * k;
+    box(r, x, e.y, z, yaw, wav, 0.42 * s + 0.05, (0.45 - i * 0.42) * k, 0.38 * s, 0.38 * s, 0.46 * k, i % 2 ? o.belly : o.body, f);
+  }
+  box(r, x, e.y, z, yaw, 0, 0.75 * k, 0.75 * k, 0.42 * k, 0.32 * k, 0.4 * k, o.body, f);
+  for (const s of [-1, 1]) box(r, x, e.y, z, yaw, s * 0.12 * k, 0.68 * k, 0.96 * k, 0.08 * k, 0.08 * k, 0.02, o.eye, 2);
+}
+
+// A winged devil: hooves, a long neck and bat wings.
+function winged(r, e, t, o) {
+  const k = o.scale || 1, { x, z, yaw } = e, f = e.flash > 0 ? 1 : 0;
+  const y = e.y + 0.4 + Math.sin(t * 3 + e.id) * 0.15, flap = Math.sin(t * 10 + e.id) * 0.6;
+  box(r, x, y, z, yaw, 0, 1.1 * k, 0, 0.36 * k, 0.6 * k, 0.4 * k, o.body, f);
+  box(r, x, y, z, yaw, 0, 1.55 * k, 0.15 * k, 0.26 * k, 0.32 * k, 0.4 * k, o.body, f);
+  for (const s of [-1, 1]) {
+    box(r, x, y, z, yaw, s * 0.55 * k, 1.25 * k, -0.05, 0.8 * k, 0.04, 0.5 * k, o.wing, f, flap * s);
+    box(r, x, y, z, yaw, s * 0.1 * k, 0.55 * k, 0, 0.1 * k, 0.5 * k, 0.1 * k, o.body, f);
+    box(r, x, y, z, yaw, s * 0.1 * k, 1.78 * k, 0.15 * k, 0.05 * k, 0.18 * k, 0.05 * k, o.horn, f);
+    box(r, x, y, z, yaw, s * 0.07 * k, 1.48 * k, 0.36 * k, 0.06 * k, 0.06 * k, 0.02, o.eye, 2);
+  }
+  box(r, x, y, z, yaw, 0, 0.9 * k, -0.45 * k, 0.06 * k, 0.06 * k, 0.6 * k, o.body, f, -0.5);
+}
+
+const FOLK = {
+  shuck: (r, e, t) => quadruped(r, e, t, { body: [0.1, 0.1, 0.12], dark: [0.05, 0.05, 0.06], eye: [1, 0.3, 0.2], glowEye: true, scale: 1.1 }),
+  jerseydevil: (r, e, t) => winged(r, e, t, { body: [0.45, 0.28, 0.2], wing: [0.3, 0.2, 0.18], horn: [0.85, 0.8, 0.7], eye: [1, 0.8, 0.2] }),
+  curupira: (r, e, t) => biped(r, e, t, { body: [0.35, 0.55, 0.3], head: [0.55, 0.4, 0.3], hair: [1, 0.35, 0.1], eye: [0.1, 0.1, 0.1], scale: 0.75 }),
+  boitata: (r, e, t) => serpent(r, e, t, { body: [1, 0.5, 0.15], belly: [1, 0.75, 0.3], eye: [1, 1, 0.6], glow: true, scale: 1.1 }),
+  tokoloshe: (r, e, t) => biped(r, e, t, { body: [0.3, 0.24, 0.2], head: [0.35, 0.28, 0.22], eye: [0.95, 0.85, 0.3], glowEye: true, scale: 0.6 }),
+  grootslang: (r, e, t) => serpent(r, e, t, { body: [0.3, 0.32, 0.26], belly: [0.45, 0.45, 0.36], eye: [0.9, 0.9, 1], scale: 1.6 }),
+  jiangshi: (r, e, t) => biped(r, e, t, { body: [0.15, 0.2, 0.35], head: [0.78, 0.85, 0.75], hat: [0.12, 0.12, 0.15], talisman: [0.95, 0.85, 0.3], eye: [0.1, 0.1, 0.1], arms: 'out', hop: true }),
+  yeti: (r, e, t) => biped(r, e, t, { body: [0.92, 0.94, 0.96], head: [0.85, 0.88, 0.92], eye: [0.2, 0.4, 0.7], scale: 1.45 }),
+  bunyip: (r, e, t) => quadruped(r, e, t, { body: [0.22, 0.22, 0.18], dark: [0.14, 0.14, 0.1], eye: [0.9, 0.9, 0.6], scale: 1.3 }),
+  yowie: (r, e, t) => biped(r, e, t, { body: [0.45, 0.33, 0.22], head: [0.4, 0.3, 0.2], eye: [0.9, 0.7, 0.3], scale: 1.35 }),
+};

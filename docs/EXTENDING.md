@@ -95,7 +95,11 @@ the open country keeps oak, berries and the odd boulder.
 maxTier, weight}`, where region is a continent name from `regions.json` (or
 left out for anywhere) and tiers are danger on a 1-10 scale. Up to
 `game.WildsPerPlayer` appear around each player outside town and vanish when
-nobody's near.
+nobody's near. Each continent has its own folklore creatures (Black Shuck, the Jersey
+Devil, the curupira and boitatá, the tokoloshe and grootslang, the jiangshi
+and yeti, the bunyip and yowie); a new one needs a model in `MOB_MODELS`
+(`web/js/models.js` has four reusable body plans: `quadruped`, `biped`,
+`serpent`, `winged`).
 
 **Place NPCs and creatures:** in content, give them `"at"` (a place, zone or
 named point) and `dx`/`dz` offsets in blocks. Positions are worked out per level,

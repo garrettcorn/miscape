@@ -519,6 +519,9 @@ func TestNPCsAndGateStandOnDryLand(t *testing.T) {
 	}
 	for id, n := range f.g.C.NPCs {
 		dry("npc "+id, n.X, n.Z)
+		if b := w.Get(int(math.Floor(n.X)), w.Def.GroundY+1, int(math.Floor(n.Z))); world.Solid(b) {
+			t.Errorf("npc %s is standing inside block %d", id, b)
+		}
 	}
 	g, err := w.Point("town:manchester:gate")
 	if err != nil {
