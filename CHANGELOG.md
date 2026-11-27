@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.1] - 2026-11-26
+
+### Fixed
+
+- Fix controller navigation jumping into the menu tabs and close button, which made Craft, Pack and other menus hard to use ([`e257271`](https://github.com/garrettcorn/miscape/commit/e257271))
+- Fix controller navigation skipping rows of controls, such as most of Settings ([`e257271`](https://github.com/garrettcorn/miscape/commit/e257271))
+- Fix the world map trapping the D-pad; the right stick now pans it and the triggers zoom ([`e257271`](https://github.com/garrettcorn/miscape/commit/e257271))
+
 ## [0.9.0] - 2026-11-26
 
 _If you are upgrading: saves migrate on load (characters get adventure points for quests they had finished, and remember Manchester). Update servers, join companions and browsers together (protocol 6)._
@@ -178,6 +186,8 @@ _If you are upgrading: browsers remember characters per address, so to keep play
 ## [0.1.0] - 2026-11-25
 
 _Initial release._
+
+[0.9.1]: https://github.com/garrettcorn/miscape/releases/tag/v0.9.1
 
 [0.9.0]: https://github.com/garrettcorn/miscape/releases/tag/v0.9.0
 
