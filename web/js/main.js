@@ -46,7 +46,8 @@ class Game {
       addEventListener('pagehide', () => this.net.flush());
     }
     this.ui = new UI(this);
-    this.input.onUI = (d) => this.ui.nav(d);
+    this.input.onUI = (d, src) => this.ui.nav(d, src);
+    this.input.onUIPan = (x, y, dt) => this.ui.pan(x, y, dt);
     this.me = null;
     this.others = new Map();
     this.mobs = new Map();
@@ -137,7 +138,8 @@ class Game {
     $('#realmbadge').textContent = { official: 'Official world', browser: 'Browser world · saved on this device' }[w.realm.kind] || `Private world · progress stays here${w.realm.modded ? ' · modded' : ''}`;
     $('#netstatus').hidden = true;
     this.input.setUIMode(false);
-    this.input.onUI = (d) => this.ui.nav(d);
+    this.input.onUI = (d, src) => this.ui.nav(d, src);
+    this.input.onUIPan = (x, y, dt) => this.ui.pan(x, y, dt);
     for (const m of w.chat || []) this.ui.chat(m);
     this.bindNet();
     this.chunkPending.clear();

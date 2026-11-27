@@ -149,10 +149,12 @@ export class Input {
       if (this.uiMode) {
         const edge = (i) => now[i] && !prev[i];
         const stickDir = Math.abs(ly) > 0.6 ? (ly < 0 ? 'up' : 'down') : Math.abs(lx) > 0.6 ? (lx < 0 ? 'left' : 'right') : null;
-        if (stickDir && (!this.lastStick || performance.now() - this.lastStick > 220)) { this.onUI && this.onUI(stickDir); this.lastStick = performance.now(); }
+        if (stickDir && (!this.lastStick || performance.now() - this.lastStick > 220)) { this.onUI && this.onUI(stickDir, 'pad'); this.lastStick = performance.now(); }
         if (!stickDir) this.lastStick = 0;
-        if (edge(PAD.UP)) this.onUI('up'); if (edge(PAD.DOWN)) this.onUI('down');
-        if (edge(PAD.LEFT)) this.onUI('left'); if (edge(PAD.RIGHT)) this.onUI('right');
+        if (edge(PAD.UP)) this.onUI('up', 'pad'); if (edge(PAD.DOWN)) this.onUI('down', 'pad');
+        if (edge(PAD.LEFT)) this.onUI('left', 'pad'); if (edge(PAD.RIGHT)) this.onUI('right', 'pad');
+        if (edge(PAD.RT)) this.onUI('zoomIn', 'pad'); if (edge(PAD.LT)) this.onUI('zoomOut', 'pad');
+        if ((rx || ry) && this.onUIPan) this.onUIPan(rx, ry, dt);
         if (edge(PAD.X)) this.onUI('alt');
         if (edge(PAD.A)) this.onUI('ok'); if (edge(PAD.B) || edge(PAD.START) || edge(PAD.Y)) this.onUI('back');
         if (edge(PAD.LB)) this.onUI('tabPrev'); if (edge(PAD.RB)) this.onUI('tabNext');

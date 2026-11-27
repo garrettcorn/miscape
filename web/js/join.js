@@ -112,14 +112,14 @@ export async function showJoin(game, err) {
   (form.querySelector('#continue') || form.querySelector('#name'))?.focus();
   // Gamepad navigation on the join screen.
   game.input.setUIMode(true);
-  game.input.onUI = (d) => {
+  game.input.onUI = (d, src) => {
     if (!game.me) {
       const els = [...form.querySelectorAll('button, input')];
       const i = els.indexOf(document.activeElement);
       if (d === 'down' || d === 'right') els[(i + 1) % els.length]?.focus();
       if (d === 'up' || d === 'left') els[(i - 1 + els.length) % els.length]?.focus();
       if (d === 'ok') document.activeElement?.click();
-    } else game.ui.nav(d);
+    } else game.ui.nav(d, src);
   };
   if (!game.joinLoop) { game.joinLoop = true; const pl = () => { if (!game.me) { game.input.poll(0.016); requestAnimationFrame(pl); } }; pl(); }
   if (params.get('autojoin')) {

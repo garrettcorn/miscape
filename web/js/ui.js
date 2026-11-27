@@ -681,7 +681,7 @@ export class UI {
       `<label>${esc(label)} <button class="btn bind" data-do="rebind" data-arg="${a}" data-fid="k-${a}">${esc(glyph('kb', a))}</button></label>`).join('');
     return `<div class="settings"><h4>Controller</h4>
       <p class="note">Left stick move · Right stick look · Ⓐ jump · RT attack/gather · LT use/place · Ⓧ talk/trade · Ⓨ menu · LB/RB hotbar · D-pad → map · D-pad ↓ Hearth · D-pad ← drop hotbar item · L3 sprint · Start settings · Back chat.
-        In menus: Ⓐ choose · Ⓑ back · Ⓧ drop one · LB/RB switch tabs.</p>
+        In menus: D-pad or left stick moves · Ⓐ choose · Ⓑ back · Ⓧ drop one · LB/RB switch tabs · on the map, the right stick pans and LT/RT zoom.</p>
       <h4>Touch</h4><p class="note">Left stick to move, drag the right side to look. ⚔ attack/gather (auto-targets the nearest creature), ✋ use/place, 💬 talk/trade. Drop items from the ☰ menu’s Pack.</p>
       <h4>Keyboard &amp; mouse (click to remap)</h4>${rows}<button class="btn" data-do="resetKeys" data-fid="rk">Reset to defaults</button></div>`;
   }
@@ -795,7 +795,23 @@ export class UI {
     const pref = f.find((e) => e.classList.contains('sel'));
     (pref || f[0] || this.focusables()[0])?.focus();
   }
-  nav(dir) {
+  // The right stick pans the world map when it's open.
+  pan(x, y, dt) {
+    if (this.panel && this.panel.kind === 'menu' && this.panel.tab === 'map' && !this.modal) {
+      const wm = this.g.worldMap, s = 900 * dt / wm.zoom;
+      wm.pan(x * s, y * s);
+    }
+  }
+
+  // dir: up/down/left/right, ok, back, alt, tabPrev/tabNext, zoomIn/zoomOut.
+  // src is 'pad' for a controller (whose D-pad always moves focus; its right
+  // stick and triggers drive the map), otherwise the keyboard.
+  nav(dir, src) {
+    if ((dir === 'zoomIn' || dir === 'zoomOut') && this.panel && this.panel.tab === 'map' && !this.modal) {
+      this.g.worldMap.setZoom(this.g.worldMap.zoom * (dir === 'zoomIn' ? 1.5 : 1 / 1.5));
+      return;
+    }
+    if (dir === 'zoomIn' || dir === 'zoomOut') return;
     if (this.modal) {
       if (dir === 'back') { this.closeModal(false); return; }
       if (dir === 'tabPrev' || dir === 'tabNext' || dir === 'alt') return;
@@ -812,7 +828,7 @@ export class UI {
       this.focusFirst();
       return;
     }
-    if (document.activeElement && document.activeElement.id === 'wmcanvas' && ['up', 'down', 'left', 'right'].includes(dir)) { this.g.worldMap.nav(dir); return; }
+    if (src !== 'pad' && document.activeElement && document.activeElement.id === 'wmcanvas' && ['up', 'down', 'left', 'right'].includes(dir)) { this.g.worldMap.nav(dir); return; }
     const cur = document.activeElement;
     if (cur && (cur.type === 'range' || cur.tagName === 'SELECT') && (dir === 'left' || dir === 'right')) {
       if (cur.type === 'range') { cur.value = +cur.value + (dir === 'right' ? 1 : -1) * +cur.step; }
@@ -823,18 +839,30 @@ export class UI {
     const els = this.focusables();
     if (!cur || !els.includes(cur)) { this.focusFirst(); return; }
     const r = cur.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    let best = null, bd = Infinity;
-    for (const e of els) {
-      if (e === cur) continue;
-      const q = e.getBoundingClientRect(), ex = q.left + q.width / 2, ey = q.top + q.height / 2;
-      const dx = ex - cx, dy = ey - cy;
-      const ok = { up: dy < -4, down: dy > 4, left: dx < -4, right: dx > 4 }[dir];
-      if (!ok) continue;
-      const primary = dir === 'up' || dir === 'down' ? Math.abs(dy) : Math.abs(dx);
-      const side = dir === 'up' || dir === 'down' ? Math.abs(dx) : Math.abs(dy);
-      const d = primary + side * 2.5;
-      if (d < bd) { bd = d; best = e; }
-    }
+    // The header (tabs and the close button) is only reached by going up from
+    // the top of the body, so sideways moves never land on a tab by accident.
+    const inHead = (e) => !!e.closest('.panelhead');
+    const pick = (cands) => {
+      let best = null, bd = Infinity;
+      for (const e of cands) {
+        if (e === cur) continue;
+        const q = e.getBoundingClientRect(), ex = q.left + q.width / 2, ey = q.top + q.height / 2;
+        const dx = ex - cx, dy = ey - cy;
+        const ok = { up: dy < -4, down: dy > 4, left: dx < -4, right: dx > 4 }[dir];
+        if (!ok) continue;
+        // Sideways distance is the gap between the two boxes (0 when they line
+        // up), so the next row wins over something far below that happens to
+        // be straight down, and grids still move one cell at a time.
+        const vert = dir === 'up' || dir === 'down';
+        const gap = vert ? Math.max(0, q.left - r.right, r.left - q.right) : Math.max(0, q.top - r.bottom, r.top - q.bottom);
+        const d = (vert ? Math.abs(dy) : Math.abs(dx)) + gap * 0.35 + (vert ? Math.abs(dx) : Math.abs(dy)) * 0.01;
+        if (d < bd) { bd = d; best = e; }
+      }
+      return best;
+    };
+    let best;
+    if (inHead(cur)) best = dir === 'down' ? pick(els.filter((e) => !inHead(e))) : pick(els.filter(inHead));
+    else best = pick(els.filter((e) => !inHead(e))) || (dir === 'up' ? pick(els.filter(inHead)) : null);
     if (best) { best.focus(); best.scrollIntoView({ block: 'nearest' }); }
   }
 }

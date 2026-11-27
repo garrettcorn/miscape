@@ -60,7 +60,7 @@ export class WorldMap {
     const me = this.g.me, b = this.g.body;
     const ll = b ? this.latLon(b.x, b.z) : '';
     return `<div class="worldmap">
-      <canvas id="wmcanvas" tabindex="0" data-fid="wm" aria-label="World map. Use the arrow keys or D-pad to pan."></canvas>
+      <canvas id="wmcanvas" tabindex="0" data-fid="wm" aria-label="World map. Arrow keys or the right stick pan it; the triggers zoom."></canvas>
       <div class="wmbar row">
         <button class="btn" data-do="mapZoom" data-arg="1" data-fid="wm-in" aria-label="Zoom in">＋</button>
         <button class="btn" data-do="mapZoom" data-arg="-1" data-fid="wm-out" aria-label="Zoom out">－</button>
